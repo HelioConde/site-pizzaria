@@ -1,4 +1,5 @@
 import Navbar from "./components/layout/Navbar";
+import Carousel from "./components/ui/Carousel";
 
 export default function App() {
   return (
@@ -8,8 +9,7 @@ export default function App() {
       {/* Só pra testar os links */}
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 16px" }}>
         <section id="inicio" style={{ padding: "80px 0" }}>
-          <h1>Início</h1>
-          <p>Bem-vindo(a) à Bella Massa.</p>
+            <Carousel />
         </section>
 
         <section id="cardapio" style={{ padding: "80px 0" }}>

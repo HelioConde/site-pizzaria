@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import styles from "./Navbar.module.css";
 
 const links = [
   { label: "Início", href: "#inicio" },
@@ -10,7 +11,6 @@ const links = [
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Fecha o menu mobile ao redimensionar para desktop
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 880) setMenuOpen(false);
@@ -19,7 +19,6 @@ export default function Navbar() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Bloqueia scroll quando menu mobile estiver aberto
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
@@ -28,60 +27,75 @@ export default function Navbar() {
   }, [menuOpen]);
 
   return (
-    <header className="nav">
-      <div className="nav__inner">
-        <a className="nav__brand" href="#inicio" onClick={() => setMenuOpen(false)}>
-          <span className="nav__logo" aria-hidden="true">🍕</span>
-          <span className="nav__brandText">Bella Massa</span>
+    <header className={styles.nav}>
+      <div className={styles.navInner}>
+        <a
+          className={styles.navBrand}
+          href="#inicio"
+          onClick={() => setMenuOpen(false)}
+        >
+          <span className={styles.navLogo} aria-hidden="true">
+            🍕
+          </span>
+          <span className={styles.navBrandText}>Bella Massa</span>
         </a>
 
-        <nav className="nav__links" aria-label="Navegação principal">
+        <nav className={styles.navLinks} aria-label="Navegação principal">
           {links.map((l) => (
-            <a key={l.href} className="nav__link" href={l.href}>
+            <a key={l.href} className={styles.navLink} href={l.href}>
               {l.label}
             </a>
           ))}
         </nav>
 
-        <div className="nav__actions">
-          <a className="btn btn--primary nav__cta" href="#fazer-pedido">
+        <div className={styles.navActions}>
+          <a
+            className={`${styles.btn} ${styles.btnPrimary} ${styles.navCta}`}
+            href="#fazer-pedido"
+            onClick={() => setMenuOpen(false)}
+          >
             Fazer pedido
           </a>
 
           <button
-            className="nav__burger"
+            className={styles.navBurger}
             type="button"
             aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
           >
-            <span className="nav__burgerLine" />
-            <span className="nav__burgerLine" />
-            <span className="nav__burgerLine" />
+            <span className={styles.navBurgerLine} />
+            <span className={styles.navBurgerLine} />
+            <span className={styles.navBurgerLine} />
           </button>
         </div>
       </div>
 
       {/* Menu Mobile */}
-      <div className={`nav__mobile ${menuOpen ? "is-open" : ""}`}>
-        <div className="nav__mobilePanel">
+      <div className={`${styles.navMobile} ${menuOpen ? styles.isOpen : ""}`}>
+        <div className={styles.navMobilePanel}>
           {links.map((l) => (
             <a
               key={l.href}
-              className="nav__mobileLink"
+              className={styles.navMobileLink}
               href={l.href}
               onClick={() => setMenuOpen(false)}
             >
               {l.label}
             </a>
           ))}
-          <a className="btn btn--primary nav__mobileCta" href="#fazer-pedido" onClick={() => setMenuOpen(false)}>
+
+          <a
+            className={`${styles.btn} ${styles.btnPrimary} ${styles.navMobileCta}`}
+            href="#fazer-pedido"
+            onClick={() => setMenuOpen(false)}
+          >
             Fazer pedido
           </a>
         </div>
 
         <button
-          className="nav__backdrop"
+          className={styles.navBackdrop}
           aria-label="Fechar menu"
           type="button"
           onClick={() => setMenuOpen(false)}
