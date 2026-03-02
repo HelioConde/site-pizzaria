@@ -2,171 +2,121 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  background: rgba(246,247,251,.85);
   backdrop-filter: blur(10px);
-  background: rgba(11,11,16,.55);
   border-bottom: 1px solid var(--line);
 }
 
-.navInner{
-  max-width: 1100px;
+.inner{
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
 }
 
-.navBrand{
+.brand{
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--text);
   text-decoration: none;
-  font-weight: 800;
-  letter-spacing: .2px;
+  font-weight: 900;
 }
 
-.navLogo{
-  width: 36px;
-  height: 36px;
+.logo{
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: rgba(255,255,255,.07);
+  background: var(--surface);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 25px rgba(2,6,23,.06);
 }
 
-.navBrandText{ font-size: 16px; }
+.brandText{ font-size: 15px; }
 
-.navLinks{
+.links{
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
-.navLink{
-  color: var(--muted);
+.link{
   text-decoration: none;
-  font-weight: 600;
+  color: var(--muted);
+  font-weight: 700;
   font-size: 14px;
 }
 
-.navLink:hover{ color: var(--text); }
+.link:hover{ color: var(--text); }
 
-.navActions{
+.actions{
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-/* Botões (por enquanto dentro do Navbar) */
-.btn{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  text-decoration: none;
-  color: var(--text);
-  background: rgba(255,255,255,.04);
-  transition: transform .15s ease, background .15s ease, border-color .15s ease;
-}
-
-.btn:hover{
-  transform: translateY(-1px);
-  background: rgba(255,255,255,.07);
-}
-
-.btnPrimary{
-  border-color: rgba(255,107,61,.55);
-  background: linear-gradient(180deg, rgba(255,107,61,.95), rgba(255,80,50,.92));
-  color: #0b0b10;
-  font-weight: 700;
-}
-
-.navCta{}
-
-/* Burger */
-.navBurger{
+.burger{
   display: none;
-  width: 44px;
-  height: 40px;
-  border-radius: 12px;
+  width: 42px;
+  height: 38px;
+  border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,.05);
+  background: var(--surface);
   cursor: pointer;
 }
 
-.navBurgerLine{
+.burgerLine{
   display: block;
-  height: 2px;
   width: 18px;
+  height: 2px;
   margin: 4px auto;
-  background: rgba(248,250,252,.86);
+  background: rgba(15,23,42,.85);
   border-radius: 999px;
 }
 
 /* Mobile */
-.navMobile{
-  position: fixed;
-  inset: 0;
-  display: none;
-}
+.mobile{ position: fixed; inset: 0; display: none; }
+.open{ display: block; }
 
-.isOpen{
-  display: block;
-}
-
-.navBackdrop{
+.backdrop{
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(2,6,23,.35);
   border: 0;
 }
 
-.navMobilePanel{
+.mobilePanel{
   position: absolute;
-  right: 14px;
-  top: 62px;
-  width: 240px;
-  background: rgba(15,15,22,.95);
+  right: 16px;
+  top: 68px;
+  width: 260px;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius);
   padding: 12px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 20px 40px rgba(0,0,0,.45);
+  box-shadow: var(--shadow);
 }
 
-.navMobileLink{
+.mobileLink{
   display: block;
-  padding: 8px 10px;
-  border-radius: 12px;
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-.navMobileLink:hover{
-  background: rgba(255,255,255,.06);
-}
-
-.navMobileCta{
-  width: 100%;
-  margin-top: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  font-size: 14px;
+  text-decoration: none;
+  font-weight: 800;
+  color: var(--text);
 }
+.mobileLink:hover{ background: rgba(2,6,23,.04); }
+
+.mobileCta{ width: 100%; margin-top: 10px; }
 
 /* Responsivo */
-@media (max-width: 880px){
-  .navLinks{ display: none; }
-  .navCta{ display: none; }
-  .navBurger{ display: inline-block; }
+@media (max-width: 900px){
+  .links{ display: none; }
+  .cta{ display: none; }
+  .burger{ display: inline-block; }
 }

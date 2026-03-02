@@ -1,31 +1,41 @@
 import Navbar from "./components/layout/Navbar";
-import Carousel from "./components/ui/Carousel";
+import Carousel from "./components/ui/Carousel/Carousel";
+import styles from "./App.module.css";
 
 export default function App() {
   return (
     <>
       <Navbar />
 
-      {/* Só pra testar os links */}
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 16px" }}>
-        <section id="inicio" style={{ padding: "80px 0" }}>
-            <Carousel />
+      <main>
+        <Carousel />
+
+        <section id="cardapio" className={styles.section}>
+          <div className={styles.container}>
+            <h2>Cardápio</h2>
+            <p>Em breve: lista de pizzas, categorias e filtros.</p>
+          </div>
         </section>
 
-        <section id="cardapio" style={{ padding: "80px 0" }}>
-          <h2>Cardápio</h2>
+        <section id="como-funciona" className={styles.sectionAlt}>
+          <div className={styles.container}>
+            <h2>Como funciona</h2>
+            <p>Em breve: passo a passo do pedido, preparo e entrega.</p>
+          </div>
         </section>
 
-        <section id="como-funciona" style={{ padding: "80px 0" }}>
-          <h2>Como funciona</h2>
+        <section id="depoimentos" className={styles.section}>
+          <div className={styles.container}>
+            <h2>Depoimentos</h2>
+            <p>Em breve: avaliações e comentários de clientes.</p>
+          </div>
         </section>
 
-        <section id="depoimentos" style={{ padding: "80px 0" }}>
-          <h2>Depoimentos</h2>
-        </section>
-
-        <section id="fazer-pedido" style={{ padding: "80px 0" }}>
-          <h2>Fazer pedido</h2>
+        <section id="fazer-pedido" className={styles.sectionAlt}>
+          <div className={styles.container}>
+            <h2>Fazer pedido</h2>
+            <p>Em breve: botão abrir WhatsApp / checkout.</p>
+          </div>
         </section>
       </main>
     </>

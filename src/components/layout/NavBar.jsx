@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./Navbar.module.css";
+import Button from "../ui/Button/Button";
 
 const links = [
   { label: "Início", href: "#inicio" },
@@ -9,97 +10,68 @@ const links = [
 ];
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 880) setMenuOpen(false);
-    };
+    const onResize = () => window.innerWidth >= 900 && setOpen(false);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => (document.body.style.overflow = "");
+  }, [open]);
 
   return (
     <header className={styles.nav}>
-      <div className={styles.navInner}>
-        <a
-          className={styles.navBrand}
-          href="#inicio"
-          onClick={() => setMenuOpen(false)}
-        >
-          <span className={styles.navLogo} aria-hidden="true">
-            🍕
-          </span>
-          <span className={styles.navBrandText}>Bella Massa</span>
+      <div className={styles.inner}>
+        <a className={styles.brand} href="#inicio" onClick={() => setOpen(false)}>
+          <span className={styles.logo} aria-hidden="true">🍕</span>
+          <span className={styles.brandText}>Base Studio <span className="accent">Pizzas</span></span>
         </a>
 
-        <nav className={styles.navLinks} aria-label="Navegação principal">
+        <nav className={styles.links} aria-label="Navegação">
           {links.map((l) => (
-            <a key={l.href} className={styles.navLink} href={l.href}>
+            <a key={l.href} className={styles.link} href={l.href}>
               {l.label}
             </a>
           ))}
         </nav>
 
-        <div className={styles.navActions}>
-          <a
-            className={`${styles.btn} ${styles.btnPrimary} ${styles.navCta}`}
-            href="#fazer-pedido"
-            onClick={() => setMenuOpen(false)}
-          >
-            Fazer pedido
-          </a>
+        <div className={styles.actions}>
+          <Button as="a" href="#fazer-pedido" variant="primary" size="sm" className={styles.cta}>
+            Fazer pedido →
+          </Button>
 
           <button
-            className={styles.navBurger}
+            className={styles.burger}
             type="button"
-            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
           >
-            <span className={styles.navBurgerLine} />
-            <span className={styles.navBurgerLine} />
-            <span className={styles.navBurgerLine} />
+            <span className={styles.burgerLine} />
+            <span className={styles.burgerLine} />
+            <span className={styles.burgerLine} />
           </button>
         </div>
       </div>
 
-      {/* Menu Mobile */}
-      <div className={`${styles.navMobile} ${menuOpen ? styles.isOpen : ""}`}>
-        <div className={styles.navMobilePanel}>
+      <div className={`${styles.mobile} ${open ? styles.open : ""}`}>
+        <div className={styles.mobilePanel}>
           {links.map((l) => (
-            <a
-              key={l.href}
-              className={styles.navMobileLink}
-              href={l.href}
-              onClick={() => setMenuOpen(false)}
-            >
+            <a key={l.href} className={styles.mobileLink} href={l.href} onClick={() => setOpen(false)}>
               {l.label}
             </a>
           ))}
 
-          <a
-            className={`${styles.btn} ${styles.btnPrimary} ${styles.navMobileCta}`}
-            href="#fazer-pedido"
-            onClick={() => setMenuOpen(false)}
-          >
-            Fazer pedido
-          </a>
+          <Button as="a" href="#fazer-pedido" variant="primary" className={styles.mobileCta} onClick={() => setOpen(false)}>
+            Fazer pedido →
+          </Button>
         </div>
 
-        <button
-          className={styles.navBackdrop}
-          aria-label="Fechar menu"
-          type="button"
-          onClick={() => setMenuOpen(false)}
-        />
+        <button className={styles.backdrop} aria-label="Fechar menu" type="button" onClick={() => setOpen(false)} />
       </div>
     </header>
   );
