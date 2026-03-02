@@ -1,21 +1,194 @@
-<<<<<<< HEAD
-# site-pizzaria
-Aplicação web completa de pizzaria com sistema de pedidos, acompanhamento de status e painel administrativo para gestão operacional. Projeto focado em experiência do usuário, organização de código e simulação de ambiente real de negócio.
-=======
-# React + Vite
+# 🍕 Base Studio Pizzas  
+### Fullstack Delivery Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma completa de delivery para pizzarias modernas, com painel de **Cliente, Administrador e Motoboy**, incluindo rastreamento em tempo real via GPS.
 
-Currently, two official plugins are available:
+Projeto desenvolvido como simulação de produto real de mercado, com foco em **arquitetura escalável, controle de permissões e experiência do usuário (UX)**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Visão Geral
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O Base Studio Pizzas simula um sistema completo de delivery, permitindo:
 
-## Expanding the ESLint configuration
+- 📱 Clientes realizarem pedidos e acompanharem o status
+- 🛠️ Administradores gerenciarem pedidos e pagamentos
+- 🛵 Motoboys visualizarem entregas e compartilharem localização em tempo real
+- 📍 Rastreamento GPS ativo durante a entrega
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
->>>>>>> f55a5b3 (Inicializa projeto React + Vite)
+Este projeto faz parte do ecossistema **Base Studio Digital**, demonstrando capacidade de desenvolvimento fullstack com arquitetura modular.
+
+---
+
+# 🧠 Funcionalidades
+
+## 👤 Cliente
+
+- Cadastro e Login
+- Visualização do Cardápio
+- Carrinho de Compras
+- Finalização de Pedido
+- Acompanhamento de Status
+- Rastreamento da entrega em tempo real
+- Confirmação de recebimento
+
+---
+
+## 🛠️ Administrador
+
+- Login administrativo
+- Visualização global de pedidos
+- Alteração de status:
+  - Aguardando pagamento
+  - Pago
+  - Em preparo
+  - Saiu para entrega
+  - Entregue
+- Atribuição de motoboy
+- Correção manual de status
+
+---
+
+## 🛵 Motoboy
+
+- Login exclusivo
+- Visualização de entregas atribuídas
+- Acesso ao endereço e contato do cliente
+- Botões:
+  - "Saiu para entrega"
+  - "Entregue"
+- Compartilhamento de localização via GPS
+
+---
+
+# 📍 Rastreamento em Tempo Real
+
+Implementado utilizando:
+
+- Geolocation API
+- Atualização periódica de coordenadas
+- Leaflet + OpenStreetMap para exibição em mapa
+
+🔐 O GPS é ativado apenas no status **"Saiu para entrega"**  
+🛑 Desativado automaticamente ao marcar **"Entregue"**
+
+---
+
+# 🔐 Controle de Permissões (RBAC)
+
+| Função                | Cliente | Admin | Motoboy |
+|-----------------------|---------|--------|----------|
+| Criar pedido          | ✅      | ❌     | ❌       |
+| Alterar status        | ❌      | ✅     | Parcial  |
+| Atribuir motoboy      | ❌      | ✅     | ❌       |
+| Marcar entregue       | ❌      | ✅     | ✅       |
+| Confirmar recebimento | ✅      | ❌     | ❌       |
+
+---
+
+# 🗂️ Arquitetura do Projeto
+
+## 🎨 Frontend
+
+- React
+- Vite
+- CSS Modules / TailwindCSS
+- React Router
+- Leaflet (Mapas)
+- Arquitetura modular por componentes
+
+## ⚙️ Backend
+
+- Node.js
+- Express
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
+
+---
+
+# 🗄️ Modelagem de Dados
+
+## User
+
+- id
+- name
+- email
+- passwordHash
+- role (client | admin | delivery)
+
+## Product
+
+- id
+- name
+- description
+- basePrice
+- sizes
+- active
+
+## Order
+
+- id
+- clientId
+- items
+- address
+- paymentMethod
+- paymentStatus
+- status
+- deliveryUserId
+- timestamps
+
+---
+
+# 🏗️ Fluxo de Status do Pedido
+
+1. Criado  
+2. Aguardando pagamento  
+3. Pago  
+4. Em preparo  
+5. Saiu para entrega  
+6. Entregue  
+7. Confirmado pelo cliente  
+
+---
+
+# 🎯 Diferenciais Técnicos
+
+- Sistema com múltiplos níveis de acesso (RBAC)
+- Rastreamento GPS em tempo real
+- Separação clara Frontend / Backend
+- Arquitetura preparada para escalar
+- Simulação de fluxo real de delivery
+- Estrutura de produto SaaS
+
+---
+
+# 📦 Roadmap (Melhorias Futuras)
+
+- Integração com pagamento real (Stripe / Mercado Pago)
+- WebSocket para atualização instantânea
+- Notificações push
+- Histórico de localização
+- Sistema de avaliações
+- Dashboard com métricas de venda
+
+---
+
+# 🧪 Objetivo Profissional
+
+Este projeto demonstra:
+
+- Organização de código
+- Arquitetura fullstack
+- Pensamento de produto
+- Controle de permissões
+- Modelagem de dados
+- UX aplicada a sistema real
+
+---
+
+# 👨‍💻 Autor
+
+**Hélio Conde**  
+Desenvolvedor Front-End focado em aplicações interativas e sistemas reais.  
+Base Studio Digital
