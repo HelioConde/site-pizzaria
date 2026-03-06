@@ -4,7 +4,7 @@ import Button from "../ui/Button/Button";
 
 const links = [
   { label: "Início", href: "#inicio" },
-  { label: "Cardápio", href: "#cardapio" },
+  { label: "Destaques", href: "#destaques" },
   { label: "Como funciona", href: "#como-funciona" },
   { label: "Depoimentos", href: "#depoimentos" },
 ];

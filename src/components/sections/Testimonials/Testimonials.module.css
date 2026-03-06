@@ -1,0 +1,67 @@
+.wrap{
+  padding: 54px 0;
+}
+
+.container{
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+
+.head{ margin-bottom: 18px; }
+.title{ margin: 0; font-size: 34px; letter-spacing: -0.8px; }
+.subtitle{ margin: 6px 0 0; color: var(--muted); }
+
+.grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.card{
+  background: var(--surface);
+  border: 1px solid rgba(15, 23, 42, .10);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.top{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  background: rgba(15, 23, 42, .06);
+  border: 1px solid rgba(15, 23, 42, .08);
+}
+
+.meta{ flex: 1; min-width: 0; }
+.name{ font-weight: 900; }
+.city{ color: rgba(71,85,105,.9); font-size: 12px; }
+
+.stars{
+  color: var(--primary);
+  font-size: 14px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.text{
+  margin: 12px 0 0;
+  color: rgba(71,85,105,.95);
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+}

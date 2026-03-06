@@ -1,18 +1,18 @@
 import styles from "./Button.module.css";
 
 export default function Button({
-  as = "button",
+  as: Comp = "button",
   variant = "primary",
   size = "md",
   className = "",
-  children,
   ...props
 }) {
-  const Comp = as;
+  const cls = [
+    styles.btn,
+    styles[`v_${variant}`],
+    styles[`s_${size}`],
+    className,
+  ].filter(Boolean).join(" ");
 
-  return (
-    <Comp className={`${styles.btn} ${styles[variant]} ${styles[size]} ${className}`} {...props}>
-      {children}
-    </Comp>
-  );
+  return <Comp className={cls} {...props} />;
 }

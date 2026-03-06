@@ -1,43 +1,44 @@
 import Navbar from "./components/layout/Navbar";
 import Carousel from "./components/ui/Carousel/Carousel";
-import styles from "./App.module.css";
+import Highlights from "./components/sections/Highlights/Highlights";
+import HowItWorks from "./components/sections/HowItWorks/HowItWorks";
+import Testimonials from "./components/sections/Testimonials/Testimonials";
+import FinalCta from "./components/sections/FinalCta/FinalCta";
+import Footer from "./components/sections/Footer/Footer";
+
+import db from "./data/db.json";
 
 export default function App() {
+  const { sections, cardapio, site } = db;
+
   return (
     <>
       <Navbar />
 
       <main>
-        <Carousel />
+        <Carousel slides={sections.carousel} />
 
-        <section id="cardapio" className={styles.section}>
-          <div className={styles.container}>
-            <h2>Cardápio</h2>
-            <p>Em breve: lista de pizzas, categorias e filtros.</p>
-          </div>
+        <section id="destaques">
+          <Highlights
+            data={sections.highlights}
+            pizzas={cardapio.pizzas}
+          />
         </section>
 
-        <section id="como-funciona" className={styles.sectionAlt}>
-          <div className={styles.container}>
-            <h2>Como funciona</h2>
-            <p>Em breve: passo a passo do pedido, preparo e entrega.</p>
-          </div>
+        <section id="como-funciona">
+          <HowItWorks data={sections.howItWorks} />
         </section>
 
-        <section id="depoimentos" className={styles.section}>
-          <div className={styles.container}>
-            <h2>Depoimentos</h2>
-            <p>Em breve: avaliações e comentários de clientes.</p>
-          </div>
+        <section id="depoimentos">
+          <Testimonials data={sections.testimonials} />
         </section>
 
-        <section id="fazer-pedido" className={styles.sectionAlt}>
-          <div className={styles.container}>
-            <h2>Fazer pedido</h2>
-            <p>Em breve: botão abrir WhatsApp / checkout.</p>
-          </div>
+        <section id="fazer-pedido" style={{ padding: "64px 0" }}>
+          <FinalCta id="fazer-pedido" />
         </section>
       </main>
+
+      <Footer store={db.store} footer={sections.footer} />
     </>
   );
 }

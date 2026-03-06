@@ -11,20 +11,63 @@
     --shadow: 0 18px 45px rgba(2, 6, 23, .08);
 }
 
+:root {
+    --nav-h: 76px;
+    /* ajuste para a altura real da sua navbar */
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: var(--nav-h);
+}
+
 * {
     box-sizing: border-box;
 }
 
 body {
     margin: 0;
-    background:
-        radial-gradient(circle at 20% 30%, rgba(239, 68, 68, 0.308), transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(59, 131, 246, 0.445), transparent 45%),
-        radial-gradient(circle at 60% 10%, rgba(255, 255, 255, 0.6), transparent 40%),
-        linear-gradient(135deg, #f8fafc 0%, #eef2f7 40%, #e9edf5 100%);
     color: var(--text);
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     overflow-x: hidden;
+
+    background:
+        radial-gradient(900px 500px at 15% 25%, rgba(239, 68, 68, 0.35), transparent 60%),
+        radial-gradient(900px 500px at 85% 75%, rgba(59, 130, 246, 0.35), transparent 60%),
+        radial-gradient(700px 400px at 55% 10%, rgba(255, 255, 255, 0.8), transparent 60%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 45%, #e9edf5 100%);
+
+    animation: bgMove 20s ease infinite alternate;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+
+    background:
+        radial-gradient(1200px 520px at 40% 55%, rgba(239, 68, 68, .08), transparent 60%),
+        radial-gradient(1200px 520px at 60% 60%, rgba(59, 130, 246, .07), transparent 62%),
+        linear-gradient(180deg, rgba(255, 255, 255, .55), transparent 35%, rgba(255, 255, 255, .35));
+
+    filter: blur(18px);
+    opacity: .9;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+@keyframes bgMove {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 20% 20%;
+    }
 }
 
 a {

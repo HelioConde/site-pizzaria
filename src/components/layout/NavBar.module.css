@@ -2,9 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(246,247,251,.85);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.70);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(15,23,42,.08);
 }
 
 .inner{
