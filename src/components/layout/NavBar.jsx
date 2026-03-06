@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import styles from "./Navbar.module.css";
 import Button from "../ui/Button/Button";
+import { Link } from "react-router-dom";
 
 const links = [
-  { label: "Início", href: "#inicio" },
+  { label: "Início", href: "/" },
   { label: "Destaques", href: "#destaques" },
   { label: "Como funciona", href: "#como-funciona" },
-  { label: "Depoimentos", href: "#depoimentos" },
+  { label: "Avaliações", href: "#depoimentos" },
 ];
 
 export default function Navbar() {
@@ -26,10 +27,10 @@ export default function Navbar() {
   return (
     <header className={styles.nav}>
       <div className={styles.inner}>
-        <a className={styles.brand} href="#inicio" onClick={() => setOpen(false)}>
+        <Link className={styles.brand} to="/" onClick={() => setOpen(false)}>
           <span className={styles.logo} aria-hidden="true">🍕</span>
           <span className={styles.brandText}>Base Studio <span className="accent">Pizzas</span></span>
-        </a>
+        </Link>
 
         <nav className={styles.links} aria-label="Navegação">
           {links.map((l) => (
@@ -40,7 +41,7 @@ export default function Navbar() {
         </nav>
 
         <div className={styles.actions}>
-          <Button as="a" href="#fazer-pedido" variant="primary" size="sm" className={styles.cta}>
+          <Button as={Link} to="/menu" variant="primary" size="sm" className={styles.cta}>
             Fazer pedido →
           </Button>
 

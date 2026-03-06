@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Carousel.module.css";
 import Button from "../Button/Button";
+import { Link } from "react-router-dom";
 
 export default function Carousel({
   slides,
@@ -84,11 +85,11 @@ export default function Carousel({
                   <p className={styles.desc}>{s.description}</p>
 
                   <div className={styles.ctaRow}>
-                    <Button as="a" href={s.primaryCta?.href} variant="primary" size="md">
+                    <Button as={Link} to={s.primaryCta.href} variant="primary" size="md">
                       {s.primaryCta?.label} <span aria-hidden="true">→</span>
                     </Button>
 
-                    <Button as="a" href={s.secondaryCta?.href} variant="ghost" size="md">
+                    <Button as={Link} to={s.primaryCta.href} variant="ghost" size="md">
                       {s.secondaryCta?.label}
                     </Button>
                   </div>

@@ -1,4 +1,6 @@
-import Navbar from "./components/layout/Navbar";
+import { Routes, Route } from "react-router-dom";
+
+import Navbar from "./components/layout/NavBar";
 import Carousel from "./components/ui/Carousel/Carousel";
 import Highlights from "./components/sections/Highlights/Highlights";
 import HowItWorks from "./components/sections/HowItWorks/HowItWorks";
@@ -6,10 +8,11 @@ import Testimonials from "./components/sections/Testimonials/Testimonials";
 import FinalCta from "./components/sections/FinalCta/FinalCta";
 import Footer from "./components/sections/Footer/Footer";
 
+import Menu from "./pages/Menu/Menu";
 import db from "./data/db.json";
 
-export default function App() {
-  const { sections, cardapio, site } = db;
+function Home() {
+  const { sections } = db;
 
   return (
     <>
@@ -21,7 +24,7 @@ export default function App() {
         <section id="destaques">
           <Highlights
             data={sections.highlights}
-            pizzas={cardapio.pizzas}
+            pizzas={db.cardapio.pizzas}
           />
         </section>
 
@@ -33,12 +36,21 @@ export default function App() {
           <Testimonials data={sections.testimonials} />
         </section>
 
-        <section id="fazer-pedido" style={{ padding: "64px 0" }}>
-          <FinalCta id="fazer-pedido" />
+        <section id="fazer-pedido">
+          <FinalCta />
         </section>
       </main>
 
       <Footer store={db.store} footer={sections.footer} />
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/menu" element={<Menu />} />
+    </Routes>
   );
 }

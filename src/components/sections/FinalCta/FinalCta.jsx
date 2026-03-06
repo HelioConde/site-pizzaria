@@ -1,5 +1,6 @@
 import styles from "./FinalCta.module.css";
 import Button from "../../ui/Button/Button";
+import { Link } from "react-router-dom";
 
 export default function FinalCta() {
   return (
@@ -13,7 +14,7 @@ export default function FinalCta() {
         </div>
 
         <div className={styles.right}>
-          <Button as="a" href="#fazer-pedido" variant="inverse" size="md">
+          <Button as={Link} to="/menu" variant="inverse" size="md">
             Fazer pedido agora <span aria-hidden="true">→</span>
           </Button>
         </div>
