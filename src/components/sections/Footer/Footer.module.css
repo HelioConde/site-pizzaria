@@ -122,6 +122,33 @@
   font-size: 13px;
 }
 
+.socials {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.social{
+  margin-top: 12px;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.06);
+}
+
+.social:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
 @media (max-width: 980px){
   .ctaInner{ flex-direction: column; align-items: flex-start; }
   .grid{ grid-template-columns: 1fr; }

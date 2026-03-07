@@ -25,7 +25,7 @@
 .v_ghost{
   background: transparent;
   color: var(--text);
-  border-color: rgba(15,23,42,.12);
+  border-color: rgba(15,23,42,.52);
 }
 .v_ghost:hover{ background: rgba(15,23,42,.04); }
 

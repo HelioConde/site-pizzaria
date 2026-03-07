@@ -1,14 +1,27 @@
 import styles from "./Footer.module.css";
-import Button from "../../ui/Button/Button";
+import { Instagram, Github, Linkedin, MessageCircle } from "lucide-react";
 
 export default function Footer({ store, footer }) {
   if (!store || !footer) return null;
 
   const year = new Date().getFullYear();
 
+  function getIcon(name) {
+    switch (name.toLowerCase()) {
+      case "instagram":
+        return <Instagram size={18} />;
+      case "github":
+        return <Github size={18} />;
+      case "linkedin":
+        return <Linkedin size={18} />;
+      case "whatsapp":
+        return <MessageCircle size={18} />;
+      default:
+        return null;
+    }
+  }
   return (
     <footer className={styles.wrap} aria-label="Rodapé">
-      {/* Conteúdo */}
       <div className={styles.container}>
         <div className={styles.grid}>
           <div>
@@ -23,13 +36,23 @@ export default function Footer({ store, footer }) {
           </div>
 
           <div>
-            <h5 className={styles.colTitle}>Links</h5>
+            <h5 className={styles.colTitle}>Redes</h5>
             <ul className={styles.links}>
-              {(footer.links ?? []).map((l) => (
-                <li key={l.href}>
-                  <a href={l.href}>{l.label}</a>
-                </li>
-              ))}
+              <div className={styles.socials}>
+                {(store.socials ?? []).map((s) => (
+                  <a
+                    key={s.url}
+                    className={styles.social}
+                    href={s.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={s.name}
+                    title={s.name}
+                  >
+                    {getIcon(s.name)}
+                  </a>
+                ))}
+              </div>
             </ul>
           </div>
 
@@ -44,9 +67,6 @@ export default function Footer({ store, footer }) {
               ))}
             </ul>
 
-            <a className={styles.social} href={store.instagram} target="_blank" rel="noreferrer">
-              Instagram
-            </a>
           </div>
         </div>
 

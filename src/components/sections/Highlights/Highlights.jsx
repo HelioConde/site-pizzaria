@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import styles from "./Highlights.module.css";
 
 function formatPrice(value) {
@@ -20,61 +21,64 @@ function Rating({ value }) {
 
 function ItemCard({ item, badgeText }) {
   return (
-    <article className={styles.item}>
-      <div className={styles.thumb} aria-hidden="true">
-        <div className={styles.thumbFrame}>
-          <img
-            src="./images/pizzaria-bg.png"
-            alt=""
-            className={styles.thumbBg}
-            loading="lazy"
-          />
-        </div>
-
-        {item.image ? (
-          <img
-            src={item.image}
-            alt={item.name}
-            className={styles.thumbPizza}
-            loading="lazy"
-          />
-        ) : (
-          <span className={styles.thumbFallback}>🍕</span>
-        )}
-      </div>
-
-      <div className={styles.itemMain}>
-        <div className={styles.itemTop}>
-          <h4 className={styles.itemTitle}>{item.name}</h4>
-          <span className={styles.pill}>{badgeText}</span>
-        </div>
-
-        <p className={styles.itemDesc}>{item.description}</p>
-
-        <div className={styles.itemBottom}>
-          <div className={styles.priceRow}>
-            {item.oldPrice ? (
-              <span className={styles.oldPrice}>{formatPrice(item.oldPrice)}</span>
-            ) : null}
-            <span className={styles.price}>{formatPrice(item.price)}</span>
+    <Link
+      to="/menu"
+      state={{ openProductId: item.id }}
+      className={styles.itemLink}
+      aria-label={`Abrir ${item.name} para personalizar`}
+    >
+      <article className={styles.item}>
+        <div className={styles.thumb} aria-hidden="true">
+          <div className={styles.thumbFrame}>
+            <img
+              src="./images/pizzaria-bg.png"
+              alt=""
+              className={styles.thumbBg}
+              loading="lazy"
+            />
           </div>
-          <Rating value={item.rating} />
+
+          {item.image ? (
+            <img
+              src={item.image}
+              alt={item.name}
+              className={styles.thumbPizza}
+              loading="lazy"
+            />
+          ) : (
+            <span className={styles.thumbFallback}>🍕</span>
+          )}
         </div>
-      </div>
-    </article>
+
+        <div className={styles.itemMain}>
+          <div className={styles.itemTop}>
+            <h4 className={styles.itemTitle}>{item.name}</h4>
+            <span className={styles.pill}>{badgeText}</span>
+          </div>
+
+          <p className={styles.itemDesc}>{item.description}</p>
+
+          <div className={styles.itemBottom}>
+            <div className={styles.priceRow}>
+              {item.oldPrice ? (
+                <span className={styles.oldPrice}>{formatPrice(item.oldPrice)}</span>
+              ) : null}
+              <span className={styles.price}>{formatPrice(item.price)}</span>
+            </div>
+            <Rating value={item.rating} />
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }
 
 export default function Highlights({ data, pizzas = [] }) {
   if (!data) return null;
 
-  console.log(pizzas)
-
   const pizzasById = Object.fromEntries(
     pizzas.map((pizza) => [pizza.id, pizza])
   );
-
-
 
   const groups = (data.groups ?? []).map((group) => ({
     ...group,

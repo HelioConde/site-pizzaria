@@ -4,7 +4,7 @@ import Button from "../ui/Button/Button";
 import { Link } from "react-router-dom";
 
 const links = [
-  { label: "Início", href: "/" },
+  { label: "Início", href: "#inicio" },
   { label: "Destaques", href: "#destaques" },
   { label: "Como funciona", href: "#como-funciona" },
   { label: "Avaliações", href: "#depoimentos" },

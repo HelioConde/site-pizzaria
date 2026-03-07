@@ -89,7 +89,7 @@ export default function Carousel({
                       {s.primaryCta?.label} <span aria-hidden="true">→</span>
                     </Button>
 
-                    <Button as={Link} to={s.primaryCta.href} variant="ghost" size="md">
+                    <Button as="a" href={s.secondaryCta.href} variant="ghost">
                       {s.secondaryCta?.label}
                     </Button>
                   </div>

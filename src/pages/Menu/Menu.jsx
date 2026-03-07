@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import db from "../../data/db.json";
 import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
-import Navbar from "../../components/layout/NavBar";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 function formatPrice(value) {
     if (value == null) return null;
@@ -14,7 +13,7 @@ function formatPrice(value) {
     }).format(value);
 }
 
-function ProductCard({ item, onAdd }) {
+function ProductCard({ item, onOpenModal }) {
     return (
         <article className={styles.card}>
             <div className={styles.imageWrap}>
@@ -48,7 +47,7 @@ function ProductCard({ item, onAdd }) {
                         type="button"
                         variant="primary"
                         size="sm"
-                        onClick={() => onAdd(item)}
+                        onClick={() => onOpenModal(item)}
                     >
                         Adicionar
                     </Button>
@@ -60,10 +59,19 @@ function ProductCard({ item, onAdd }) {
 
 export default function Menu() {
     const { cardapio } = db;
+    const location = useLocation();
+    const didPreselectRef = useRef(false);
 
     const [activeCategory, setActiveCategory] = useState("all");
     const [cartItems, setCartItems] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
+
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [productModalOpen, setProductModalOpen] = useState(false);
+    const [notes, setNotes] = useState("");
+    const [withoutOnion, setWithoutOnion] = useState(false);
+    const [withoutTomato, setWithoutTomato] = useState(false);
+    const [withoutOlive, setWithoutOlive] = useState(false);
 
     const products = useMemo(() => {
         const base = (cardapio?.pizzas ?? []).filter((item) => item.active);
@@ -73,38 +81,60 @@ export default function Menu() {
         return base.filter((item) => item.categoryId === activeCategory);
     }, [cardapio, activeCategory]);
 
-    function handleAdd(product) {
-        setCartItems((prev) => {
-            const existing = prev.find((item) => item.id === product.id);
+    function resetProductOptions() {
+        setNotes("");
+        setWithoutOnion(false);
+        setWithoutTomato(false);
+        setWithoutOlive(false);
+    }
 
-            if (existing) {
-                return prev.map((item) =>
-                    item.id === product.id
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                );
-            }
+    function handleOpenProductModal(product) {
+        setSelectedProduct(product);
+        resetProductOptions();
+        setProductModalOpen(true);
+    }
 
-            return [
-                ...prev,
-                {
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    image: product.image,
-                    quantity: 1,
-                },
-            ];
-        });
+    function handleCloseProductModal() {
+        setProductModalOpen(false);
+        setSelectedProduct(null);
+        resetProductOptions();
+    }
 
+
+    function handleConfirmProduct() {
+        if (!selectedProduct) return;
+
+        const removedIngredients = [
+            withoutOnion ? "Sem cebola" : null,
+            withoutTomato ? "Sem tomate" : null,
+            withoutOlive ? "Sem azeitona" : null,
+        ].filter(Boolean);
+
+        const trimmedNotes = notes.trim();
+
+        setCartItems((prev) => [
+            ...prev,
+            {
+                id: `${selectedProduct.id}-${Date.now()}`,
+                productId: selectedProduct.id,
+                name: selectedProduct.name,
+                price: selectedProduct.price,
+                image: selectedProduct.image,
+                quantity: 1,
+                notes: trimmedNotes,
+                removedIngredients,
+            },
+        ]);
+
+        handleCloseProductModal();
         setCartOpen(true);
     }
 
-    function handleDecrease(productId) {
+    function handleDecrease(cartItemId) {
         setCartItems((prev) =>
             prev
                 .map((item) =>
-                    item.id === productId
+                    item.id === cartItemId
                         ? { ...item, quantity: item.quantity - 1 }
                         : item
                 )
@@ -112,18 +142,18 @@ export default function Menu() {
         );
     }
 
-    function handleIncrease(productId) {
+    function handleIncrease(cartItemId) {
         setCartItems((prev) =>
             prev.map((item) =>
-                item.id === productId
+                item.id === cartItemId
                     ? { ...item, quantity: item.quantity + 1 }
                     : item
             )
         );
     }
 
-    function handleRemove(productId) {
-        setCartItems((prev) => prev.filter((item) => item.id !== productId));
+    function handleRemove(cartItemId) {
+        setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
     }
 
     const cartCount = useMemo(
@@ -140,15 +170,34 @@ export default function Menu() {
     const total = subtotal + deliveryFee;
 
     useEffect(() => {
-        document.body.style.overflow = cartOpen ? "hidden" : "";
+        document.body.style.overflow = cartOpen || productModalOpen ? "hidden" : "";
         return () => {
             document.body.style.overflow = "";
         };
-    }, [cartOpen]);
+    }, [cartOpen, productModalOpen]);
+
+    useEffect(() => {
+        const openProductId = location.state?.openProductId;
+
+        if (!openProductId) return;
+        if (didPreselectRef.current) return;
+
+        const selectedPizza = (cardapio?.pizzas ?? []).find(
+            (pizza) => pizza.id === openProductId
+        );
+
+        if (!selectedPizza) return;
+
+        didPreselectRef.current = true;
+
+        setActiveCategory("all");
+        setSelectedProduct(selectedPizza);
+        resetProductOptions();
+        setProductModalOpen(true);
+    }, [location.state, cardapio]);
 
     return (
         <>
-
             <main className={styles.page}>
                 <section className={styles.heroButton}>
                     <div className={styles.heroContent}>
@@ -157,6 +206,7 @@ export default function Menu() {
                         </Link>
                     </div>
                 </section>
+
                 <section className={styles.hero}>
                     <div className={styles.heroContent}>
                         <span className={styles.kicker}>Cardápio digital</span>
@@ -196,7 +246,11 @@ export default function Menu() {
                 <section className={styles.catalogSection}>
                     <div className={styles.grid}>
                         {products.map((item) => (
-                            <ProductCard key={item.id} item={item} onAdd={handleAdd} />
+                            <ProductCard
+                                key={item.id}
+                                item={item}
+                                onOpenModal={handleOpenProductModal}
+                            />
                         ))}
                     </div>
                 </section>
@@ -213,6 +267,107 @@ export default function Menu() {
                 </span>
                 <span className={styles.floatingCartCount}>{cartCount}</span>
             </button>
+
+            {productModalOpen && selectedProduct && (
+                <div
+                    className={styles.productModalOverlay}
+                    onClick={handleCloseProductModal}
+                    aria-hidden={!productModalOpen}
+                >
+                    <div
+                        className={styles.productModal}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Personalizar produto"
+                    >
+                        <div className={styles.productModalHead}>
+                            <div>
+                                <h2 className={styles.productModalTitle}>{selectedProduct.name}</h2>
+                                <p className={styles.productModalPrice}>
+                                    {formatPrice(selectedProduct.price)}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                className={styles.closeBtn}
+                                onClick={handleCloseProductModal}
+                                aria-label="Fechar personalização"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p className={styles.productModalDesc}>
+                            {selectedProduct.description}
+                        </p>
+
+                        <div className={styles.productOptions}>
+                            <h3 className={styles.optionTitle}>Remover ingredientes</h3>
+
+                            <label className={styles.optionItem}>
+                                <input
+                                    type="checkbox"
+                                    checked={withoutOnion}
+                                    onChange={(e) => setWithoutOnion(e.target.checked)}
+                                />
+                                <span>Sem cebola</span>
+                            </label>
+
+                            <label className={styles.optionItem}>
+                                <input
+                                    type="checkbox"
+                                    checked={withoutTomato}
+                                    onChange={(e) => setWithoutTomato(e.target.checked)}
+                                />
+                                <span>Sem tomate</span>
+                            </label>
+
+                            <label className={styles.optionItem}>
+                                <input
+                                    type="checkbox"
+                                    checked={withoutOlive}
+                                    onChange={(e) => setWithoutOlive(e.target.checked)}
+                                />
+                                <span>Sem azeitona</span>
+                            </label>
+                        </div>
+
+                        <div className={styles.notesWrap}>
+                            <label htmlFor="product-notes" className={styles.optionTitle}>
+                                Observações
+                            </label>
+
+                            <textarea
+                                id="product-notes"
+                                className={styles.notesField}
+                                placeholder="Ex: massa bem assada, sem muito molho..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                            />
+                        </div>
+
+                        <div className={styles.productModalActions}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="md"
+                                onClick={handleCloseProductModal}
+                            >
+                                Cancelar
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="md"
+                                onClick={handleConfirmProduct}
+                            >
+                                Adicionar ao carrinho
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div
                 className={`${styles.drawerOverlay} ${cartOpen ? styles.drawerOpen : ""}`}
@@ -268,6 +423,16 @@ export default function Menu() {
                                                 <p className={styles.cartItemPrice}>
                                                     {formatPrice(item.price)}
                                                 </p>
+
+                                                {item.removedIngredients?.length > 0 ? (
+                                                    <p className={styles.cartItemNotes}>
+                                                        {item.removedIngredients.join(" • ")}
+                                                    </p>
+                                                ) : null}
+
+                                                {item.notes ? (
+                                                    <p className={styles.cartItemNotes}>{item.notes}</p>
+                                                ) : null}
                                             </div>
                                         </div>
 

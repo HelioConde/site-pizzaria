@@ -30,7 +30,25 @@
     "maps": {
       "embedUrl": "https://www.google.com/maps?q=Bras%C3%ADlia%20DF&output=embed",
       "openUrl": "https://www.google.com/maps?q=Bras%C3%ADlia%20DF"
-    }
+    },
+    "socials": [
+      {
+        "name": "Instagram",
+        "url": "https://www.instagram.com/conde.helio/"
+      },
+      {
+        "name": "GitHub",
+        "url": "https://github.com/helioconde"
+      },
+      {
+        "name": "LinkedIn",
+        "url": "https://www.linkedin.com/in/helioconde/"
+      },
+      {
+        "name": "WhatsApp",
+        "url": "https://wa.me/5561984970060"
+      }
+    ]
   },
   "ui": {
     "navLinks": [
