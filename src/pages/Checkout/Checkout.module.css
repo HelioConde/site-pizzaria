@@ -393,6 +393,24 @@
   font-weight: 600;
 }
 
+.paymentMethodDetails {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.paymentOptionBox {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.paymentOption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .paymentOption input {
   accent-color: #ef4444;
 }

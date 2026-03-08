@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button/Button";
 import { supabase } from "../../lib/supabase";
 import styles from "./Checkout.module.css";
+import PaymentSection from "./components/Payment/PaymentSection";
+
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 const GUEST_STORAGE_KEY = "base-studio-pizzas-guest";
@@ -28,6 +30,8 @@ const initialDeliveryForm = {
     complement: "",
     reference: "",
     paymentMethod: "",
+    needsChange: false,
+    changeFor: "",
 };
 
 function mapUserMetadataToForm(metadata = {}) {
@@ -43,6 +47,8 @@ function mapUserMetadataToForm(metadata = {}) {
         complement: "",
         reference: "",
         paymentMethod: "",
+        needsChange: false,
+        changeFor: "",
     };
 }
 
@@ -60,7 +66,13 @@ function mapAddressToForm(address, base = {}) {
     };
 }
 
+function parseMoneyValue(value) {
+    if (!value) return 0;
+    return Number(String(value).replace(/\./g, "").replace(",", "."));
+}
+
 export default function Checkout() {
+    const navigate = useNavigate();
     const [cartItems, setCartItems] = useState([]);
     const [mode, setMode] = useState(null); // null | guest | account
     const [deliveryForm, setDeliveryForm] = useState(initialDeliveryForm);
@@ -103,6 +115,8 @@ export default function Checkout() {
                     ...mapUserMetadataToForm(metadata),
                     ...mapAddressToForm(defaultAddress),
                     paymentMethod: prev.paymentMethod || "",
+                    needsChange: prev.needsChange || false,
+                    changeFor: prev.changeFor || "",
                 }));
             } else {
                 setSelectedAddressId(null);
@@ -112,6 +126,8 @@ export default function Checkout() {
                     ...prev,
                     ...mapUserMetadataToForm(metadata),
                     paymentMethod: prev.paymentMethod || "",
+                    needsChange: prev.needsChange || false,
+                    changeFor: prev.changeFor || "",
                 }));
             }
         } catch (error) {
@@ -148,6 +164,9 @@ export default function Checkout() {
                     setDeliveryForm((prev) => ({
                         ...prev,
                         ...mapUserMetadataToForm(metadata),
+                        paymentMethod: prev.paymentMethod || "",
+                        needsChange: prev.needsChange || false,
+                        changeFor: prev.changeFor || "",
                     }));
 
                     await loadAddresses(currentUser.id, metadata);
@@ -170,6 +189,8 @@ export default function Checkout() {
                             complement: parsedGuest.complement ?? "",
                             reference: parsedGuest.reference ?? "",
                             paymentMethod: parsedGuest.paymentMethod ?? "",
+                            needsChange: parsedGuest.needsChange ?? false,
+                            changeFor: parsedGuest.changeFor ?? "",
                         });
                         setMode("guest");
                         setHasSavedGuestData(true);
@@ -197,12 +218,26 @@ export default function Checkout() {
     }
 
     function handleDeliveryChange(event) {
-        const { name, value } = event.target;
+        const { name, value, type, checked } = event.target;
 
-        setDeliveryForm((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        setDeliveryForm((prev) => {
+            const nextValue = type === "checkbox" ? checked : value;
+            const nextForm = {
+                ...prev,
+                [name]: nextValue,
+            };
+
+            if (name === "paymentMethod" && value !== "dinheiro") {
+                nextForm.needsChange = false;
+                nextForm.changeFor = "";
+            }
+
+            if (name === "needsChange" && !checked) {
+                nextForm.changeFor = "";
+            }
+
+            return nextForm;
+        });
 
         if (name === "cep") {
             const numbers = value.replace(/\D/g, "");
@@ -268,6 +303,8 @@ export default function Checkout() {
             ...mapUserMetadataToForm(metadata),
             ...mapAddressToForm(address),
             paymentMethod: prev.paymentMethod || "",
+            needsChange: prev.needsChange || false,
+            changeFor: prev.changeFor || "",
         }));
     }
 
@@ -282,6 +319,8 @@ export default function Checkout() {
             ...initialDeliveryForm,
             ...mapUserMetadataToForm(metadata),
             paymentMethod: prev.paymentMethod || "",
+            needsChange: prev.needsChange || false,
+            changeFor: prev.changeFor || "",
         }));
     }
 
@@ -370,6 +409,7 @@ export default function Checkout() {
     function getActiveDeliveryData() {
         return deliveryForm;
     }
+    const basePath = import.meta.env.BASE_URL;
 
     async function handleConfirmOrder() {
         if (cartItems.length === 0) {
@@ -399,6 +439,24 @@ export default function Checkout() {
             return;
         }
 
+        if (activeDelivery.paymentMethod === "dinheiro" && activeDelivery.needsChange) {
+            if (!activeDelivery.changeFor) {
+                alert("Informe o valor para troco.");
+                return;
+            }
+
+            const changeValue = parseMoneyValue(activeDelivery.changeFor);
+            if (changeValue <= 0) {
+                alert("Informe um valor de troco válido.");
+                return;
+            }
+
+            if (changeValue < total) {
+                alert("O valor do troco deve ser maior que o total do pedido.");
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         setMessage("");
 
@@ -407,12 +465,82 @@ export default function Checkout() {
                 handleSaveGuestData();
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 800));
+            const orderPayload = {
+                total,
+                subtotal,
+                deliveryFee,
+                customer: {
+                    name: activeDelivery.name,
+                    email: user?.email ?? "cliente@basestudiopizzas.com",
+                    phone: activeDelivery.phone,
+                },
+                delivery: {
+                    cep: activeDelivery.cep,
+                    address: activeDelivery.address,
+                    district: activeDelivery.district,
+                    city: activeDelivery.city,
+                    state: activeDelivery.state,
+                    number: activeDelivery.number,
+                    complement: activeDelivery.complement,
+                    reference: activeDelivery.reference,
+                },
+                items: cartItems.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                })),
+            };
 
-            alert("Pedido confirmado com sucesso! Próximo passo: salvar no Supabase.");
+            if (activeDelivery.paymentMethod === "pagamento_online") {
+                const { data, error } = await supabase.functions.invoke(
+                    "create-checkout-session",
+                    {
+                        body: {
+                            amount: total,
+                            orderId: null,
+                            customer: {
+                                name: orderPayload.customer.name,
+                                email: orderPayload.customer.email,
+                            },
+                            description: "Pedido Base Studio Pizzas",
+                            successUrl: `${window.location.origin}${basePath}payment-success`,
+                            cancelUrl: `${window.location.origin}${basePath}checkout`,
+                            metadata: {
+                                customer_name: orderPayload.customer.name,
+                                customer_phone: orderPayload.customer.phone,
+                                delivery_address: `${orderPayload.delivery.address}, ${orderPayload.delivery.number}`,
+                            },
+                        },
+                    }
+                );
+
+                if (error) {
+                    throw error;
+                }
+
+                if (!data?.url) {
+                    throw new Error("A sessão de pagamento não retornou uma URL.");
+                }
+
+                window.location.href = data.url;
+                return;
+            }
+
+            if (activeDelivery.paymentMethod === "cartao_entrega") {
+                alert("Pedido confirmado com pagamento em cartão na entrega.");
+                return;
+            }
+
+            if (activeDelivery.paymentMethod === "dinheiro") {
+                alert("Pedido confirmado com pagamento em dinheiro.");
+                return;
+            }
+
+            alert("Pedido confirmado com sucesso!");
         } catch (error) {
             console.error("Erro ao confirmar pedido:", error);
-            alert("Não foi possível confirmar o pedido.");
+            alert(error.message || "Não foi possível confirmar o pedido.");
         } finally {
             setIsSubmitting(false);
         }
@@ -447,9 +575,9 @@ export default function Checkout() {
                             <section className={styles.card}>
                                 <h2 className={styles.sectionTitle}>Como deseja continuar?</h2>
                                 <p className={styles.sectionDesc}>
-                                    Você pode entrar em uma conta ou comprar sem cadastro. Ao comprar sem
-                                    cadastro, salvaremos seus dados neste dispositivo para facilitar a
-                                    próxima compra.
+                                    Você pode entrar em uma conta ou comprar sem cadastro. Ao comprar
+                                    sem cadastro, salvaremos seus dados neste dispositivo para facilitar
+                                    a próxima compra.
                                 </p>
 
                                 <div className={styles.choiceGrid}>
@@ -466,7 +594,9 @@ export default function Checkout() {
                                     >
                                         <span className={styles.choiceIcon}>🛍️</span>
                                         <strong>Comprar sem cadastro</strong>
-                                        <span>Seus dados ficam salvos neste navegador para a próxima compra.</span>
+                                        <span>
+                                            Seus dados ficam salvos neste navegador para a próxima compra.
+                                        </span>
                                     </button>
                                 </div>
                             </section>
@@ -523,26 +653,34 @@ export default function Checkout() {
                                             {savedAddresses.map((addr, index) => (
                                                 <div
                                                     key={addr.id}
-                                                    className={`${styles.addressCard} ${selectedAddressId === addr.id ? styles.addressCardActive : ""
+                                                    className={`${styles.addressCard} ${selectedAddressId === addr.id
+                                                        ? styles.addressCardActive
+                                                        : ""
                                                         }`}
                                                 >
                                                     <p className={styles.addressCardTitle}>
-                                                        <strong>{addr.label?.trim() || `Endereço ${index + 1}`}</strong>
+                                                        <strong>
+                                                            {addr.label?.trim() || `Endereço ${index + 1}`}
+                                                        </strong>
                                                         {addr.is_default ? " • Principal" : ""}
                                                     </p>
+
                                                     <p className={styles.addressCardLine}>
                                                         {addr.address}, {addr.number}
                                                     </p>
+
                                                     {addr.complement ? (
                                                         <p className={styles.addressCardLine}>
                                                             Complemento: {addr.complement}
                                                         </p>
                                                     ) : null}
+
                                                     {addr.reference ? (
                                                         <p className={styles.addressCardLine}>
                                                             Referência: {addr.reference}
                                                         </p>
                                                     ) : null}
+
                                                     <p className={styles.addressCardLine}>
                                                         {addr.district ? `${addr.district} • ` : ""}
                                                         {addr.city}
@@ -920,7 +1058,8 @@ export default function Checkout() {
 
                                         <p className={styles.summaryDeliveryText}>
                                             {activeDelivery.address
-                                                ? `${activeDelivery.address}, ${activeDelivery.number || "s/n"}`
+                                                ? `${activeDelivery.address}, ${activeDelivery.number || "s/n"
+                                                }`
                                                 : "Endereço não informado"}
                                         </p>
 
@@ -937,49 +1076,21 @@ export default function Checkout() {
                                         ) : null}
 
                                         <p className={styles.summaryDeliveryText}>
-                                            {activeDelivery.district ? `${activeDelivery.district} • ` : ""}
+                                            {activeDelivery.district
+                                                ? `${activeDelivery.district} • `
+                                                : ""}
                                             {activeDelivery.city}
-                                            {activeDelivery.state ? ` - ${activeDelivery.state}` : ""}
+                                            {activeDelivery.state
+                                                ? ` - ${activeDelivery.state}`
+                                                : ""}
                                         </p>
 
-                                        <div className={styles.paymentBox}>
-                                            <h3 className={styles.summaryDeliveryTitle}>Forma de pagamento</h3>
-
-                                            <div className={styles.paymentOptionBox}>
-                                                <label className={styles.paymentOption}>
-                                                    <input
-                                                        type="radio"
-                                                        name="paymentMethod"
-                                                        value="pix"
-                                                        checked={activeDelivery.paymentMethod === "pix"}
-                                                        onChange={handleDeliveryChange}
-                                                    />
-                                                    <span>Pix</span>
-                                                </label>
-
-                                                <label className={styles.paymentOption}>
-                                                    <input
-                                                        type="radio"
-                                                        name="paymentMethod"
-                                                        value="dinheiro"
-                                                        checked={activeDelivery.paymentMethod === "dinheiro"}
-                                                        onChange={handleDeliveryChange}
-                                                    />
-                                                    <span>Dinheiro</span>
-                                                </label>
-
-                                                <label className={styles.paymentOption}>
-                                                    <input
-                                                        type="radio"
-                                                        name="paymentMethod"
-                                                        value="cartao"
-                                                        checked={activeDelivery.paymentMethod === "cartao"}
-                                                        onChange={handleDeliveryChange}
-                                                    />
-                                                    <span>Cartão</span>
-                                                </label>
-                                            </div>
-                                        </div>
+                                        <PaymentSection
+                                            paymentMethod={activeDelivery.paymentMethod}
+                                            needsChange={activeDelivery.needsChange}
+                                            changeFor={activeDelivery.changeFor}
+                                            onChange={handleDeliveryChange}
+                                        />
                                     </div>
 
                                     <Button

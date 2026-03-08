@@ -9,6 +9,7 @@ import FinalCta from "./components/sections/FinalCta/FinalCta";
 import Footer from "./components/sections/Footer/Footer";
 import Checkout from "./pages/Checkout/Checkout";
 import Auth from "./pages/Auth/Auth";
+import PaymentSuccess from "./pages/Payment/PaymentSuccess";
 
 import Menu from "./pages/Menu/Menu";
 import db from "./data/db.json";
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/menu" element={<Menu />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
     </Routes>
   );
 }

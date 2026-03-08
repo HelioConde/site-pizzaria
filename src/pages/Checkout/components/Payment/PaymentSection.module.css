@@ -1,0 +1,166 @@
+.wrapper {
+    margin-top: 18px;
+    display: grid;
+    gap: 14px;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #071833;
+}
+
+.optionList {
+    display: grid;
+    gap: 12px;
+}
+
+.optionCard {
+    display: block;
+    border: 1px solid #d9e1ec;
+    border-radius: 20px;
+    background: #ffffff;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+.optionCard:hover {
+    border-color: #f24a46;
+    box-shadow: 0 12px 24px rgba(7, 24, 51, 0.06);
+    transform: translateY(-1px);
+}
+
+.optionCardActive {
+    border-color: #f24a46;
+    background: #fff6f5;
+    box-shadow: 0 10px 22px rgba(242, 74, 70, 0.08);
+}
+
+.inputHidden {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.optionContent {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.optionTitle {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #071833;
+    margin-bottom: 4px;
+}
+
+.optionDescription {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #5e6f8c;
+}
+
+.optionCheck {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: 2px solid #cfd8e6;
+    background: #fff;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.optionCardActive .optionCheck {
+    border-color: #f24a46;
+    background: radial-gradient(circle, #f24a46 45%, #fff 46%);
+    box-shadow: 0 0 0 4px rgba(242, 74, 70, 0.08);
+}
+
+.extraBox {
+    margin-top: -2px;
+    border: 1px solid #f2d3d0;
+    border-radius: 18px;
+    background: #fffafa;
+    padding: 16px;
+    display: grid;
+    gap: 14px;
+}
+
+.checkboxRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: #071833;
+}
+
+.checkboxRow input {
+    width: 16px;
+    height: 16px;
+    accent-color: #f24a46;
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+}
+
+.field span {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #071833;
+}
+
+.field input {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid #d9e1ec;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0 14px;
+    font-size: 0.95rem;
+    color: #071833;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.field input:focus {
+    border-color: #f24a46;
+    box-shadow: 0 0 0 4px rgba(242, 74, 70, 0.08);
+}
+
+@media (max-width: 768px) {
+    .optionCard {
+        padding: 14px 15px;
+        border-radius: 18px;
+    }
+
+    .optionContent {
+        gap: 12px;
+    }
+
+    .title {
+        font-size: 1.2rem;
+    }
+
+    .optionDescription {
+        font-size: 0.92rem;
+    }
+}
