@@ -1,0 +1,424 @@
+.page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.topBar {
+  padding: 24px 24px 0;
+}
+
+.container,
+.containerGrid {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.backBtn:hover {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecdd3;
+}
+
+.hero {
+  padding: 28px 24px 32px;
+}
+
+.kicker {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.title {
+  margin: 18px 0 10px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.subtitle {
+  max-width: 720px;
+  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.content {
+  padding: 0 24px 64px;
+}
+
+.containerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.card,
+.summaryCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 1.2rem;
+}
+
+.sectionDesc {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.changeModeBtn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.choiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.choiceCard {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  text-decoration: none;
+}
+
+.choiceCard:hover {
+  transform: translateY(-2px);
+  border-color: #fecaca;
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.08);
+}
+
+.choiceIcon {
+  font-size: 1.5rem;
+}
+
+.choiceCard strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.choiceCard span {
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  font-weight: 700;
+  color: #334155;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.summaryList {
+  display: grid;
+  gap: 14px;
+}
+
+.summaryItem {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.summaryItemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+}
+
+.summaryItemNote {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.totalBox {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 12px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #334155;
+}
+
+.totalFinal {
+  font-size: 1.08rem;
+  color: #0f172a;
+}
+
+.confirmBtn {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.emptyState {
+  display: grid;
+  gap: 10px;
+  color: #64748b;
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+.emptyLink {
+  color: #ef4444;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.savedAddressBox {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px;
+  background: #fff;
+}
+
+.savedAddressTitle {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.savedAddressLine {
+  margin: 0 0 8px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.savedAddressActions {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checkoutMessage {
+  margin-top: 16px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.summaryDelivery {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 6px;
+}
+
+.summaryDeliveryTitle {
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.summaryDeliveryText {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.paymentBox {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 10px;
+}
+
+.paymentOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.paymentOption:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.paymentOptionBox {
+  display: flex;
+  justify-content: space-around;
+}
+
+.paymentOption input {
+  accent-color: #ef4444;
+}
+
+.addressList {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.addressCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px;
+  background: #fff;
+}
+
+.addressCardActive {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+.addressCardTitle {
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+
+.addressCardLine {
+  margin: 0 0 6px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.addressActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.formActions {
+  margin-top: 18px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.paymentOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.paymentOption input {
+  accent-color: #ef4444;
+}
+
+@media (max-width: 900px) {
+  .containerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+
+  .topBar,
+  .hero,
+  .content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .choiceGrid,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

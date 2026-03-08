@@ -4,6 +4,8 @@ import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
 import { Link, useLocation } from "react-router-dom";
 
+const CART_STORAGE_KEY = "base-studio-pizzas-cart";
+
 function formatPrice(value) {
     if (value == null) return null;
 
@@ -100,7 +102,6 @@ export default function Menu() {
         resetProductOptions();
     }
 
-
     function handleConfirmProduct() {
         if (!selectedProduct) return;
 
@@ -175,6 +176,31 @@ export default function Menu() {
             document.body.style.overflow = "";
         };
     }, [cartOpen, productModalOpen]);
+
+    // Carregar carrinho salvo ao abrir a página
+    useEffect(() => {
+        try {
+            const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+            if (!savedCart) return;
+
+            const parsedCart = JSON.parse(savedCart);
+
+            if (Array.isArray(parsedCart)) {
+                setCartItems(parsedCart);
+            }
+        } catch (error) {
+            console.error("Erro ao carregar carrinho do localStorage:", error);
+        }
+    }, []);
+
+    // Salvar carrinho sempre que ele mudar
+    useEffect(() => {
+        try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+        } catch (error) {
+            console.error("Erro ao salvar carrinho no localStorage:", error);
+        }
+    }, [cartItems]);
 
     useEffect(() => {
         const openProductId = location.state?.openProductId;
@@ -485,7 +511,7 @@ export default function Menu() {
                                     <strong>{formatPrice(total)}</strong>
                                 </div>
 
-                                <Button type="button" variant="primary" size="md">
+                                <Button as={Link} to="/checkout" variant="primary" size="md">
                                     Finalizar pedido
                                 </Button>
                             </div>
