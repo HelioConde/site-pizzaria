@@ -10,7 +10,6 @@ import Footer from "./components/sections/Footer/Footer";
 import Checkout from "./pages/Checkout/Checkout";
 import Auth from "./pages/Auth/Auth";
 import PaymentSuccess from "./pages/Payment/PaymentSuccess";
-
 import Menu from "./pages/Menu/Menu";
 import db from "./data/db.json";
 

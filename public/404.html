@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Redirect</title>
+<script>
+  var path = window.location.pathname;
+  var repo = "/site-pizzaria/";
+  if (path.startsWith(repo)) {
+    window.location.replace(repo + "?redirect=" + path.replace(repo, ""));
+  }
+</script>
+</head>
+<body>
+Redirecting...
+</body>
+</html>
