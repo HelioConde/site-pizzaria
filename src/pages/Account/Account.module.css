@@ -1,438 +1,595 @@
 .page {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(239, 68, 68, 0.06), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.05), transparent 24%),
-        #f8fafc;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(239, 68, 68, 0.06), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.05), transparent 24%),
+    #f8fafc;
 }
 
 .container {
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 24px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .hero {
-    padding: 42px 0 30px;
+  padding: 42px 0 30px;
 }
 
 .kicker {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: rgba(239, 68, 68, 0.1);
-    color: #b91c1c;
-    font-weight: 700;
-    font-size: 0.92rem;
-    letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
 }
 
 .title {
-    margin: 18px 0 12px;
-    font-size: clamp(2.5rem, 5vw, 4rem);
-    line-height: 0.98;
-    color: #0f172a;
-    letter-spacing: -0.03em;
+  margin: 18px 0 12px;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 0.98;
+  color: #0f172a;
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
-    max-width: 720px;
-    color: #475569;
-    font-size: 1.08rem;
-    line-height: 1.75;
+  max-width: 720px;
+  color: #475569;
+  font-size: 1.08rem;
+  line-height: 1.75;
 }
 
 .content {
-    padding: 6px 0 72px;
+  padding: 6px 0 72px;
 }
 
 .grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
 }
 
 .card {
-    position: relative;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid #e2e8f0;
-    border-radius: 28px;
-    padding: 24px;
-    box-shadow:
-        0 10px 30px rgba(15, 23, 42, 0.05),
-        0 1px 0 rgba(255, 255, 255, 0.65) inset;
-    backdrop-filter: blur(10px);
+  position: relative;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  backdrop-filter: blur(10px);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 
 .cardWide {
-    grid-column: 1 / -1;
+  grid-column: 1 / -1;
 }
 
 .cardHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
 .cardHeader h2 {
-    margin: 0;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    color: #0f172a;
-    letter-spacing: -0.02em;
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .infoList {
-    display: grid;
-    gap: 16px;
+  display: grid;
+  gap: 16px;
 }
 
 .infoItem {
-    display: grid;
-    gap: 6px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  display: grid;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
 }
 
 .infoItem:last-child {
-    padding-bottom: 0;
-    border-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .infoItem span {
-    color: #64748b;
-    font-size: 0.93rem;
-    font-weight: 500;
+  color: #64748b;
+  font-size: 0.93rem;
+  font-weight: 500;
 }
 
 .infoItem strong {
-    color: #0f172a;
-    font-size: 1.08rem;
-    line-height: 1.4;
-    letter-spacing: -0.01em;
+  color: #0f172a;
+  font-size: 1.08rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 .addressBox {
-    display: grid;
-    gap: 8px;
-    padding: 18px 18px;
-    border: 1px solid #dbe4f0;
-    border-radius: 22px;
-    background:
-        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .addressBox strong {
-    color: #0f172a;
-    font-size: 1.05rem;
-    line-height: 1.45;
+  color: #0f172a;
+  font-size: 1.05rem;
+  line-height: 1.45;
 }
 
 .addressBox span {
-    color: #475569;
-    line-height: 1.6;
+  color: #475569;
+  line-height: 1.6;
 }
 
 .emptyState {
-    display: grid;
-    gap: 8px;
-    padding: 20px;
-    border-radius: 22px;
-    background:
-        linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
-    border: 1px dashed #cbd5e1;
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.95) 0%,
+    rgba(241, 245, 249, 0.95) 100%
+  );
+  border: 1px dashed #cbd5e1;
 }
 
 .emptyState p {
-    margin: 0;
-    font-weight: 800;
-    font-size: 1.02rem;
-    color: #0f172a;
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: #0f172a;
 }
 
 .emptyState span {
-    color: #64748b;
-    line-height: 1.65;
-}
-
-.actionsRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-}
-
-.loadingCard {
-    margin-top: 32px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 24px;
-    padding: 24px;
-    color: #475569;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-/* Ajustes finos para destacar melhor os blocos */
-.card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
-}
-
-.pageMessage {
-    margin: 0 0 18px;
-    padding: 14px 16px;
-    border-radius: 16px;
-    border: 1px solid #fecdd3;
-    background: #fff1f2;
-    color: #b91c1c;
-    font-weight: 700;
-}
-
-.addressList {
-    display: grid;
-    gap: 16px;
-}
-
-.addressCard {
-    border: 1px solid #e2e8f0;
-    border-radius: 22px;
-    padding: 18px;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-}
-
-.addressCardTop {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.addressCardTitle {
-    margin: 0;
-    color: #0f172a;
-}
-
-.addressCardLine {
-    margin: 0;
-    color: #475569;
-    line-height: 1.6;
-}
-
-.addressCard+.addressCard {
-    margin-top: 2px;
-}
-
-.addressActions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.formGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.field {
-    display: grid;
-    gap: 8px;
-}
-
-.field span {
-    font-weight: 700;
-    color: #334155;
-}
-
-.field input {
-    width: 100%;
-    border: 1px solid #dbe3ef;
-    border-radius: 14px;
-    padding: 12px 14px;
-    font: inherit;
-    color: #0f172a;
-    background: #fff;
-    outline: none;
-    transition: 0.2s ease;
-}
-
-.field input:focus {
-    border-color: #f87171;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
-}
-
-.fieldFull {
-    grid-column: 1 / -1;
-}
-
-.checkboxField {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #334155;
-    font-weight: 600;
-}
-
-.formActions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 18px;
-}
-
-.accountDropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-
-    width: 240px;
-
-    padding: 14px;
-
-    border-radius: 16px;
-
-    background: white;
-
-    box-shadow:
-        0 10px 25px rgba(0, 0, 0, 0.08),
-        0 4px 10px rgba(0, 0, 0, 0.04);
-
-    border: 1px solid #ececec;
-}
-
-.accountHeader {
-    display: flex;
-    flex-direction: column;
-
-    gap: 4px;
-
-    padding-bottom: 10px;
-
-    border-bottom: 1px solid #eee;
-}
-
-.accountName {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.accountEmail {
-    font-size: 12px;
-    color: #666;
-}
-
-.heroUser {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #ef4444;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-.btnDanger {
-    color: #e11d48;
-}
-
-.btnDanger:hover {
-    background: #fff1f2;
+  color: #64748b;
+  line-height: 1.65;
 }
 
 .emptyOrders {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 30px;
-    text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 30px;
+  text-align: center;
 }
 
 .emptyIcon {
-    font-size: 32px;
+  font-size: 32px;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.loadingCard {
+  margin-top: 32px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 24px;
+  color: #475569;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.pageMessage {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.addressList {
+  display: grid;
+  gap: 16px;
+}
+
+.addressCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.addressCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.addressCardTitle {
+  margin: 0;
+  color: #0f172a;
+}
+
+.addressCardLine {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.addressActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  font-weight: 700;
+  color: #334155;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.field input:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.checkboxField {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* Pedidos recentes */
+
+.ordersCompactList {
+  display: grid;
+  gap: 16px;
+}
+
+.orderRowCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 16px;
+  align-items: start;
+}
+
+.orderRowMain {
+  display: grid;
+  grid-template-columns:
+    minmax(145px, 170px)
+    minmax(210px, 250px)
+    minmax(260px, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.orderIdentity {
+  display: grid;
+  gap: 4px;
+}
+
+.orderRowNumber {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.orderRowDate {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.orderTimelineInline {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.timelineInlineStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.timelineInlineDot {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 2px solid #bfd0e7;
+  background: #fff;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.timelineInlineDotActive {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: #fff;
+}
+
+.timelineInlineDotCurrent {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.timelineInlineText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.timelineInlineLabel {
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.timelineInlineLabelActive {
+  color: #0f172a;
+}
+
+.timelineInlineCurrent {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.orderSummaryColumn {
+  border-left: 1px solid #e2e8f0;
+  padding-left: 14px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.orderInfoMini,
+.orderItemsMini {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.orderInfoMiniLabel {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.orderInfoMiniValue {
+  color: #0f172a;
+  line-height: 1.45;
+  min-width: 0;
+}
+
+.orderItemsMini {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.orderItemMiniTop {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 10px;
+  color: #0f172a;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.orderItemMiniTop span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orderItemMiniTop strong {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.orderItemMiniNote {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.orderItemMiniMore {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.orderRowSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.orderMethodPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #dbe3ef;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.orderRowTotal {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .orderRowCard {
+    grid-template-columns: 1fr;
+  }
+
+  .orderRowMain {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .orderSummaryColumn {
+    border-left: 0;
+    border-top: 1px solid #e2e8f0;
+    padding-left: 0;
+    padding-top: 14px;
+  }
+
+  .orderRowSide {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 }
 
 @media (max-width: 760px) {
-    .heroUser {
-        align-items: flex-start;
-    }
+  .container {
+    padding: 0 16px;
+  }
 
-    .avatar {
-        width: 48px;
-        height: 48px;
-        font-size: 18px;
-    }
+  .hero {
+    padding: 30px 0 22px;
+  }
+
+  .title {
+    font-size: clamp(2rem, 8vw, 2.8rem);
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .cardWide {
+    grid-column: auto;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldFull,
+  .checkboxField {
+    grid-column: auto;
+  }
+
+  .addressActions,
+  .formActions,
+  .actionsRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
-@media (max-width: 760px) {
-    .formGrid {
-        grid-template-columns: 1fr;
-    }
+@media (max-width: 640px) {
+  .orderRowCard {
+    padding: 16px;
+    border-radius: 20px;
+  }
 
-    .fieldFull,
-    .checkboxField {
-        grid-column: auto;
-    }
+  .orderItemMiniTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-    .addressActions,
-    .formActions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
-
-@media (max-width: 760px) {
-    .container {
-        padding: 0 16px;
-    }
-
-    .hero {
-        padding: 30px 0 22px;
-    }
-
-    .title {
-        font-size: clamp(2rem, 8vw, 2.8rem);
-    }
-
-    .subtitle {
-        font-size: 1rem;
-    }
-
-    .grid {
-        grid-template-columns: 1fr;
-        gap: 18px;
-    }
-
-    .card {
-        padding: 20px;
-        border-radius: 24px;
-    }
-
-    .cardWide {
-        grid-column: auto;
-    }
-
-    .actionsRow {
-        flex-direction: column;
-        align-items: stretch;
-    }
+  .orderRowSide {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
