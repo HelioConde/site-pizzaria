@@ -56,6 +56,10 @@ body::before {
     opacity: .9;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 button:hover {
     transform: translateY(-1px);
 }

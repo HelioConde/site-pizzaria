@@ -1,524 +1,375 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import db from "../../data/db.json";
 import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
-import { Link, useLocation } from "react-router-dom";
+
+import ProductCard from "./components/ProductCard";
+import SearchBar from "./components/SearchBar";
+import CategoryFilters from "./components/CategoryFilters";
+import ProductModal from "./components/ProductModal";
+import CartDrawer from "./components/CartDrawer";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 
 function formatPrice(value) {
-    if (value == null) return null;
+  if (value == null) return null;
 
-    return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    }).format(value);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 }
 
-function ProductCard({ item, onOpenModal }) {
-    return (
-        <article className={styles.card}>
-            <div className={styles.imageWrap}>
-                {item.image ? (
-                    <img
-                        src={item.image}
-                        alt={item.name}
-                        className={styles.image}
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className={styles.imageFallback}>🍕</div>
-                )}
-
-                {item.tag ? <span className={styles.badge}>{item.tag}</span> : null}
-            </div>
-
-            <div className={styles.cardBody}>
-                <h3 className={styles.cardTitle}>{item.name}</h3>
-                <p className={styles.cardDesc}>{item.description}</p>
-
-                <div className={styles.cardFooter}>
-                    <div className={styles.priceBox}>
-                        {item.oldPrice ? (
-                            <span className={styles.oldPrice}>{formatPrice(item.oldPrice)}</span>
-                        ) : null}
-                        <span className={styles.price}>{formatPrice(item.price)}</span>
-                    </div>
-
-                    <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={() => onOpenModal(item)}
-                    >
-                        Adicionar
-                    </Button>
-                </div>
-            </div>
-        </article>
-    );
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 export default function Menu() {
-    const { cardapio } = db;
-    const location = useLocation();
-    const didPreselectRef = useRef(false);
+  const { cardapio } = db;
+  const location = useLocation();
+  const didPreselectRef = useRef(false);
 
-    const [activeCategory, setActiveCategory] = useState("all");
-    const [cartItems, setCartItems] = useState([]);
-    const [cartOpen, setCartOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [search, setSearch] = useState("");
+  const [cartItems, setCartItems] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
 
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [productModalOpen, setProductModalOpen] = useState(false);
-    const [notes, setNotes] = useState("");
-    const [withoutOnion, setWithoutOnion] = useState(false);
-    const [withoutTomato, setWithoutTomato] = useState(false);
-    const [withoutOlive, setWithoutOlive] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [withoutOnion, setWithoutOnion] = useState(false);
+  const [withoutTomato, setWithoutTomato] = useState(false);
+  const [withoutOlive, setWithoutOlive] = useState(false);
 
-    const products = useMemo(() => {
-        const base = (cardapio?.pizzas ?? []).filter((item) => item.active);
+  const baseProducts = useMemo(() => {
+    return (cardapio?.pizzas ?? []).filter((item) => item.active);
+  }, [cardapio]);
 
-        if (activeCategory === "all") return base;
+  const products = useMemo(() => {
+    let filtered = baseProducts;
 
-        return base.filter((item) => item.categoryId === activeCategory);
-    }, [cardapio, activeCategory]);
-
-    function resetProductOptions() {
-        setNotes("");
-        setWithoutOnion(false);
-        setWithoutTomato(false);
-        setWithoutOlive(false);
+    if (activeCategory !== "all") {
+      filtered = filtered.filter((item) => item.categoryId === activeCategory);
     }
 
-    function handleOpenProductModal(product) {
-        setSelectedProduct(product);
-        resetProductOptions();
-        setProductModalOpen(true);
-    }
+    if (search.trim()) {
+      const term = normalizeText(search);
 
-    function handleCloseProductModal() {
-        setProductModalOpen(false);
-        setSelectedProduct(null);
-        resetProductOptions();
-    }
+      filtered = filtered.filter((item) => {
+        const name = normalizeText(item.name);
+        const description = normalizeText(item.description);
+        const tag = normalizeText(item.tag);
 
-    function handleConfirmProduct() {
-        if (!selectedProduct) return;
-
-        const removedIngredients = [
-            withoutOnion ? "Sem cebola" : null,
-            withoutTomato ? "Sem tomate" : null,
-            withoutOlive ? "Sem azeitona" : null,
-        ].filter(Boolean);
-
-        const trimmedNotes = notes.trim();
-
-        setCartItems((prev) => [
-            ...prev,
-            {
-                id: `${selectedProduct.id}-${Date.now()}`,
-                productId: selectedProduct.id,
-                name: selectedProduct.name,
-                price: selectedProduct.price,
-                image: selectedProduct.image,
-                quantity: 1,
-                notes: trimmedNotes,
-                removedIngredients,
-            },
-        ]);
-
-        handleCloseProductModal();
-        setCartOpen(true);
-    }
-
-    function handleDecrease(cartItemId) {
-        setCartItems((prev) =>
-            prev
-                .map((item) =>
-                    item.id === cartItemId
-                        ? { ...item, quantity: item.quantity - 1 }
-                        : item
-                )
-                .filter((item) => item.quantity > 0)
+        return (
+          name.includes(term) ||
+          description.includes(term) ||
+          tag.includes(term)
         );
+      });
     }
 
-    function handleIncrease(cartItemId) {
-        setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === cartItemId
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            )
-        );
-    }
+    return filtered;
+  }, [baseProducts, activeCategory, search]);
 
-    function handleRemove(cartItemId) {
-        setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-    }
-
-    const cartCount = useMemo(
-        () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
-        [cartItems]
-    );
-
-    const subtotal = useMemo(
-        () => cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
-        [cartItems]
-    );
-
-    const deliveryFee = cartItems.length > 0 ? 6.9 : 0;
-    const total = subtotal + deliveryFee;
-
-    useEffect(() => {
-        document.body.style.overflow = cartOpen || productModalOpen ? "hidden" : "";
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [cartOpen, productModalOpen]);
-
-    // Carregar carrinho salvo ao abrir a página
-    useEffect(() => {
-        try {
-            const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-            if (!savedCart) return;
-
-            const parsedCart = JSON.parse(savedCart);
-
-            if (Array.isArray(parsedCart)) {
-                setCartItems(parsedCart);
-            }
-        } catch (error) {
-            console.error("Erro ao carregar carrinho do localStorage:", error);
-        }
-    }, []);
-
-    // Salvar carrinho sempre que ele mudar
-    useEffect(() => {
-        try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-        } catch (error) {
-            console.error("Erro ao salvar carrinho no localStorage:", error);
-        }
-    }, [cartItems]);
-
-    useEffect(() => {
-        const openProductId = location.state?.openProductId;
-
-        if (!openProductId) return;
-        if (didPreselectRef.current) return;
-
-        const selectedPizza = (cardapio?.pizzas ?? []).find(
-            (pizza) => pizza.id === openProductId
-        );
-
-        if (!selectedPizza) return;
-
-        didPreselectRef.current = true;
-
-        setActiveCategory("all");
-        setSelectedProduct(selectedPizza);
-        resetProductOptions();
-        setProductModalOpen(true);
-    }, [location.state, cardapio]);
+  const activeCategoryName = useMemo(() => {
+    if (activeCategory === "all") return "Todas";
 
     return (
-        <>
-            <main className={styles.page}>
-                <section className={styles.heroButton}>
-                    <div className={styles.heroContent}>
-                        <Link to="/" className={styles.backBtn}>
-                            ← Voltar
-                        </Link>
-                    </div>
-                </section>
-
-                <section className={styles.hero}>
-                    <div className={styles.heroContent}>
-                        <span className={styles.kicker}>Cardápio digital</span>
-                        <h1 className={styles.title}>Nosso cardápio</h1>
-                        <p className={styles.subtitle}>
-                            Escolha sua pizza favorita, filtre por categoria e monte seu pedido
-                            com rapidez.
-                        </p>
-                    </div>
-                </section>
-
-                <section className={styles.filtersSection}>
-                    <div className={styles.filters}>
-                        <button
-                            type="button"
-                            className={`${styles.filterBtn} ${activeCategory === "all" ? styles.filterActive : ""
-                                }`}
-                            onClick={() => setActiveCategory("all")}
-                        >
-                            Todas
-                        </button>
-
-                        {(cardapio?.categories ?? []).map((category) => (
-                            <button
-                                key={category.id}
-                                type="button"
-                                className={`${styles.filterBtn} ${activeCategory === category.id ? styles.filterActive : ""
-                                    }`}
-                                onClick={() => setActiveCategory(category.id)}
-                            >
-                                {category.name}
-                            </button>
-                        ))}
-                    </div>
-                </section>
-
-                <section className={styles.catalogSection}>
-                    <div className={styles.grid}>
-                        {products.map((item) => (
-                            <ProductCard
-                                key={item.id}
-                                item={item}
-                                onOpenModal={handleOpenProductModal}
-                            />
-                        ))}
-                    </div>
-                </section>
-            </main>
-
-            <button
-                type="button"
-                className={styles.floatingCart}
-                onClick={() => setCartOpen(true)}
-                aria-label={`Abrir carrinho com ${cartCount} item(ns)`}
-            >
-                <span className={styles.floatingCartIcon} aria-hidden="true">
-                    🛒
-                </span>
-                <span className={styles.floatingCartCount}>{cartCount}</span>
-            </button>
-
-            {productModalOpen && selectedProduct && (
-                <div
-                    className={styles.productModalOverlay}
-                    onClick={handleCloseProductModal}
-                    aria-hidden={!productModalOpen}
-                >
-                    <div
-                        className={styles.productModal}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Personalizar produto"
-                    >
-                        <div className={styles.productModalHead}>
-                            <div>
-                                <h2 className={styles.productModalTitle}>{selectedProduct.name}</h2>
-                                <p className={styles.productModalPrice}>
-                                    {formatPrice(selectedProduct.price)}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                className={styles.closeBtn}
-                                onClick={handleCloseProductModal}
-                                aria-label="Fechar personalização"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <p className={styles.productModalDesc}>
-                            {selectedProduct.description}
-                        </p>
-
-                        <div className={styles.productOptions}>
-                            <h3 className={styles.optionTitle}>Remover ingredientes</h3>
-
-                            <label className={styles.optionItem}>
-                                <input
-                                    type="checkbox"
-                                    checked={withoutOnion}
-                                    onChange={(e) => setWithoutOnion(e.target.checked)}
-                                />
-                                <span>Sem cebola</span>
-                            </label>
-
-                            <label className={styles.optionItem}>
-                                <input
-                                    type="checkbox"
-                                    checked={withoutTomato}
-                                    onChange={(e) => setWithoutTomato(e.target.checked)}
-                                />
-                                <span>Sem tomate</span>
-                            </label>
-
-                            <label className={styles.optionItem}>
-                                <input
-                                    type="checkbox"
-                                    checked={withoutOlive}
-                                    onChange={(e) => setWithoutOlive(e.target.checked)}
-                                />
-                                <span>Sem azeitona</span>
-                            </label>
-                        </div>
-
-                        <div className={styles.notesWrap}>
-                            <label htmlFor="product-notes" className={styles.optionTitle}>
-                                Observações
-                            </label>
-
-                            <textarea
-                                id="product-notes"
-                                className={styles.notesField}
-                                placeholder="Ex: massa bem assada, sem muito molho..."
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                            />
-                        </div>
-
-                        <div className={styles.productModalActions}>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="md"
-                                onClick={handleCloseProductModal}
-                            >
-                                Cancelar
-                            </Button>
-
-                            <Button
-                                type="button"
-                                variant="primary"
-                                size="md"
-                                onClick={handleConfirmProduct}
-                            >
-                                Adicionar ao carrinho
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div
-                className={`${styles.drawerOverlay} ${cartOpen ? styles.drawerOpen : ""}`}
-                onClick={() => setCartOpen(false)}
-                aria-hidden={!cartOpen}
-            >
-                <aside
-                    className={styles.drawer}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label="Carrinho de compras"
-                >
-                    <div className={styles.drawerHead}>
-                        <div>
-                            <h2 className={styles.drawerTitle}>Seu carrinho</h2>
-                            <p className={styles.drawerSubtitle}>{cartCount} item(ns)</p>
-                        </div>
-
-                        <button
-                            type="button"
-                            className={styles.closeBtn}
-                            onClick={() => setCartOpen(false)}
-                            aria-label="Fechar carrinho"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    {cartItems.length === 0 ? (
-                        <div className={styles.emptyCart}>
-                            <p>Nenhum item adicionado ainda.</p>
-                            <span>Escolha uma pizza para começar seu pedido.</span>
-                        </div>
-                    ) : (
-                        <>
-                            <div className={styles.cartList}>
-                                {cartItems.map((item) => (
-                                    <div key={item.id} className={styles.cartItem}>
-                                        <div className={styles.cartItemInfo}>
-                                            <div className={styles.cartThumb}>
-                                                {item.image ? (
-                                                    <img
-                                                        src={item.image}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                    />
-                                                ) : (
-                                                    "🍕"
-                                                )}
-                                            </div>
-
-                                            <div className={styles.cartMeta}>
-                                                <h3 className={styles.cartItemName}>{item.name}</h3>
-                                                <p className={styles.cartItemPrice}>
-                                                    {formatPrice(item.price)}
-                                                </p>
-
-                                                {item.removedIngredients?.length > 0 ? (
-                                                    <p className={styles.cartItemNotes}>
-                                                        {item.removedIngredients.join(" • ")}
-                                                    </p>
-                                                ) : null}
-
-                                                {item.notes ? (
-                                                    <p className={styles.cartItemNotes}>{item.notes}</p>
-                                                ) : null}
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.cartActions}>
-                                            <div className={styles.qtyBox}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDecrease(item.id)}
-                                                    aria-label={`Diminuir quantidade de ${item.name}`}
-                                                >
-                                                    −
-                                                </button>
-
-                                                <span>{item.quantity}</span>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleIncrease(item.id)}
-                                                    aria-label={`Aumentar quantidade de ${item.name}`}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                className={styles.removeBtn}
-                                                onClick={() => handleRemove(item.id)}
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className={styles.summary}>
-                                <div className={styles.summaryRow}>
-                                    <span>Subtotal</span>
-                                    <strong>{formatPrice(subtotal)}</strong>
-                                </div>
-
-                                <div className={styles.summaryRow}>
-                                    <span>Entrega</span>
-                                    <strong>{formatPrice(deliveryFee)}</strong>
-                                </div>
-
-                                <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                                    <span>Total</span>
-                                    <strong>{formatPrice(total)}</strong>
-                                </div>
-
-                                <Button as={Link} to="/checkout" variant="primary" size="md">
-                                    Finalizar pedido
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </aside>
-            </div>
-        </>
+      cardapio?.categories?.find((category) => category.id === activeCategory)
+        ?.name || "Categoria"
     );
+  }, [activeCategory, cardapio]);
+
+  const cartCount = useMemo(
+    () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
+    [cartItems]
+  );
+
+  const subtotal = useMemo(
+    () => cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
+    [cartItems]
+  );
+
+  const deliveryFee = cartItems.length > 0 ? 6.9 : 0;
+  const total = subtotal + deliveryFee;
+
+  function resetProductOptions() {
+    setNotes("");
+    setWithoutOnion(false);
+    setWithoutTomato(false);
+    setWithoutOlive(false);
+  }
+
+  function handleOpenProductModal(product) {
+    setSelectedProduct(product);
+    resetProductOptions();
+    setProductModalOpen(true);
+  }
+
+  function handleCloseProductModal() {
+    setProductModalOpen(false);
+    setSelectedProduct(null);
+    resetProductOptions();
+  }
+
+  function handleConfirmProduct() {
+    if (!selectedProduct) return;
+
+    const removedIngredients = [
+      withoutOnion ? "Sem cebola" : null,
+      withoutTomato ? "Sem tomate" : null,
+      withoutOlive ? "Sem azeitona" : null,
+    ].filter(Boolean);
+
+    const trimmedNotes = notes.trim();
+
+    setCartItems((prev) => [
+      ...prev,
+      {
+        id: `${selectedProduct.id}-${Date.now()}`,
+        productId: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        image: selectedProduct.image,
+        quantity: 1,
+        notes: trimmedNotes,
+        removedIngredients,
+      },
+    ]);
+
+    handleCloseProductModal();
+    setCartOpen(true);
+  }
+
+  function handleDecrease(cartItemId) {
+    setCartItems((prev) =>
+      prev
+        .map((item) =>
+          item.id === cartItemId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  }
+
+  function handleIncrease(cartItemId) {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.id === cartItemId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  }
+
+  function handleRemove(cartItemId) {
+    setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
+  }
+
+  function handleClearSearch() {
+    setSearch("");
+  }
+
+  useEffect(() => {
+    document.body.style.overflow = cartOpen || productModalOpen ? "hidden" : "";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [cartOpen, productModalOpen]);
+
+  useEffect(() => {
+    function handleEsc(event) {
+      if (event.key === "Escape") {
+        if (productModalOpen) handleCloseProductModal();
+        if (cartOpen) setCartOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [cartOpen, productModalOpen]);
+
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (!savedCart) return;
+
+      const parsedCart = JSON.parse(savedCart);
+
+      if (Array.isArray(parsedCart)) {
+        setCartItems(parsedCart);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar carrinho do localStorage:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error("Erro ao salvar carrinho no localStorage:", error);
+    }
+  }, [cartItems]);
+
+  useEffect(() => {
+    const openProductId = location.state?.openProductId;
+
+    if (!openProductId) return;
+    if (didPreselectRef.current) return;
+
+    const selectedPizza = (cardapio?.pizzas ?? []).find(
+      (pizza) => pizza.id === openProductId
+    );
+
+    if (!selectedPizza) return;
+
+    didPreselectRef.current = true;
+
+    setActiveCategory("all");
+    setSelectedProduct(selectedPizza);
+    resetProductOptions();
+    setProductModalOpen(true);
+  }, [location.state, cardapio]);
+
+  return (
+    <>
+      <main className={styles.page}>
+        <section className={styles.hero}>
+          <div className={styles.heroContent}>
+            <span className={styles.kicker}>Cardápio digital</span>
+            <h1 className={styles.title}>Nosso cardápio</h1>
+            <p className={styles.subtitle}>
+              Escolha sua pizza favorita, filtre por categoria e monte seu pedido
+              com rapidez.
+            </p>
+
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              onClear={handleClearSearch}
+            />
+          </div>
+        </section>
+
+        <section className={styles.filtersSection}>
+          <div className={styles.exploreCard}>
+            <CategoryFilters
+              categories={cardapio?.categories ?? []}
+              activeCategory={activeCategory}
+              onChangeCategory={setActiveCategory}
+            />
+
+            <div className={styles.resultsBar}>
+              <p className={styles.resultsText}>
+                Mostrando <strong>{products.length}</strong>{" "}
+                {products.length === 1 ? "pizza" : "pizzas"} • Categoria:{" "}
+                <strong>{activeCategoryName}</strong>
+                {search ? (
+                  <>
+                    {" "}• Busca: <strong>“{search}”</strong>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.catalogSection}>
+          {products.length === 0 ? (
+            <div className={styles.emptyCatalog}>
+              <div className={styles.emptyCatalogIcon}>🍕</div>
+              <h2>Nenhuma pizza encontrada</h2>
+              <p>
+                Tente buscar por outro nome ou escolha uma categoria diferente.
+              </p>
+
+              <div className={styles.emptyCatalogActions}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  onClick={() => {
+                    setSearch("");
+                    setActiveCategory("all");
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {products.map((item) => (
+                <ProductCard
+                  key={item.id}
+                  item={item}
+                  onOpenModal={handleOpenProductModal}
+                  formatPrice={formatPrice}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      <button
+        type="button"
+        className={`${styles.floatingCart} ${
+          cartCount > 0 ? styles.floatingCartVisible : styles.floatingCartEmpty
+        }`}
+        onClick={() => setCartOpen(true)}
+        aria-label={`Abrir carrinho com ${cartCount} item(ns)`}
+      >
+        <span className={styles.floatingCartIcon} aria-hidden="true">
+          🛒
+        </span>
+
+        <div className={styles.floatingCartInfo}>
+          <strong className={styles.floatingCartTitle}>Ver carrinho</strong>
+          <span className={styles.floatingCartMeta}>
+            {cartCount} {cartCount === 1 ? "item" : "itens"} • {formatPrice(total)}
+          </span>
+        </div>
+
+        <span className={styles.floatingCartCount}>{cartCount}</span>
+      </button>
+
+      <ProductModal
+        open={productModalOpen}
+        product={selectedProduct}
+        notes={notes}
+        setNotes={setNotes}
+        withoutOnion={withoutOnion}
+        setWithoutOnion={setWithoutOnion}
+        withoutTomato={withoutTomato}
+        setWithoutTomato={setWithoutTomato}
+        withoutOlive={withoutOlive}
+        setWithoutOlive={setWithoutOlive}
+        onClose={handleCloseProductModal}
+        onConfirm={handleConfirmProduct}
+        formatPrice={formatPrice}
+      />
+
+      <CartDrawer
+        open={cartOpen}
+        cartItems={cartItems}
+        cartCount={cartCount}
+        subtotal={subtotal}
+        deliveryFee={deliveryFee}
+        total={total}
+        onClose={() => setCartOpen(false)}
+        onDecrease={handleDecrease}
+        onIncrease={handleIncrease}
+        onRemove={handleRemove}
+        formatPrice={formatPrice}
+      />
+    </>
+  );
 }

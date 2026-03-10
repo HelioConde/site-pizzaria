@@ -7,10 +7,14 @@ import HowItWorks from "./components/sections/HowItWorks/HowItWorks";
 import Testimonials from "./components/sections/Testimonials/Testimonials";
 import FinalCta from "./components/sections/FinalCta/FinalCta";
 import Footer from "./components/sections/Footer/Footer";
+
 import Checkout from "./pages/Checkout/Checkout";
 import Auth from "./pages/Auth/Auth";
 import PaymentSuccess from "./pages/Payment/PaymentSuccess";
 import Menu from "./pages/Menu/Menu";
+import Account from "./pages/Account/Account";
+import ScrollToHash from "./components/utils/ScrollToHash";
+
 import db from "./data/db.json";
 
 function Home() {
@@ -18,9 +22,7 @@ function Home() {
 
   return (
     <>
-      <Navbar />
-
-      <main>
+      <main id="inicio">
         <Carousel slides={sections.carousel} />
 
         <section id="destaques">
@@ -50,12 +52,18 @@ function Home() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/menu" element={<Menu />} />
-      <Route path="/checkout" element={<Checkout />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/payment-success" element={<PaymentSuccess />} />
-    </Routes>
+    <>
+      <Navbar />
+      <ScrollToHash />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/account" element={<Account />} />
+      </Routes>
+    </>
   );
 }

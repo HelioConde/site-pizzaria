@@ -88,6 +88,12 @@
   border-radius: 999px;
   cursor: pointer;
   font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.tabBtn:hover {
+  border-color: #fecdd3;
+  color: #ef4444;
 }
 
 .tabActive {
@@ -96,10 +102,18 @@
   border-color: #ef4444;
 }
 
+.tabActive:hover {
+  color: #fff;
+}
+
 .message {
   margin: 0 0 14px;
   color: #b91c1c;
   font-weight: 600;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  padding: 12px 14px;
+  border-radius: 14px;
 }
 
 .form {
@@ -132,6 +146,7 @@
   color: #0f172a;
   background: #fff;
   outline: none;
+  transition: 0.2s ease;
 }
 
 .field input:focus {
@@ -139,8 +154,15 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
-.fieldFull {
-  grid-column: 1 / -1;
+.field input[aria-invalid="true"] {
+  border-color: #ef4444;
+  background: #fffafa;
+}
+
+.errorText {
+  color: #b91c1c;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
