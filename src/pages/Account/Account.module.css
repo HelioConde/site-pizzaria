@@ -439,6 +439,30 @@
   overflow: hidden;
 }
 
+.heroUser{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.avatar{
+  width:56px;
+  height:56px;
+
+  border-radius:50%;
+
+  background:#ef4444;
+
+  color:white;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-weight:700;
+  font-size:20px;
+}
+
 .orderItemMiniTop {
   display: flex;
   justify-content: flex-start;
