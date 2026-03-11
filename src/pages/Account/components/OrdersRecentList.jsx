@@ -2,6 +2,27 @@ import { Link } from "react-router-dom";
 import styles from "../Account.module.css";
 import Button from "../../../components/ui/Button/Button";
 
+const PAYMENT_METHOD = {
+  CASH: "dinheiro",
+  CARD_ON_DELIVERY: "cartao_entrega",
+  ONLINE: "pagamento_online",
+};
+
+const PAYMENT_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  DELIVERY_PAYMENT: "delivery_payment",
+  CANCELLED: "cancelled",
+};
+
+const ORDER_STATUS = {
+  PENDING: "pending",
+  PREPARING: "preparing",
+  DELIVERY: "delivery",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+};
+
 function formatPrice(value) {
   if (value == null) return null;
 
@@ -22,53 +43,192 @@ function formatDate(value) {
 
 function getPaymentLabel(method) {
   switch (method) {
-    case "dinheiro":
+    case PAYMENT_METHOD.CASH:
       return "Dinheiro";
-    case "cartao_entrega":
+    case PAYMENT_METHOD.CARD_ON_DELIVERY:
       return "Cartão na entrega";
-    case "pagamento_online":
+    case PAYMENT_METHOD.ONLINE:
       return "Pagamento online";
     default:
       return "Não informado";
   }
 }
 
-function getTimeline(orderStatus) {
+function normalizeOrderStage(order) {
+  const rawStatus = String(
+    order.display_status || order.order_status || order.status || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (
+    [
+      "pending",
+      "new",
+      "novo",
+      "confirmed",
+      "confirmado",
+      "awaiting",
+      "aguardando",
+    ].includes(rawStatus)
+  ) {
+    return ORDER_STATUS.PENDING;
+  }
+
+  if (["preparing", "em_preparo", "preparo"].includes(rawStatus)) {
+    return ORDER_STATUS.PREPARING;
+  }
+
+  if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(rawStatus)) {
+    return ORDER_STATUS.DELIVERY;
+  }
+
+  if (["delivered", "entregue"].includes(rawStatus)) {
+    return ORDER_STATUS.DELIVERED;
+  }
+
+  if (["cancelled", "canceled", "cancelado"].includes(rawStatus)) {
+    return ORDER_STATUS.CANCELLED;
+  }
+
+  return ORDER_STATUS.PENDING;
+}
+
+function getTimeline(order) {
+  const orderStage = normalizeOrderStage(order);
+  const paymentMethod = String(order.payment_method || "").trim().toLowerCase();
+  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
+
+  const isOnlinePayment = paymentMethod === PAYMENT_METHOD.ONLINE;
+  const isPaid = paymentStatus === PAYMENT_STATUS.PAID;
+  const isCancelled = orderStage === ORDER_STATUS.CANCELLED;
+
+  if (isCancelled) {
+    return [
+      {
+        key: "cancelled",
+        label: "Cancelado",
+        active: true,
+        current: true,
+      },
+    ];
+  }
+
+  if (isOnlinePayment && !isPaid && orderStage === ORDER_STATUS.PENDING) {
+    return [
+      {
+        key: "payment_pending",
+        label: "Pagamento aguardando confirmação",
+        active: true,
+        current: true,
+      },
+      {
+        key: "preparing",
+        label: "Em preparo",
+        active: false,
+        current: false,
+      },
+      {
+        key: "delivery",
+        label: "Saiu para entrega",
+        active: false,
+        current: false,
+      },
+      {
+        key: "delivered",
+        label: "Entregue",
+        active: false,
+        current: false,
+      },
+    ];
+  }
+
   return [
     {
-      key: "confirmed",
-      label: "Pagamento aprovado",
-      active:
-        orderStatus === "confirmed" ||
-        orderStatus === "preparing" ||
-        orderStatus === "delivery" ||
-        orderStatus === "delivered",
-      current: orderStatus === "confirmed",
+      key: "pending",
+      label: "Aguardando",
+      active: true,
+      current: orderStage === ORDER_STATUS.PENDING,
     },
     {
       key: "preparing",
       label: "Em preparo",
-      active:
-        orderStatus === "preparing" ||
-        orderStatus === "delivery" ||
-        orderStatus === "delivered",
-      current: orderStatus === "preparing",
+      active: [ORDER_STATUS.PREPARING, ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(orderStage),
+      current: orderStage === ORDER_STATUS.PREPARING,
     },
     {
       key: "delivery",
       label: "Saiu para entrega",
-      active:
-        orderStatus === "delivery" ||
-        orderStatus === "delivered",
-      current: orderStatus === "delivery",
+      active: [ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(orderStage),
+      current: orderStage === ORDER_STATUS.DELIVERY,
     },
     {
       key: "delivered",
       label: "Entregue",
-      active: orderStatus === "delivered",
-      current: orderStatus === "delivered",
+      active: orderStage === ORDER_STATUS.DELIVERED,
+      current: orderStage === ORDER_STATUS.DELIVERED,
     },
   ];
+}
+
+function getPaymentStatusLabel(order) {
+  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
+
+  if (paymentStatus === PAYMENT_STATUS.PAID) {
+    return "Pago";
+  }
+
+  if (paymentStatus === PAYMENT_STATUS.DELIVERY_PAYMENT) {
+    return "Pagamento na entrega";
+  }
+
+  if (paymentStatus === PAYMENT_STATUS.CANCELLED) {
+    return "Cancelado";
+  }
+
+  return "Pendente";
+}
+
+function parseRemovedIngredients(removedIngredients) {
+  if (!removedIngredients) return [];
+
+  if (Array.isArray(removedIngredients)) {
+    return removedIngredients
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
+  if (typeof removedIngredients === "string") {
+    try {
+      const parsed = JSON.parse(removedIngredients);
+
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item || "").trim())
+          .filter(Boolean);
+      }
+    } catch {
+      return removedIngredients
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+function getRemovedIngredientsLabel(removedIngredients) {
+  const items = parseRemovedIngredients(removedIngredients);
+
+  if (!items.length) return null;
+
+  return items
+    .map((item) => {
+      const text = String(item || "").trim();
+      return /^sem\s+/i.test(text) ? text : `Sem ${text}`;
+    })
+    .join(" • ");
 }
 
 export default function OrdersRecentList({ orders = [], loading = false }) {
@@ -94,7 +254,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
       ) : (
         <div className={styles.ordersCompactList}>
           {orders.map((order) => {
-            const timeline = getTimeline(order.order_status);
+            const timeline = getTimeline(order);
             const firstItem = order.order_items?.[0];
             const hasMoreItems = (order.order_items?.length ?? 0) > 1;
 
@@ -117,9 +277,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                         <div
                           className={`${styles.timelineInlineDot} ${
                             step.active ? styles.timelineInlineDotActive : ""
-                          } ${
-                            step.current ? styles.timelineInlineDotCurrent : ""
-                          }`}
+                          } ${step.current ? styles.timelineInlineDotCurrent : ""}`}
                         >
                           {step.active ? "✓" : ""}
                         </div>
@@ -147,7 +305,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                     <div className={styles.orderInfoMini}>
                       <span className={styles.orderInfoMiniLabel}>Pagamento</span>
                       <strong className={styles.orderInfoMiniValue}>
-                        {order.payment_status === "paid" ? "Pago" : "Pendente"}
+                        {getPaymentStatusLabel(order)}
                       </strong>
                     </div>
 
@@ -177,9 +335,9 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                             </strong>
                           </div>
 
-                          {firstItem.removed_ingredients?.length > 0 ? (
+                          {parseRemovedIngredients(firstItem.removed_ingredients).length > 0 ? (
                             <p className={styles.orderItemMiniNote}>
-                              {firstItem.removed_ingredients.join(" • ")}
+                              {getRemovedIngredientsLabel(firstItem.removed_ingredients)}
                             </p>
                           ) : null}
 

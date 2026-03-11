@@ -8,6 +8,27 @@ import PaymentSection from "./components/Payment/PaymentSection";
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 const GUEST_STORAGE_KEY = "base-studio-pizzas-guest";
 
+const PAYMENT_METHOD = {
+  CASH: "dinheiro",
+  CARD_ON_DELIVERY: "cartao_entrega",
+  ONLINE: "pagamento_online",
+};
+
+const PAYMENT_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  DELIVERY_PAYMENT: "delivery_payment",
+  CANCELLED: "cancelled",
+};
+
+const ORDER_STATUS = {
+  PENDING: "pending",
+  PREPARING: "preparing",
+  DELIVERY: "delivery",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+};
+
 function formatPrice(value) {
   if (value == null) return null;
 
@@ -227,7 +248,7 @@ export default function Checkout() {
         [name]: nextValue,
       };
 
-      if (name === "paymentMethod" && value !== "dinheiro") {
+      if (name === "paymentMethod" && value !== PAYMENT_METHOD.CASH) {
         nextForm.needsChange = false;
         nextForm.changeFor = "";
       }
@@ -420,6 +441,13 @@ export default function Checkout() {
       user?.email ??
       (mode === "guest" ? "cliente-convidado@basestudiopizzas.com" : null);
 
+    const notes =
+      activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
+      activeDelivery.needsChange &&
+      activeDelivery.changeFor
+        ? `Troco para: ${activeDelivery.changeFor}`
+        : null;
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -444,6 +472,7 @@ export default function Checkout() {
         delivery_number: activeDelivery.number || null,
         delivery_complement: activeDelivery.complement || null,
         delivery_reference: activeDelivery.reference || null,
+        notes,
       })
       .select()
       .single();
@@ -454,10 +483,10 @@ export default function Checkout() {
 
     const itemsPayload = cartItems.map((item) => ({
       order_id: order.id,
-      product_id: item.productId ?? null,
+      product_id: item.productId ?? item.id ?? null,
       name: item.name,
-      quantity: item.quantity,
-      unit_price: item.price,
+      quantity: Number(item.quantity) || 1,
+      unit_price: Number(item.price) || 0,
       notes: item.notes || null,
       removed_ingredients:
         item.removedIngredients?.length > 0 ? item.removedIngredients : null,
@@ -511,13 +540,17 @@ export default function Checkout() {
       return;
     }
 
-    if (activeDelivery.paymentMethod === "dinheiro" && activeDelivery.needsChange) {
+    if (
+      activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
+      activeDelivery.needsChange
+    ) {
       if (!activeDelivery.changeFor) {
         alert("Informe o valor para troco.");
         return;
       }
 
       const changeValue = parseMoneyValue(activeDelivery.changeFor);
+
       if (changeValue <= 0) {
         alert("Informe um valor de troco válido.");
         return;
@@ -556,16 +589,18 @@ export default function Checkout() {
         },
       };
 
-      if (activeDelivery.paymentMethod === "pagamento_online") {
+      if (activeDelivery.paymentMethod === PAYMENT_METHOD.ONLINE) {
         const order = await createOrderInSupabase({
-          paymentMethod: "pagamento_online",
-          paymentStatus: "pending",
-          orderStatus: "pending",
+          paymentMethod: PAYMENT_METHOD.ONLINE,
+          paymentStatus: PAYMENT_STATUS.PENDING,
+          orderStatus: ORDER_STATUS.PENDING,
           activeDelivery,
         });
 
         const basePath = import.meta.env.BASE_URL || "/";
-        const normalizedBasePath = basePath.endsWith("/") ? basePath : `${basePath}/`;
+        const normalizedBasePath = basePath.endsWith("/")
+          ? basePath
+          : `${basePath}/`;
 
         const { data, error } = await supabase.functions.invoke(
           "create-checkout-session",
@@ -606,11 +641,11 @@ export default function Checkout() {
         return;
       }
 
-      if (activeDelivery.paymentMethod === "cartao_entrega") {
+      if (activeDelivery.paymentMethod === PAYMENT_METHOD.CARD_ON_DELIVERY) {
         const order = await createOrderInSupabase({
-          paymentMethod: "cartao_entrega",
-          paymentStatus: "pending",
-          orderStatus: "confirmed",
+          paymentMethod: PAYMENT_METHOD.CARD_ON_DELIVERY,
+          paymentStatus: PAYMENT_STATUS.DELIVERY_PAYMENT,
+          orderStatus: ORDER_STATUS.PENDING,
           activeDelivery,
         });
 
@@ -619,11 +654,11 @@ export default function Checkout() {
         return;
       }
 
-      if (activeDelivery.paymentMethod === "dinheiro") {
+      if (activeDelivery.paymentMethod === PAYMENT_METHOD.CASH) {
         const order = await createOrderInSupabase({
-          paymentMethod: "dinheiro",
-          paymentStatus: "pending",
-          orderStatus: "confirmed",
+          paymentMethod: PAYMENT_METHOD.CASH,
+          paymentStatus: PAYMENT_STATUS.DELIVERY_PAYMENT,
+          orderStatus: ORDER_STATUS.PENDING,
           activeDelivery,
         });
 
@@ -1181,6 +1216,7 @@ export default function Checkout() {
                       needsChange={activeDelivery.needsChange}
                       changeFor={activeDelivery.changeFor}
                       onChange={handleDeliveryChange}
+                      paymentMethods={PAYMENT_METHOD}
                     />
                   </div>
 

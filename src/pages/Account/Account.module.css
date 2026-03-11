@@ -148,11 +148,9 @@
   gap: 8px;
   padding: 20px;
   border-radius: 22px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.95) 0%,
-    rgba(241, 245, 249, 0.95) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(248, 250, 252, 0.95) 0%,
+      rgba(241, 245, 249, 0.95) 100%);
   border: 1px dashed #cbd5e1;
 }
 
@@ -320,9 +318,7 @@
 .orderRowMain {
   display: grid;
   grid-template-columns:
-    minmax(145px, 170px)
-    minmax(210px, 250px)
-    minmax(260px, 1fr);
+    minmax(145px, 170px) minmax(210px, 250px) minmax(260px, 1fr);
   gap: 16px;
   align-items: start;
   min-width: 0;
@@ -439,28 +435,33 @@
   overflow: hidden;
 }
 
-.heroUser{
-  display:flex;
-  align-items:center;
-  gap:16px;
+.heroUser {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.avatar{
-  width:56px;
-  height:56px;
+.timelineInlineDotCurrent:not(.timelineInlineDotActive) {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+}
 
-  border-radius:50%;
+.avatar {
+  width: 56px;
+  height: 56px;
 
-  background:#ef4444;
+  border-radius: 50%;
 
-  color:white;
+  background: #ef4444;
 
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  color: white;
 
-  font-weight:700;
-  font-size:20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 700;
+  font-size: 20px;
 }
 
 .orderItemMiniTop {

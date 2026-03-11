@@ -14,6 +14,7 @@ import PaymentSuccess from "./pages/Payment/PaymentSuccess";
 import Menu from "./pages/Menu/Menu";
 import Account from "./pages/Account/Account";
 import ScrollToHash from "./components/utils/ScrollToHash";
+import Admin from "./pages/Admin/Admin";
 
 import db from "./data/db.json";
 
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </>
   );
