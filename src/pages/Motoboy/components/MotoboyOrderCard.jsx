@@ -1,30 +1,27 @@
-import styles from "../Admin.module.css";
-import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS, STATUS_META } from "../admin.constants";
+import styles from "../Motoboy.module.css";
 import {
   buildDeliveryAddress,
-  canAdvanceOrder,
   formatDate,
   formatPrice,
-  getOrderStatusLabel,
+  getGoogleMapsRouteUrl,
   getPaymentMethodLabel,
   getPaymentStatusLabel,
+  getPhoneCallUrl,
+  getWhatsAppUrl,
   groupOrderItems,
-  isStatusButtonDisabled,
-} from "../admin.utils";
+} from "../motoboy.utils";
 
-export default function AdminOrderCard({
+export default function MotoboyOrderCard({
   order,
   updatingOrderId,
-  onUpdateStatus,
+  onMarkDelivered,
 }) {
   const groupedItems = groupOrderItems(order.order_items);
-  const statusClass =
-    styles[
-      STATUS_META[order.normalized_status]?.badgeClass || "statusBadgeDefault"
-    ];
+  const isUpdating = updatingOrderId === order.id;
 
-  const isPaid =
-    String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID;
+  const whatsappUrl = getWhatsAppUrl(order.customer_phone);
+  const callUrl = getPhoneCallUrl(order.customer_phone);
+  const mapsUrl = getGoogleMapsRouteUrl(order);
 
   return (
     <article className={styles.orderCard}>
@@ -40,11 +37,6 @@ export default function AdminOrderCard({
           <span className={styles.badge}>
             {getPaymentMethodLabel(order.payment_method)}
           </span>
-
-          <span className={`${styles.statusBadge} ${statusClass}`}>
-            {getOrderStatusLabel(order.normalized_status)}
-          </span>
-
           <span className={styles.badgeStrong}>{formatPrice(order.total)}</span>
         </div>
       </div>
@@ -62,24 +54,20 @@ export default function AdminOrderCard({
 
         <div className={styles.infoBlock}>
           <span className={styles.infoLabel}>Pagamento</span>
-          <span
-            className={`${styles.paymentBadge} ${
-              isPaid ? styles.paymentPaid : styles.paymentPending
-            }`}
-          >
-            {getPaymentStatusLabel(order)}
-          </span>
-        </div>
-
-        <div className={styles.infoBlock}>
-          <span className={styles.infoLabel}>Status do pedido</span>
-          <strong>{getOrderStatusLabel(order.normalized_status)}</strong>
+          <strong>{getPaymentStatusLabel(order)}</strong>
         </div>
 
         <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
           <span className={styles.infoLabel}>Entrega</span>
           <strong>{buildDeliveryAddress(order)}</strong>
         </div>
+
+        {order.delivery_reference ? (
+          <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
+            <span className={styles.infoLabel}>Referência</span>
+            <strong>{order.delivery_reference}</strong>
+          </div>
+        ) : null}
 
         <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
           <span className={styles.infoLabel}>Itens</span>
@@ -117,40 +105,42 @@ export default function AdminOrderCard({
       </div>
 
       <div className={styles.actionsRow}>
-        {ORDER_STATUS_OPTIONS.map((option) => {
-          const isActive = order.normalized_status === option.value;
-          const isDisabled = isStatusButtonDisabled(
-            order,
-            option.value,
-            updatingOrderId
-          );
-          const isAllowed = canAdvanceOrder(order, option.value);
-          const isUpdatingThisOrder = updatingOrderId === order.id;
+        <button
+          type="button"
+          className={styles.primaryAction}
+          onClick={() => onMarkDelivered(order.id)}
+          disabled={isUpdating}
+        >
+          {isUpdating ? "Atualizando..." : "Marcar como entregue"}
+        </button>
 
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={`${styles.actionButton} ${
-                isActive ? styles.actionButtonActive : ""
-              } ${
-                !isAllowed && !isActive ? styles.actionButtonBlocked : ""
-              }`}
-              onClick={() => onUpdateStatus(order.id, option.value)}
-              disabled={isDisabled}
-              aria-pressed={isActive}
-              title={
-                !isAllowed
-                  ? "Esse pedido não pode ir para essa etapa agora."
-                  : option.label
-              }
-            >
-              {isUpdatingThisOrder && !isActive
-                ? "Atualizando..."
-                : option.label}
-            </button>
-          );
-        })}
+        {mapsUrl ? (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.secondaryAction}
+          >
+            Abrir rota
+          </a>
+        ) : null}
+
+        {whatsappUrl ? (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.secondaryAction}
+          >
+            WhatsApp
+          </a>
+        ) : null}
+
+        {callUrl ? (
+          <a href={callUrl} className={styles.secondaryAction}>
+            Ligar
+          </a>
+        ) : null}
       </div>
     </article>
   );

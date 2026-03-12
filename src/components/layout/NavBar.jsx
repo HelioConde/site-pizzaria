@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import styles from "./Navbar.module.css";
-import Button from "../ui/Button/Button";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import useAuthRole from "../../hooks/useAuthRole";
+
+import styles from "./Navbar.module.css";
+import Button from "../ui/Button/Button";
 
 const links = [
   { label: "Início", section: "inicio" },
@@ -18,6 +20,24 @@ export default function Navbar() {
 
   const navigate = useNavigate();
   const accountRef = useRef(null);
+  const { isAuthenticated, userRole } = useAuthRole();
+
+  function getAccountRoute() {
+    if (!isAuthenticated) return "/auth";
+    if (userRole === "admin") return "/admin";
+    if (userRole === "delivery") return "/motoboy";
+    return "/account";
+  }
+
+  function getAccountLabel() {
+    if (!isAuthenticated) return "Entrar";
+    if (userRole === "admin") return "Painel Admin";
+    if (userRole === "delivery") return "Painel Motoboy";
+    return "Minha Conta";
+  }
+
+  const accountRoute = getAccountRoute();
+  const accountLabel = getAccountLabel();
 
   useEffect(() => {
     const onResize = () => {
@@ -76,7 +96,8 @@ export default function Navbar() {
     await supabase.auth.signOut();
     setUser(null);
     setAccountOpen(false);
-    navigate("/");
+    setOpen(false);
+    navigate("/", { replace: true });
   }
 
   function getNavTo(section) {
@@ -133,7 +154,7 @@ export default function Navbar() {
                 aria-haspopup="menu"
                 aria-expanded={accountOpen}
               >
-                Minha conta
+                {accountLabel}
                 <span
                   className={`${styles.accountChevron} ${
                     accountOpen ? styles.accountChevronOpen : ""
@@ -152,12 +173,12 @@ export default function Navbar() {
                   </div>
 
                   <Link
-                    to="/account"
+                    to={accountRoute}
                     className={styles.accountDropdownLink}
                     onClick={() => setAccountOpen(false)}
                     role="menuitem"
                   >
-                    Ver minha conta
+                    {accountLabel}
                   </Link>
 
                   <button
@@ -222,21 +243,22 @@ export default function Navbar() {
 
           {user ? (
             <div className={styles.mobileAccountBox}>
-              <div className={styles.mobileUserTitle}>Minha conta</div>
+              <div className={styles.mobileUserTitle}>{accountLabel}</div>
 
               <div className={styles.mobileUserName}>{userName}</div>
 
               <div className={styles.mobileUserEmail}>{user?.email}</div>
 
               <Link
-                to="/account"
+                to={accountRoute}
                 className={styles.mobileAccountLink}
                 onClick={() => setOpen(false)}
               >
-                Ver minha conta
+                {accountLabel}
               </Link>
 
               <button
+                type="button"
                 className={styles.mobileLogout}
                 onClick={handleLogout}
               >

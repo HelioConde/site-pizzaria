@@ -1,324 +1,47 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Admin.module.css";
 
-const PAYMENT_METHOD = {
-  CASH: "dinheiro",
-  CARD_ON_DELIVERY: "cartao_entrega",
-  ONLINE: "pagamento_online",
-};
+import DashboardHeader from "../../components/layout/DashboardHeader/DashboardHeader";
+import AdminSidebar from "./components/AdminSidebar";
 
-const PAYMENT_STATUS = {
-  PENDING: "pending",
-  PAID: "paid",
-  DELIVERY_PAYMENT: "delivery_payment",
-  CANCELLED: "cancelled",
-};
+import {
+  ADMIN_SECTION,
+  ADMIN_SECTIONS,
+  ORDER_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
+  USER_ROLE,
+} from "./admin.constants";
 
-const ORDER_STATUS = {
-  PENDING: "pending",
-  PREPARING: "preparing",
-  DELIVERY: "delivery",
-  DELIVERED: "delivered",
-  CANCELLED: "cancelled",
-};
+import { isSameDay, normalizeOrderStatus } from "./admin.utils";
 
-const STATUS_META = {
-  [ORDER_STATUS.PENDING]: {
-    value: ORDER_STATUS.PENDING,
-    label: "Aguardando",
-    filterLabel: "Aguardando",
-    badgeClass: "statusBadgePending",
-  },
-  [ORDER_STATUS.PREPARING]: {
-    value: ORDER_STATUS.PREPARING,
-    label: "Em preparo",
-    filterLabel: "Em preparo",
-    badgeClass: "statusBadgePreparing",
-  },
-  [ORDER_STATUS.DELIVERY]: {
-    value: ORDER_STATUS.DELIVERY,
-    label: "Saiu para entrega",
-    filterLabel: "Saiu para entrega",
-    badgeClass: "statusBadgeDelivery",
-  },
-  [ORDER_STATUS.DELIVERED]: {
-    value: ORDER_STATUS.DELIVERED,
-    label: "Entregue",
-    filterLabel: "Entregues",
-    badgeClass: "statusBadgeDelivered",
-  },
-  [ORDER_STATUS.CANCELLED]: {
-    value: ORDER_STATUS.CANCELLED,
-    label: "Cancelado",
-    filterLabel: "Cancelados",
-    badgeClass: "statusBadgeCanceled",
-  },
-};
-
-const ORDER_STATUS_OPTIONS = Object.values(STATUS_META);
-
-const FILTER_OPTIONS = [
-  { value: "all", label: "Todos" },
-  ...ORDER_STATUS_OPTIONS.map((status) => ({
-    value: status.value,
-    label: status.filterLabel,
-  })),
-];
-
-const PAYMENT_METHOD_META = {
-  [PAYMENT_METHOD.CASH]: { label: "💵 Dinheiro" },
-  [PAYMENT_METHOD.CARD_ON_DELIVERY]: { label: "💳 Cartão na entrega" },
-  [PAYMENT_METHOD.ONLINE]: { label: "⚡ Pagamento online" },
-};
-
-const priceFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
-function formatPrice(value) {
-  return priceFormatter.format(Number(value || 0));
-}
-
-function formatDate(value) {
-  if (!value) return "Data não informada";
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "Data inválida"
-    : dateFormatter.format(date);
-}
-
-function getPaymentMethodLabel(method) {
-  const normalized = String(method || "").toLowerCase();
-  return PAYMENT_METHOD_META[normalized]?.label || "Não informado";
-}
-
-function getPaymentStatusLabel(order) {
-  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
-
-  if (paymentStatus === PAYMENT_STATUS.PAID) {
-    return "Pago";
-  }
-
-  if (paymentStatus === PAYMENT_STATUS.DELIVERY_PAYMENT) {
-    return "Pagamento na entrega";
-  }
-
-  if (paymentStatus === PAYMENT_STATUS.CANCELLED) {
-    return "Cancelado";
-  }
-
-  return "Pendente";
-}
-
-function normalizeOrderStatus(order) {
-  const raw = String(order.order_status || "").trim().toLowerCase();
-
-  if (
-    [
-      "pending",
-      "new",
-      "novo",
-      "confirmed",
-      "confirmado",
-      "awaiting",
-      "aguardando",
-    ].includes(raw)
-  ) {
-    return ORDER_STATUS.PENDING;
-  }
-
-  if (["preparing", "em_preparo", "preparo"].includes(raw)) {
-    return ORDER_STATUS.PREPARING;
-  }
-
-  if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(raw)) {
-    return ORDER_STATUS.DELIVERY;
-  }
-
-  if (["delivered", "entregue"].includes(raw)) {
-    return ORDER_STATUS.DELIVERED;
-  }
-
-  if (["cancelled", "canceled", "cancelado"].includes(raw)) {
-    return ORDER_STATUS.CANCELLED;
-  }
-
-  return ORDER_STATUS.PENDING;
-}
-
-function getOrderStatusLabel(status) {
-  return STATUS_META[status]?.label || "Não definido";
-}
-
-function isSameDay(dateA, dateB) {
-  return (
-    dateA.getDate() === dateB.getDate() &&
-    dateA.getMonth() === dateB.getMonth() &&
-    dateA.getFullYear() === dateB.getFullYear()
-  );
-}
-
-function buildDeliveryAddress(order) {
-  if (!order.delivery_address) return "Endereço não informado";
-
-  const number = order.delivery_number || "s/n";
-  const complement = order.delivery_complement
-    ? `, ${order.delivery_complement}`
-    : "";
-
-  return `${order.delivery_address}, ${number}${complement}`;
-}
-
-function parseArrayLike(value) {
-  if (!value) return [];
-
-  if (Array.isArray(value)) {
-    return value
-      .filter(Boolean)
-      .map((item) => String(item).trim())
-      .filter(Boolean);
-  }
-
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter(Boolean)
-          .map((item) => String(item).trim())
-          .filter(Boolean);
-      }
-    } catch {
-      return value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
-function normalizeRemovedIngredientsText(removedIngredients) {
-  const items = parseArrayLike(removedIngredients);
-
-  if (!items.length) return "";
-
-  return items
-    .map((item) => item.replace(/^sem\s+/i, "").trim())
-    .filter(Boolean)
-    .join(", ");
-}
-
-function buildItemGroupKey(item) {
-  const removedIngredients = normalizeRemovedIngredientsText(
-    item.removed_ingredients
-  );
-  const notes = String(item.notes || "").trim();
-
-  return [
-    item.name || "",
-    Number(item.unit_price || 0),
-    removedIngredients,
-    notes,
-  ].join("|");
-}
-
-function groupOrderItems(items) {
-  if (!Array.isArray(items) || !items.length) return [];
-
-  const grouped = items.reduce((acc, item) => {
-    const key = buildItemGroupKey(item);
-    const removedIngredients = normalizeRemovedIngredientsText(
-      item.removed_ingredients
-    );
-    const notes = String(item.notes || "").trim();
-
-    if (!acc[key]) {
-      acc[key] = {
-        id: key,
-        name: item.name || "Item sem nome",
-        quantity: 0,
-        unitPrice: Number(item.unit_price || 0),
-        removedIngredients,
-        notes,
-      };
-    }
-
-    acc[key].quantity += Number(item.quantity || 0);
-    return acc;
-  }, {});
-
-  return Object.values(grouped);
-}
-
-function canAdvanceOrder(order, nextStatus) {
-  const paymentMethod = String(order.payment_method || "").trim().toLowerCase();
-  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
-  const currentStatus = String(order.normalized_status || "").trim().toLowerCase();
-
-  const isOnlinePayment = paymentMethod === PAYMENT_METHOD.ONLINE;
-  const isPaid = paymentStatus === PAYMENT_STATUS.PAID;
-
-  if (currentStatus === ORDER_STATUS.CANCELLED) {
-    return false;
-  }
-
-  if (currentStatus === ORDER_STATUS.DELIVERED && nextStatus !== ORDER_STATUS.DELIVERED) {
-    return false;
-  }
-
-  if (nextStatus === ORDER_STATUS.CANCELLED) {
-    return currentStatus !== ORDER_STATUS.DELIVERED;
-  }
-
-  if (
-    isOnlinePayment &&
-    !isPaid &&
-    [ORDER_STATUS.PREPARING, ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(nextStatus)
-  ) {
-    return false;
-  }
-
-  const allowedTransitions = {
-    [ORDER_STATUS.PENDING]: [ORDER_STATUS.PREPARING, ORDER_STATUS.CANCELLED],
-    [ORDER_STATUS.PREPARING]: [ORDER_STATUS.DELIVERY, ORDER_STATUS.CANCELLED],
-    [ORDER_STATUS.DELIVERY]: [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED],
-    [ORDER_STATUS.DELIVERED]: [],
-    [ORDER_STATUS.CANCELLED]: [],
-  };
-
-  return allowedTransitions[currentStatus]?.includes(nextStatus) ?? false;
-}
-
-function isStatusButtonDisabled(order, optionValue, updatingOrderId) {
-  const isActive = order.normalized_status === optionValue;
-  const isUpdatingThisOrder = updatingOrderId === order.id;
-  const isAllowed = canAdvanceOrder(order, optionValue);
-
-  return isActive || isUpdatingThisOrder || !isAllowed;
-}
+import DashboardSection from "./sections/DashboardSection";
+import OrdersSection from "./sections/OrdersSection";
+import ProductsSection from "./sections/ProductsSection";
+import CategoriesSection from "./sections/CategoriesSection";
+import CustomersSection from "./sections/CustomersSection";
+import DeliveryUsersSection from "./sections/DeliveryUsersSection";
+import PaymentsSection from "./sections/PaymentsSection";
+import ReportsSection from "./sections/ReportsSection";
+import SettingsSection from "./sections/SettingsSection";
 
 export default function Admin() {
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [activeSection, setActiveSection] = useState(ADMIN_SECTION.DASHBOARD);
+  const [userInfo, setUserInfo] = useState({
+    name: "Administrador",
+    email: "",
+  });
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -375,7 +98,68 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    loadOrders();
+    let active = true;
+
+    async function validateAdminAccess() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          navigate("/auth", { replace: true, state: { from: "/admin" } });
+          return;
+        }
+
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role, name")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        const role = String(profile?.role || "").trim().toLowerCase();
+
+        if (role !== USER_ROLE.ADMIN) {
+          navigate("/", { replace: true });
+          return;
+        }
+
+        if (!active) return;
+
+        setUserInfo({
+          name:
+            profile?.name ||
+            session.user.user_metadata?.name ||
+            session.user.email?.split("@")[0] ||
+            "Administrador",
+          email: session.user.email || "",
+        });
+
+        setHasAccess(true);
+        await loadOrders();
+      } catch (error) {
+        console.error("Erro ao validar acesso do admin:", error);
+        navigate("/", { replace: true });
+      } finally {
+        if (active) {
+          setAccessLoading(false);
+        }
+      }
+    }
+
+    validateAdminAccess();
+
+    return () => {
+      active = false;
+    };
+  }, [navigate, loadOrders]);
+
+  useEffect(() => {
+    if (!hasAccess) return;
 
     const channel = supabase
       .channel("orders-admin")
@@ -393,7 +177,12 @@ export default function Admin() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadOrders]);
+  }, [hasAccess, loadOrders]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate("/", { replace: true });
+  }
 
   async function handleUpdateOrderStatus(orderId, nextStatus) {
     const currentOrder = orders.find((order) => order.id === orderId);
@@ -404,11 +193,6 @@ export default function Admin() {
     }
 
     if (currentOrder.normalized_status === nextStatus) {
-      return;
-    }
-
-    if (!canAdvanceOrder(currentOrder, nextStatus)) {
-      setMessage("Esse pedido não pode avançar para essa etapa agora.");
       return;
     }
 
@@ -433,6 +217,10 @@ export default function Admin() {
       const updatePayload = {
         order_status: nextStatus,
       };
+
+      if (nextStatus === ORDER_STATUS.DELIVERY) {
+        updatePayload.delivery_started_at = new Date().toISOString();
+      }
 
       if (nextStatus === ORDER_STATUS.CANCELLED) {
         updatePayload.payment_status =
@@ -496,241 +284,91 @@ export default function Admin() {
     };
   }, [orders]);
 
-  return (
-    <main className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.container}>
-          <span className={styles.kicker}>Painel administrativo</span>
-          <h1 className={styles.title}>Gestão de pedidos</h1>
-          <p className={styles.subtitle}>
-            Acompanhe os pedidos da pizzaria, filtre por etapa e atualize o
-            andamento em tempo real.
-          </p>
-        </div>
-      </section>
+  function renderSection() {
+    switch (activeSection) {
+      case ADMIN_SECTION.DASHBOARD:
+        return <DashboardSection stats={stats} />;
 
-      <section className={styles.content}>
-        <div className={styles.container}>
-          {message ? (
-            <p className={styles.pageMessage} role="status">
-              {message}
-            </p>
-          ) : null}
+      case ADMIN_SECTION.ORDERS:
+        return (
+          <OrdersSection
+            message={message}
+            stats={stats}
+            loading={loading}
+            filteredOrders={filteredOrders}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            updatingOrderId={updatingOrderId}
+            handleUpdateOrderStatus={handleUpdateOrderStatus}
+          />
+        );
 
-          <div className={styles.statsGrid}>
-            <article className={styles.statCard}>
-              <span>Pedidos hoje</span>
-              <strong>{stats.totalToday}</strong>
-            </article>
+      case ADMIN_SECTION.PRODUCTS:
+        return <ProductsSection />;
 
-            <article className={styles.statCard}>
-              <span>Aguardando</span>
-              <strong>{stats.pending}</strong>
-            </article>
+      case ADMIN_SECTION.CATEGORIES:
+        return <CategoriesSection />;
 
-            <article className={styles.statCard}>
-              <span>Em preparo</span>
-              <strong>{stats.preparing}</strong>
-            </article>
+      case ADMIN_SECTION.CUSTOMERS:
+        return <CustomersSection />;
 
-            <article className={styles.statCard}>
-              <span>Saiu para entrega</span>
-              <strong>{stats.outForDelivery}</strong>
-            </article>
+      case ADMIN_SECTION.DELIVERY_USERS:
+        return <DeliveryUsersSection />;
 
-            <article className={styles.statCard}>
-              <span>Entregues</span>
-              <strong>{stats.delivered}</strong>
-            </article>
+      case ADMIN_SECTION.PAYMENTS:
+        return <PaymentsSection />;
 
-            <article className={`${styles.statCard} ${styles.statCardWide}`}>
-              <span>Faturamento do dia</span>
-              <strong>{formatPrice(stats.revenueToday)}</strong>
-            </article>
-          </div>
+      case ADMIN_SECTION.REPORTS:
+        return <ReportsSection />;
 
-          <div className={styles.toolbar}>
-            <div className={styles.filterGroup}>
-              {FILTER_OPTIONS.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  className={`${styles.filterButton} ${
-                    statusFilter === filter.value ? styles.filterButtonActive : ""
-                  }`}
-                  onClick={() => setStatusFilter(filter.value)}
-                >
-                  {filter.label}
-                </button>
-              ))}
+      case ADMIN_SECTION.SETTINGS:
+        return <SettingsSection />;
+
+      default:
+        return <DashboardSection stats={stats} />;
+    }
+  }
+
+  if (accessLoading) {
+    return (
+      <main className={styles.page}>
+        <section className={styles.content}>
+          <div className={styles.container}>
+            <div className={styles.emptyState}>
+              <p>Validando acesso ao painel...</p>
             </div>
           </div>
+        </section>
+      </main>
+    );
+  }
 
-          <section className={styles.ordersSection}>
-            {loading ? (
-              <div className={styles.emptyState}>
-                <p>Carregando pedidos...</p>
-              </div>
-            ) : !filteredOrders.length ? (
-              <div className={styles.emptyState}>
-                <p>Nenhum pedido encontrado para este filtro.</p>
-              </div>
-            ) : (
-              <div className={styles.ordersList}>
-                {filteredOrders.map((order) => {
-                  const groupedItems = groupOrderItems(order.order_items);
-                  const statusClass =
-                    styles[
-                      STATUS_META[order.normalized_status]?.badgeClass ||
-                        "statusBadgeDefault"
-                    ];
+  if (!hasAccess) {
+    return null;
+  }
 
-                  const isPaid =
-                    String(order.payment_status || "").toLowerCase() ===
-                    PAYMENT_STATUS.PAID;
+  return (
+    <main className={styles.page}>
+      <DashboardHeader
+        title="Painel Admin"
+        userName={userInfo.name}
+        userEmail={userInfo.email}
+        accountLabel="Minha conta"
+        accountRoute="/admin"
+        onLogout={handleLogout}
+      />
 
-                  return (
-                    <article key={order.id} className={styles.orderCard}>
-                      <div className={styles.orderHeader}>
-                        <div>
-                          <h2 className={styles.orderTitle}>
-                            Pedido #{String(order.id).slice(0, 8)}
-                          </h2>
-                          <p className={styles.orderMeta}>
-                            {formatDate(order.created_at)}
-                          </p>
-                        </div>
+      <div className={styles.adminShell}>
+        <AdminSidebar
+          sections={ADMIN_SECTIONS}
+          activeSection={activeSection}
+          onChangeSection={setActiveSection}
+        />
 
-                        <div className={styles.orderBadges}>
-                          <span className={styles.badge}>
-                            {getPaymentMethodLabel(order.payment_method)}
-                          </span>
-
-                          <span className={`${styles.statusBadge} ${statusClass}`}>
-                            {getOrderStatusLabel(order.normalized_status)}
-                          </span>
-
-                          <span className={styles.badgeStrong}>
-                            {formatPrice(order.total)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className={styles.orderGrid}>
-                        <div className={styles.infoBlock}>
-                          <span className={styles.infoLabel}>Cliente</span>
-                          <strong>{order.customer_name || "Não informado"}</strong>
-                        </div>
-
-                        <div className={styles.infoBlock}>
-                          <span className={styles.infoLabel}>Telefone</span>
-                          <strong>{order.customer_phone || "Não informado"}</strong>
-                        </div>
-
-                        <div className={styles.infoBlock}>
-                          <span className={styles.infoLabel}>Pagamento</span>
-                          <span
-                            className={`${styles.paymentBadge} ${
-                              isPaid ? styles.paymentPaid : styles.paymentPending
-                            }`}
-                          >
-                            {getPaymentStatusLabel(order)}
-                          </span>
-                        </div>
-
-                        <div className={styles.infoBlock}>
-                          <span className={styles.infoLabel}>Status do pedido</span>
-                          <strong>{getOrderStatusLabel(order.normalized_status)}</strong>
-                        </div>
-
-                        <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
-                          <span className={styles.infoLabel}>Entrega</span>
-                          <strong>{buildDeliveryAddress(order)}</strong>
-                        </div>
-
-                        <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
-                          <span className={styles.infoLabel}>Itens</span>
-
-                          <div className={styles.itemsList}>
-                            {groupedItems.length ? (
-                              groupedItems.map((item) => (
-                                <div key={item.id} className={styles.itemRow}>
-                                  <div className={styles.itemInfo}>
-                                    <span className={styles.itemName}>
-                                      🍕 {item.name} x{item.quantity}
-                                    </span>
-
-                                    {item.removedIngredients ? (
-                                      <span className={styles.itemDetails}>
-                                        Remover: {item.removedIngredients}
-                                      </span>
-                                    ) : null}
-
-                                    {item.notes ? (
-                                      <span className={styles.itemDetails}>
-                                        Obs.: {item.notes}
-                                      </span>
-                                    ) : null}
-                                  </div>
-
-                                  <strong>
-                                    {formatPrice(item.unitPrice * item.quantity)}
-                                  </strong>
-                                </div>
-                              ))
-                            ) : (
-                              <strong>Nenhum item encontrado</strong>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={styles.actionsRow}>
-                        {ORDER_STATUS_OPTIONS.map((option) => {
-                          const isActive = order.normalized_status === option.value;
-                          const isUpdatingThisOrder = updatingOrderId === order.id;
-                          const isAllowed = canAdvanceOrder(order, option.value);
-                          const isDisabled = isStatusButtonDisabled(
-                            order,
-                            option.value,
-                            updatingOrderId
-                          );
-
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`${styles.actionButton} ${
-                                isActive ? styles.actionButtonActive : ""
-                              } ${
-                                !isAllowed && !isActive
-                                  ? styles.actionButtonBlocked
-                                  : ""
-                              }`}
-                              onClick={() => handleUpdateOrderStatus(order.id, option.value)}
-                              disabled={isDisabled}
-                              aria-pressed={isActive}
-                              title={
-                                !isAllowed
-                                  ? "Esse pedido não pode ir para essa etapa agora."
-                                  : option.label
-                              }
-                            >
-                              {isUpdatingThisOrder && !isActive
-                                ? "Atualizando..."
-                                : option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+        <div className={styles.adminMain}>
+          {renderSection()}
         </div>
-      </section>
+      </div>
     </main>
   );
 }

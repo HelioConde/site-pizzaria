@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Navbar from "./components/layout/NavBar";
 import Carousel from "./components/ui/Carousel/Carousel";
@@ -8,6 +8,7 @@ import Testimonials from "./components/sections/Testimonials/Testimonials";
 import FinalCta from "./components/sections/FinalCta/FinalCta";
 import Footer from "./components/sections/Footer/Footer";
 
+import Motoboy from "./pages/Motoboy/Motoboy";
 import Checkout from "./pages/Checkout/Checkout";
 import Auth from "./pages/Auth/Auth";
 import PaymentSuccess from "./pages/Payment/PaymentSuccess";
@@ -15,6 +16,8 @@ import Menu from "./pages/Menu/Menu";
 import Account from "./pages/Account/Account";
 import ScrollToHash from "./components/utils/ScrollToHash";
 import Admin from "./pages/Admin/Admin";
+import ProtectedRoute from "./components/routes/ProtectedRoute";
+import useAuthRole from "./hooks/useAuthRole";
 
 import db from "./data/db.json";
 
@@ -51,21 +54,99 @@ function Home() {
   );
 }
 
-export default function App() {
+function AuthRedirect({ isLoading, isAuthenticated, userRole }) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Auth />;
+  }
+
+  if (userRole === "admin") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (userRole === "delivery") {
+    return <Navigate to="/motoboy" replace />;
+  }
+
+  return <Navigate to="/account" replace />;
+}
+
+function AppContent() {
+  const location = useLocation();
+  const { isLoading, isAuthenticated, userRole } = useAuthRole();
+
+  const hideNavbarRoutes = ["/auth", "/admin", "/motoboy"];
+  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
+
   return (
     <>
-      <Navbar />
+      {!shouldHideNavbar ? <Navbar /> : null}
       <ScrollToHash />
 
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/checkout" element={<Checkout />} />
-        <Route path="/auth" element={<Auth />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/admin" element={<Admin />} />
+
+        <Route
+          path="/auth"
+          element={
+            <AuthRedirect
+              isLoading={isLoading}
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+            />
+          }
+        />
+
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute
+              isLoading={isLoading}
+              isAuthenticated={isAuthenticated}
+            >
+              <Account />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute
+              isLoading={isLoading}
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["admin"]}
+            >
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/motoboy"
+          element={
+            <ProtectedRoute
+              isLoading={isLoading}
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["delivery"]}
+            >
+              <Motoboy />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </>
   );
+}
+
+export default function App() {
+  return <AppContent />;
 }

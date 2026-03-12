@@ -26,8 +26,11 @@ export default function ProductCard({ item, onOpenModal, formatPrice }) {
         <div className={styles.cardFooter}>
           <div className={styles.priceBox}>
             {item.oldPrice ? (
-              <span className={styles.oldPrice}>{formatPrice(item.oldPrice)}</span>
+              <span className={styles.oldPrice}>
+                {formatPrice(item.oldPrice)}
+              </span>
             ) : null}
+
             <span className={styles.price}>{formatPrice(item.price)}</span>
           </div>
 

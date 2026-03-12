@@ -176,13 +176,16 @@ export default function Checkout() {
           }
         }
 
-        const { data, error } = await supabase.auth.getUser();
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error("Erro ao buscar usuário:", error);
+        if (sessionError) {
+          console.error("Erro ao buscar sessão:", sessionError);
         }
 
-        const currentUser = data?.user ?? null;
+        const currentUser = session?.user ?? null;
 
         if (currentUser) {
           const metadata = currentUser.user_metadata ?? {};
@@ -443,8 +446,8 @@ export default function Checkout() {
 
     const notes =
       activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
-      activeDelivery.needsChange &&
-      activeDelivery.changeFor
+        activeDelivery.needsChange &&
+        activeDelivery.changeFor
         ? `Troco para: ${activeDelivery.changeFor}`
         : null;
 
@@ -783,11 +786,10 @@ export default function Checkout() {
                       {savedAddresses.map((addr, index) => (
                         <div
                           key={addr.id}
-                          className={`${styles.addressCard} ${
-                            selectedAddressId === addr.id
-                              ? styles.addressCardActive
-                              : ""
-                          }`}
+                          className={`${styles.addressCard} ${selectedAddressId === addr.id
+                            ? styles.addressCardActive
+                            : ""
+                            }`}
                         >
                           <p className={styles.addressCardTitle}>
                             <strong>

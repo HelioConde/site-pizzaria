@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import db from "../../data/db.json";
+import { supabase } from "../../lib/supabase";
 import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
 
@@ -29,9 +29,13 @@ function normalizeText(value) {
 }
 
 export default function Menu() {
-  const { cardapio } = db;
   const location = useLocation();
   const didPreselectRef = useRef(false);
+
+  const [categories, setCategories] = useState([]);
+  const [productsFromDb, setProductsFromDb] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [menuMessage, setMenuMessage] = useState("");
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -45,9 +49,80 @@ export default function Menu() {
   const [withoutTomato, setWithoutTomato] = useState(false);
   const [withoutOlive, setWithoutOlive] = useState(false);
 
+  async function loadMenuData() {
+    setLoading(true);
+
+    try {
+      const [{ data: categoriesData, error: categoriesError }, { data: productsData, error: productsError }] =
+        await Promise.all([
+          supabase
+            .from("product_categories")
+            .select("id, slug, name, is_active, sort_order")
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("products")
+            .select(`
+              id,
+              slug,
+              name,
+              description,
+              price,
+              old_price,
+              rating,
+              tag,
+              image_url,
+              is_active,
+              is_featured,
+              sort_order,
+              category_id
+            `)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+        ]);
+
+      if (categoriesError) throw categoriesError;
+      if (productsError) throw productsError;
+
+      const normalizedCategories = (categoriesData ?? []).map((category) => ({
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+      }));
+
+      const normalizedProducts = (productsData ?? []).map((product) => ({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        categoryId: product.category_id,
+        description: product.description,
+        price: Number(product.price || 0),
+        oldPrice: product.old_price != null ? Number(product.old_price) : null,
+        rating: product.rating != null ? Number(product.rating) : null,
+        tag: product.tag,
+        image: product.image_url,
+        active: product.is_active,
+        hero: product.is_featured,
+      }));
+
+      setCategories(normalizedCategories);
+      setProductsFromDb(normalizedProducts);
+      setMenuMessage("");
+    } catch (error) {
+      console.error("Erro ao carregar cardápio:", error);
+      setCategories([]);
+      setProductsFromDb([]);
+      setMenuMessage("Não foi possível carregar o cardápio agora.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const baseProducts = useMemo(() => {
-    return (cardapio?.pizzas ?? []).filter((item) => item.active);
-  }, [cardapio]);
+    return productsFromDb.filter((item) => item.active);
+  }, [productsFromDb]);
 
   const products = useMemo(() => {
     let filtered = baseProducts;
@@ -79,10 +154,10 @@ export default function Menu() {
     if (activeCategory === "all") return "Todas";
 
     return (
-      cardapio?.categories?.find((category) => category.id === activeCategory)
-        ?.name || "Categoria"
+      categories.find((category) => category.id === activeCategory)?.name ||
+      "Categoria"
     );
-  }, [activeCategory, cardapio]);
+  }, [activeCategory, categories]);
 
   const cartCount = useMemo(
     () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
@@ -176,6 +251,41 @@ export default function Menu() {
   }
 
   useEffect(() => {
+    loadMenuData();
+
+    const productsChannel = supabase
+      .channel("menu-products")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "products",
+        },
+        loadMenuData
+      )
+      .subscribe();
+
+    const categoriesChannel = supabase
+      .channel("menu-categories")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "product_categories",
+        },
+        loadMenuData
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(categoriesChannel);
+    };
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = cartOpen || productModalOpen ? "hidden" : "";
 
     return () => {
@@ -223,9 +333,10 @@ export default function Menu() {
 
     if (!openProductId) return;
     if (didPreselectRef.current) return;
+    if (!productsFromDb.length) return;
 
-    const selectedPizza = (cardapio?.pizzas ?? []).find(
-      (pizza) => pizza.id === openProductId
+    const selectedPizza = productsFromDb.find(
+      (pizza) => pizza.id === openProductId || pizza.slug === openProductId
     );
 
     if (!selectedPizza) return;
@@ -236,7 +347,7 @@ export default function Menu() {
     setSelectedProduct(selectedPizza);
     resetProductOptions();
     setProductModalOpen(true);
-  }, [location.state, cardapio]);
+  }, [location.state, productsFromDb]);
 
   return (
     <>
@@ -261,7 +372,7 @@ export default function Menu() {
         <section className={styles.filtersSection}>
           <div className={styles.exploreCard}>
             <CategoryFilters
-              categories={cardapio?.categories ?? []}
+              categories={categories}
               activeCategory={activeCategory}
               onChangeCategory={setActiveCategory}
             />
@@ -269,7 +380,7 @@ export default function Menu() {
             <div className={styles.resultsBar}>
               <p className={styles.resultsText}>
                 Mostrando <strong>{products.length}</strong>{" "}
-                {products.length === 1 ? "pizza" : "pizzas"} • Categoria:{" "}
+                {products.length === 1 ? "produto" : "produtos"} • Categoria:{" "}
                 <strong>{activeCategoryName}</strong>
                 {search ? (
                   <>
@@ -282,10 +393,28 @@ export default function Menu() {
         </section>
 
         <section className={styles.catalogSection}>
-          {products.length === 0 ? (
+          {menuMessage ? (
+            <div className={styles.emptyCatalog}>
+              <div className={styles.emptyCatalogIcon}>⚠️</div>
+              <h2>Não foi possível carregar o cardápio</h2>
+              <p>{menuMessage}</p>
+
+              <div className={styles.emptyCatalogActions}>
+                <Button type="button" variant="ghost" size="md" onClick={loadMenuData}>
+                  Tentar novamente
+                </Button>
+              </div>
+            </div>
+          ) : loading ? (
             <div className={styles.emptyCatalog}>
               <div className={styles.emptyCatalogIcon}>🍕</div>
-              <h2>Nenhuma pizza encontrada</h2>
+              <h2>Carregando cardápio...</h2>
+              <p>Aguarde enquanto buscamos os produtos.</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className={styles.emptyCatalog}>
+              <div className={styles.emptyCatalogIcon}>🍕</div>
+              <h2>Nenhum produto encontrado</h2>
               <p>
                 Tente buscar por outro nome ou escolha uma categoria diferente.
               </p>
