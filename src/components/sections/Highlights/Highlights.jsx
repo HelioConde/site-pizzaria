@@ -11,9 +11,22 @@ function formatPrice(value) {
 }
 
 function Rating({ value }) {
+  if (value == null) {
+    return (
+      <div className={styles.rating} aria-label="Sem avaliação">
+        <span className={styles.star} aria-hidden="true">
+          ☆
+        </span>
+        <span className={styles.ratingValue}>--</span>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.rating} aria-label={`Nota ${value}`}>
-      <span className={styles.star} aria-hidden="true">☆</span>
+      <span className={styles.star} aria-hidden="true">
+        ☆
+      </span>
       <span className={styles.ratingValue}>{value}</span>
     </div>
   );
@@ -23,7 +36,7 @@ function ItemCard({ item, badgeText }) {
   return (
     <Link
       to="/menu"
-      state={{ openProductId: item.id }}
+      state={{ openProductId: item.slug || item.id }}
       className={styles.itemLink}
       aria-label={`Abrir ${item.name} para personalizar`}
     >
@@ -61,10 +74,14 @@ function ItemCard({ item, badgeText }) {
           <div className={styles.itemBottom}>
             <div className={styles.priceRow}>
               {item.oldPrice ? (
-                <span className={styles.oldPrice}>{formatPrice(item.oldPrice)}</span>
+                <span className={styles.oldPrice}>
+                  {formatPrice(item.oldPrice)}
+                </span>
               ) : null}
+
               <span className={styles.price}>{formatPrice(item.price)}</span>
             </div>
+
             <Rating value={item.rating} />
           </div>
         </div>
@@ -73,19 +90,35 @@ function ItemCard({ item, badgeText }) {
   );
 }
 
-export default function Highlights({ data, pizzas = [] }) {
+export default function Highlights({ data, products = [] }) {
   if (!data) return null;
 
-  const pizzasById = Object.fromEntries(
-    pizzas.map((pizza) => [pizza.id, pizza])
+  const productsByKey = Object.fromEntries(
+    products.flatMap((product) => {
+      const entries = [];
+
+      if (product.id) {
+        entries.push([product.id, product]);
+      }
+
+      if (product.slug) {
+        entries.push([product.slug, product]);
+      }
+
+      return entries;
+    })
   );
 
   const groups = (data.groups ?? []).map((group) => ({
     ...group,
     resolvedItems: (group.items ?? [])
-      .map((itemId) => pizzasById[itemId])
+      .map((itemKey) => productsByKey[itemKey])
       .filter(Boolean),
   }));
+
+  const visibleGroups = groups.filter((group) => group.resolvedItems.length > 0);
+
+  if (!visibleGroups.length) return null;
 
   return (
     <section className={styles.wrap} aria-label={data.title}>
@@ -96,7 +129,7 @@ export default function Highlights({ data, pizzas = [] }) {
         </header>
 
         <div className={styles.grid}>
-          {groups.map((group, index) => (
+          {visibleGroups.map((group, index) => (
             <div className={styles.panel} key={group.id}>
               <div className={styles.panelHead}>
                 <span className={styles.panelIcon} aria-hidden="true">

@@ -29,6 +29,69 @@ import {
   getRedirectByRole,
 } from "./auth.service";
 
+async function ensureInitialAddress(userId, formData) {
+  const normalizedAddress = normalizeSpaces(formData.address);
+  const normalizedDistrict = normalizeSpaces(formData.district);
+  const normalizedCity = normalizeSpaces(formData.city);
+  const normalizedState = String(formData.state || "").trim().toUpperCase();
+  const normalizedNumber = normalizeSpaces(formData.number);
+  const normalizedComplement = normalizeSpaces(formData.complement);
+  const normalizedReference = normalizeSpaces(formData.reference);
+  const normalizedCep = formatCep(formData.cep);
+
+  if (!normalizedAddress || !normalizedNumber || !normalizedCity || !normalizedState) {
+    return;
+  }
+
+  const { data: existingAddresses, error: existingError } = await supabase
+    .from("addresses")
+    .select(
+      "id, cep, address, district, city, state, number, complement, reference, is_default"
+    )
+    .eq("user_id", userId);
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const foundSameAddress = (existingAddresses ?? []).find((addr) => {
+    return (
+      String(addr.cep || "") === String(normalizedCep || "") &&
+      normalizeSpaces(addr.address) === normalizedAddress &&
+      normalizeSpaces(addr.district) === normalizedDistrict &&
+      normalizeSpaces(addr.city) === normalizedCity &&
+      String(addr.state || "").trim().toUpperCase() === normalizedState &&
+      normalizeSpaces(addr.number) === normalizedNumber &&
+      normalizeSpaces(addr.complement) === normalizedComplement &&
+      normalizeSpaces(addr.reference) === normalizedReference
+    );
+  });
+
+  if (foundSameAddress) {
+    return;
+  }
+
+  const shouldBeDefault = (existingAddresses ?? []).length === 0;
+
+  const { error: insertError } = await supabase.from("addresses").insert({
+    user_id: userId,
+    label: "Endereço principal",
+    cep: normalizedCep || null,
+    address: normalizedAddress,
+    district: normalizedDistrict || null,
+    city: normalizedCity || null,
+    state: normalizedState || null,
+    number: normalizedNumber,
+    complement: normalizedComplement || null,
+    reference: normalizedReference || null,
+    is_default: shouldBeDefault,
+  });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +118,12 @@ export default function Auth() {
   const isRegisterValid = Object.keys(registerErrors).length === 0;
 
   useEffect(() => {
+    if (location.state?.successMessage) {
+      setMessage(location.state.successMessage);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
     let active = true;
 
     async function checkSession() {
@@ -64,12 +133,10 @@ export default function Auth() {
         } = await supabase.auth.getSession();
 
         if (!session || !active) return;
+        if (mode === "register") return;
 
         const role = await getProfileRole(session.user.id);
         const redirectPath = getRedirectByRole(role, redirectTo);
-
-        console.log("checkSession role:", role);
-        console.log("checkSession redirectPath:", redirectPath);
 
         if (active) {
           navigate(redirectPath, { replace: true });
@@ -84,7 +151,7 @@ export default function Auth() {
     return () => {
       active = false;
     };
-  }, [navigate, redirectTo]);
+  }, [navigate, redirectTo, mode]);
 
   async function handleFetchAddressByCep(rawCep) {
     try {
@@ -226,18 +293,24 @@ export default function Auth() {
 
       if (error) throw error;
 
+      const hasSession = !!data?.session;
       const createdUserId = data?.user?.id;
 
-      if (createdUserId) {
-        const { error: profileError } = await supabase.from("profiles").upsert({
-          id: createdUserId,
-          name: cleanedForm.name,
-          role: USER_ROLE.CUSTOMER,
-        });
+      if (createdUserId && hasSession) {
+        await ensureInitialAddress(createdUserId, cleanedForm);
 
-        if (profileError) {
-          throw profileError;
-        }
+        const role = await getProfileRole(createdUserId).catch(
+          () => USER_ROLE.CUSTOMER
+        );
+        const redirectPath = getRedirectByRole(role, redirectTo);
+
+        navigate(redirectPath, {
+          replace: true,
+          state: {
+            successMessage: "Conta criada com sucesso. Você já está logado.",
+          },
+        });
+        return;
       }
 
       setMessage("Conta criada com sucesso. Faça login para continuar.");
@@ -250,6 +323,7 @@ export default function Auth() {
       setRegisterForm(initialRegisterForm);
       setRegisterTouched(initialRegisterTouched);
     } catch (error) {
+      console.error("Erro ao criar conta:", error);
       setMessage(error.message || "Não foi possível criar a conta.");
     } finally {
       setLoading(false);
@@ -289,9 +363,6 @@ export default function Auth() {
 
       const role = await getProfileRole(userId);
       const redirectPath = getRedirectByRole(role, redirectTo);
-
-      console.log("handleLogin role:", role);
-      console.log("handleLogin redirectPath:", redirectPath);
 
       navigate(redirectPath, { replace: true });
     } catch (error) {

@@ -133,11 +133,14 @@
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 260px));
+  justify-content: center;
   gap: 22px;
 }
 
 .card {
+  width: 100%;
+  max-width: 320px;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 24px;

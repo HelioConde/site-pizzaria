@@ -18,6 +18,8 @@ export default function ProductModal({
 }) {
   if (!open || !product) return null;
 
+  const showIngredientOptions = !!product.isCustomizable;
+
   return (
     <div
       className={styles.productModalOverlay}
@@ -49,36 +51,38 @@ export default function ProductModal({
 
         <p className={styles.productModalDesc}>{product.description}</p>
 
-        <div className={styles.productOptions}>
-          <h3 className={styles.optionTitle}>Remover ingredientes</h3>
+        {showIngredientOptions ? (
+          <div className={styles.productOptions}>
+            <h3 className={styles.optionTitle}>Remover ingredientes</h3>
 
-          <label className={styles.optionItem}>
-            <input
-              type="checkbox"
-              checked={withoutOnion}
-              onChange={(e) => setWithoutOnion(e.target.checked)}
-            />
-            <span>Sem cebola</span>
-          </label>
+            <label className={styles.optionItem}>
+              <input
+                type="checkbox"
+                checked={withoutOnion}
+                onChange={(e) => setWithoutOnion(e.target.checked)}
+              />
+              <span>Sem cebola</span>
+            </label>
 
-          <label className={styles.optionItem}>
-            <input
-              type="checkbox"
-              checked={withoutTomato}
-              onChange={(e) => setWithoutTomato(e.target.checked)}
-            />
-            <span>Sem tomate</span>
-          </label>
+            <label className={styles.optionItem}>
+              <input
+                type="checkbox"
+                checked={withoutTomato}
+                onChange={(e) => setWithoutTomato(e.target.checked)}
+              />
+              <span>Sem tomate</span>
+            </label>
 
-          <label className={styles.optionItem}>
-            <input
-              type="checkbox"
-              checked={withoutOlive}
-              onChange={(e) => setWithoutOlive(e.target.checked)}
-            />
-            <span>Sem azeitona</span>
-          </label>
-        </div>
+            <label className={styles.optionItem}>
+              <input
+                type="checkbox"
+                checked={withoutOlive}
+                onChange={(e) => setWithoutOlive(e.target.checked)}
+              />
+              <span>Sem azeitona</span>
+            </label>
+          </div>
+        ) : null}
 
         <div className={styles.notesWrap}>
           <label htmlFor="product-notes" className={styles.optionTitle}>
@@ -88,7 +92,11 @@ export default function ProductModal({
           <textarea
             id="product-notes"
             className={styles.notesField}
-            placeholder="Ex: massa bem assada, sem muito molho..."
+            placeholder={
+              showIngredientOptions
+                ? "Ex: massa bem assada, sem muito molho..."
+                : "Ex: bem gelado, sem gelo, enviar colher..."
+            }
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />

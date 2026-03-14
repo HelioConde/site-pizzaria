@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
@@ -25,7 +25,43 @@ function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .trim();
+}
+
+function isPizzaCategory(category) {
+  const slug = normalizeText(category?.slug);
+  const name = normalizeText(category?.name);
+
+  return (
+    slug === "tradicionais" ||
+    slug === "especiais" ||
+    slug.includes("pizza") ||
+    name.includes("pizza") ||
+    name.includes("tradicional") ||
+    name.includes("tradicionais") ||
+    name.includes("especial") ||
+    name.includes("especiais")
+  );
+}
+
+function isCustomizableProduct(product) {
+  const categorySlug = normalizeText(product?.categorySlug);
+  const categoryName = normalizeText(product?.categoryName);
+  const name = normalizeText(product?.name);
+
+  return (
+    product?.isCustomizable === true ||
+    categorySlug === "tradicionais" ||
+    categorySlug === "especiais" ||
+    categorySlug.includes("pizza") ||
+    categoryName.includes("pizza") ||
+    categoryName.includes("tradicional") ||
+    categoryName.includes("tradicionais") ||
+    categoryName.includes("especial") ||
+    categoryName.includes("especiais") ||
+    name.includes("pizza")
+  );
 }
 
 export default function Menu() {
@@ -53,35 +89,37 @@ export default function Menu() {
     setLoading(true);
 
     try {
-      const [{ data: categoriesData, error: categoriesError }, { data: productsData, error: productsError }] =
-        await Promise.all([
-          supabase
-            .from("product_categories")
-            .select("id, slug, name, is_active, sort_order")
-            .eq("is_active", true)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true }),
-          supabase
-            .from("products")
-            .select(`
-              id,
-              slug,
-              name,
-              description,
-              price,
-              old_price,
-              rating,
-              tag,
-              image_url,
-              is_active,
-              is_featured,
-              sort_order,
-              category_id
-            `)
-            .eq("is_active", true)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true }),
-        ]);
+      const [
+        { data: categoriesData, error: categoriesError },
+        { data: productsData, error: productsError },
+      ] = await Promise.all([
+        supabase
+          .from("product_categories")
+          .select("id, slug, name, is_active, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("products")
+          .select(`
+            id,
+            slug,
+            name,
+            description,
+            price,
+            old_price,
+            rating,
+            tag,
+            image_url,
+            is_active,
+            is_featured,
+            sort_order,
+            category_id
+          `)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true }),
+      ]);
 
       if (categoriesError) throw categoriesError;
       if (productsError) throw productsError;
@@ -92,20 +130,31 @@ export default function Menu() {
         name: category.name,
       }));
 
-      const normalizedProducts = (productsData ?? []).map((product) => ({
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        categoryId: product.category_id,
-        description: product.description,
-        price: Number(product.price || 0),
-        oldPrice: product.old_price != null ? Number(product.old_price) : null,
-        rating: product.rating != null ? Number(product.rating) : null,
-        tag: product.tag,
-        image: product.image_url,
-        active: product.is_active,
-        hero: product.is_featured,
-      }));
+      const categoriesById = Object.fromEntries(
+        normalizedCategories.map((category) => [category.id, category])
+      );
+
+      const normalizedProducts = (productsData ?? []).map((product) => {
+        const category = categoriesById[product.category_id];
+
+        return {
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          categoryId: product.category_id,
+          categorySlug: category?.slug || "",
+          categoryName: category?.name || "",
+          description: product.description,
+          price: Number(product.price || 0),
+          oldPrice: product.old_price != null ? Number(product.old_price) : null,
+          rating: product.rating != null ? Number(product.rating) : null,
+          tag: product.tag,
+          image: product.image_url,
+          active: product.is_active,
+          hero: product.is_featured,
+          isCustomizable: isPizzaCategory(category),
+        };
+      });
 
       setCategories(normalizedCategories);
       setProductsFromDb(normalizedProducts);
@@ -138,11 +187,13 @@ export default function Menu() {
         const name = normalizeText(item.name);
         const description = normalizeText(item.description);
         const tag = normalizeText(item.tag);
+        const categoryName = normalizeText(item.categoryName);
 
         return (
           name.includes(term) ||
           description.includes(term) ||
-          tag.includes(term)
+          tag.includes(term) ||
+          categoryName.includes(term)
         );
       });
     }
@@ -180,7 +231,10 @@ export default function Menu() {
   }
 
   function handleOpenProductModal(product) {
-    setSelectedProduct(product);
+    setSelectedProduct({
+      ...product,
+      isCustomizable: isCustomizableProduct(product),
+    });
     resetProductOptions();
     setProductModalOpen(true);
   }
@@ -194,11 +248,13 @@ export default function Menu() {
   function handleConfirmProduct() {
     if (!selectedProduct) return;
 
-    const removedIngredients = [
-      withoutOnion ? "Sem cebola" : null,
-      withoutTomato ? "Sem tomate" : null,
-      withoutOlive ? "Sem azeitona" : null,
-    ].filter(Boolean);
+    const removedIngredients = isCustomizableProduct(selectedProduct)
+      ? [
+          withoutOnion ? "Sem cebola" : null,
+          withoutTomato ? "Sem tomate" : null,
+          withoutOlive ? "Sem azeitona" : null,
+        ].filter(Boolean)
+      : [];
 
     const trimmedNotes = notes.trim();
 
@@ -335,16 +391,19 @@ export default function Menu() {
     if (didPreselectRef.current) return;
     if (!productsFromDb.length) return;
 
-    const selectedPizza = productsFromDb.find(
-      (pizza) => pizza.id === openProductId || pizza.slug === openProductId
+    const selected = productsFromDb.find(
+      (product) => product.id === openProductId || product.slug === openProductId
     );
 
-    if (!selectedPizza) return;
+    if (!selected) return;
 
     didPreselectRef.current = true;
 
     setActiveCategory("all");
-    setSelectedProduct(selectedPizza);
+    setSelectedProduct({
+      ...selected,
+      isCustomizable: isCustomizableProduct(selected),
+    });
     resetProductOptions();
     setProductModalOpen(true);
   }, [location.state, productsFromDb]);

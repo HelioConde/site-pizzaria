@@ -6,7 +6,7 @@ import styles from "./Checkout.module.css";
 import PaymentSection from "./components/Payment/PaymentSection";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
-const GUEST_STORAGE_KEY = "base-studio-pizzas-guest";
+const GUEST_TEST_EMAIL = "compra@sem.cadastro.com";
 
 const PAYMENT_METHOD = {
   CASH: "dinheiro",
@@ -54,10 +54,57 @@ const initialDeliveryForm = {
   changeFor: "",
 };
 
+function normalizeDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function formatCep(value) {
+  const digits = normalizeDigits(value).slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+function formatPhone(value) {
+  const digits = normalizeDigits(value).slice(0, 11);
+
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatState(value) {
+  return String(value || "")
+    .replace(/[^a-zA-Z]/g, "")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatChangeFor(value) {
+  const cleaned = String(value || "").replace(/[^\d,]/g, "");
+
+  if (!cleaned) return "";
+
+  const parts = cleaned.split(",");
+  const integerPart = parts[0].slice(0, 6);
+  const decimalPart = parts[1] ? parts[1].slice(0, 2) : "";
+
+  return decimalPart ? `${integerPart},${decimalPart}` : integerPart;
+}
+
+function parseMoneyValue(value) {
+  if (!value) return 0;
+  return Number(String(value).replace(/\./g, "").replace(",", "."));
+}
+
 function mapUserMetadataToForm(metadata = {}) {
   return {
     name: metadata.name ?? "",
-    phone: metadata.phone ?? "",
+    phone: formatPhone(metadata.phone ?? ""),
     cep: "",
     address: "",
     district: "",
@@ -75,20 +122,101 @@ function mapUserMetadataToForm(metadata = {}) {
 function mapAddressToForm(address, base = {}) {
   return {
     ...base,
-    cep: address?.cep ?? "",
+    cep: formatCep(address?.cep ?? ""),
     address: address?.address ?? "",
     district: address?.district ?? "",
     city: address?.city ?? "",
-    state: address?.state ?? "",
+    state: formatState(address?.state ?? ""),
     number: address?.number ?? "",
     complement: address?.complement ?? "",
     reference: address?.reference ?? "",
   };
 }
 
-function parseMoneyValue(value) {
-  if (!value) return 0;
-  return Number(String(value).replace(/\./g, "").replace(",", "."));
+function validateDeliveryData({
+  mode,
+  isLoggedIn,
+  savedAddresses,
+  selectedAddressId,
+  showNewAddressForm,
+  activeDelivery,
+  total,
+  paymentMethods,
+}) {
+  if (mode === null) {
+    return "Escolha como deseja continuar.";
+  }
+
+  if (!activeDelivery.name.trim()) {
+    return "Preencha o nome.";
+  }
+
+  if (normalizeDigits(activeDelivery.phone).length < 10) {
+    return "Preencha um telefone válido.";
+  }
+
+  const requiresFullAddress =
+    mode === "guest" ||
+    !isLoggedIn ||
+    savedAddresses.length === 0 ||
+    showNewAddressForm;
+
+  if (mode === "account" && savedAddresses.length > 0 && !showNewAddressForm) {
+    if (!selectedAddressId) {
+      return "Selecione um endereço salvo.";
+    }
+  }
+
+  if (requiresFullAddress) {
+    if (normalizeDigits(activeDelivery.cep).length !== 8) {
+      return "Preencha um CEP válido.";
+    }
+
+    if (!activeDelivery.address.trim()) {
+      return "Preencha o endereço.";
+    }
+
+    if (!activeDelivery.district.trim()) {
+      return "Preencha o bairro.";
+    }
+
+    if (!activeDelivery.city.trim()) {
+      return "Preencha a cidade.";
+    }
+
+    if (activeDelivery.state.trim().length !== 2) {
+      return "Preencha o estado com 2 letras.";
+    }
+
+    if (!activeDelivery.number.trim()) {
+      return "Preencha o número do endereço.";
+    }
+  }
+
+  if (!activeDelivery.paymentMethod) {
+    return "Selecione a forma de pagamento.";
+  }
+
+  if (
+    activeDelivery.paymentMethod === paymentMethods.CASH &&
+    activeDelivery.needsChange
+  ) {
+    if (!activeDelivery.changeFor.trim()) {
+      return "Informe o valor para troco.";
+    }
+
+    const changeValue = parseMoneyValue(activeDelivery.changeFor);
+
+    if (changeValue <= 0) {
+      return "Informe um valor de troco válido.";
+    }
+
+    if (changeValue < total) {
+      return "O valor do troco deve ser maior que o total do pedido.";
+    }
+  }
+
+  return null;
 }
 
 export default function Checkout() {
@@ -98,7 +226,6 @@ export default function Checkout() {
   const [mode, setMode] = useState(null); // null | guest | account
   const [deliveryForm, setDeliveryForm] = useState(initialDeliveryForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSavedGuestData, setHasSavedGuestData] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -202,31 +329,6 @@ export default function Checkout() {
           }));
 
           await loadAddresses(currentUser.id, metadata);
-          return;
-        }
-
-        const savedGuest = localStorage.getItem(GUEST_STORAGE_KEY);
-        if (savedGuest) {
-          const parsedGuest = JSON.parse(savedGuest);
-          if (parsedGuest && typeof parsedGuest === "object") {
-            setDeliveryForm({
-              name: parsedGuest.name ?? "",
-              phone: parsedGuest.phone ?? "",
-              cep: parsedGuest.cep ?? "",
-              address: parsedGuest.address ?? "",
-              district: parsedGuest.district ?? "",
-              city: parsedGuest.city ?? "",
-              state: parsedGuest.state ?? "",
-              number: parsedGuest.number ?? "",
-              complement: parsedGuest.complement ?? "",
-              reference: parsedGuest.reference ?? "",
-              paymentMethod: parsedGuest.paymentMethod ?? "",
-              needsChange: parsedGuest.needsChange ?? false,
-              changeFor: parsedGuest.changeFor ?? "",
-            });
-            setMode("guest");
-            setHasSavedGuestData(true);
-          }
         }
       } catch (error) {
         console.error("Erro ao carregar checkout:", error);
@@ -239,13 +341,27 @@ export default function Checkout() {
   function handleContinueAsGuest() {
     setMode("guest");
     setMessage("");
+    setDeliveryForm((prev) => ({
+      ...initialDeliveryForm,
+      paymentMethod: prev.paymentMethod || "",
+      needsChange: prev.needsChange || false,
+      changeFor: prev.changeFor || "",
+    }));
   }
 
   function handleDeliveryChange(event) {
     const { name, value, type, checked } = event.target;
 
     setDeliveryForm((prev) => {
-      const nextValue = type === "checkbox" ? checked : value;
+      let nextValue = type === "checkbox" ? checked : value;
+
+      if (type !== "checkbox") {
+        if (name === "phone") nextValue = formatPhone(value);
+        if (name === "cep") nextValue = formatCep(value);
+        if (name === "state") nextValue = formatState(value);
+        if (name === "changeFor") nextValue = formatChangeFor(value);
+      }
+
       const nextForm = {
         ...prev,
         [name]: nextValue,
@@ -264,7 +380,7 @@ export default function Checkout() {
     });
 
     if (name === "cep") {
-      const numbers = value.replace(/\D/g, "");
+      const numbers = normalizeDigits(value);
       if (numbers.length === 8) {
         fetchAddressByCep(numbers);
       }
@@ -272,7 +388,7 @@ export default function Checkout() {
   }
 
   async function fetchAddressByCep(rawCep) {
-    const cep = rawCep.replace(/\D/g, "");
+    const cep = normalizeDigits(rawCep);
 
     if (cep.length !== 8) return;
 
@@ -290,26 +406,17 @@ export default function Checkout() {
 
       setDeliveryForm((prev) => ({
         ...prev,
-        cep,
+        cep: formatCep(cep),
         address: data.logradouro || "",
         district: data.bairro || "",
         city: data.localidade || "",
-        state: data.uf || "",
+        state: formatState(data.uf || ""),
       }));
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       setMessage("Não foi possível buscar o CEP.");
     } finally {
       setCepLoading(false);
-    }
-  }
-
-  function handleSaveGuestData() {
-    try {
-      localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(deliveryForm));
-      setHasSavedGuestData(true);
-    } catch (error) {
-      console.error("Erro ao salvar dados do convidado:", error);
     }
   }
 
@@ -351,8 +458,19 @@ export default function Checkout() {
   async function handleSaveNewAddress() {
     if (!user) return;
 
-    if (!deliveryForm.address || !deliveryForm.number) {
-      alert("Preencha endereço e número.");
+    const validationError = validateDeliveryData({
+      mode: "account",
+      isLoggedIn: true,
+      savedAddresses,
+      selectedAddressId,
+      showNewAddressForm: true,
+      activeDelivery: deliveryForm,
+      total,
+      paymentMethods: PAYMENT_METHOD,
+    });
+
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
@@ -365,7 +483,7 @@ export default function Checkout() {
       const { error } = await supabase.from("addresses").insert({
         user_id: user.id,
         label: "",
-        cep: deliveryForm.cep || null,
+        cep: normalizeDigits(deliveryForm.cep) || null,
         address: deliveryForm.address,
         district: deliveryForm.district || null,
         city: deliveryForm.city || null,
@@ -441,13 +559,12 @@ export default function Checkout() {
     activeDelivery,
   }) {
     const customerEmail =
-      user?.email ??
-      (mode === "guest" ? "cliente-convidado@basestudiopizzas.com" : null);
+      user?.email ?? (mode === "guest" ? GUEST_TEST_EMAIL : null);
 
     const notes =
       activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
-        activeDelivery.needsChange &&
-        activeDelivery.changeFor
+      activeDelivery.needsChange &&
+      activeDelivery.changeFor
         ? `Troco para: ${activeDelivery.changeFor}`
         : null;
 
@@ -458,6 +575,7 @@ export default function Checkout() {
         payment_method: paymentMethod,
         payment_status: paymentStatus,
         order_status: orderStatus,
+        is_test_order: mode === "guest",
 
         subtotal,
         delivery_fee: deliveryFee,
@@ -465,9 +583,9 @@ export default function Checkout() {
 
         customer_name: activeDelivery.name,
         customer_email: customerEmail,
-        customer_phone: activeDelivery.phone,
+        customer_phone: normalizeDigits(activeDelivery.phone),
 
-        delivery_cep: activeDelivery.cep || null,
+        delivery_cep: normalizeDigits(activeDelivery.cep) || null,
         delivery_address: activeDelivery.address || null,
         delivery_district: activeDelivery.district || null,
         delivery_city: activeDelivery.city || null,
@@ -506,13 +624,9 @@ export default function Checkout() {
     return order;
   }
 
-  function clearCartAndGuestIfNeeded() {
+  function clearCartOnly() {
     localStorage.removeItem(CART_STORAGE_KEY);
     setCartItems([]);
-
-    if (mode === "guest") {
-      handleSaveGuestData();
-    }
   }
 
   async function handleConfirmOrder() {
@@ -521,48 +635,22 @@ export default function Checkout() {
       return;
     }
 
-    if (mode === null) {
-      alert("Escolha como deseja continuar.");
-      return;
-    }
-
     const activeDelivery = getActiveDeliveryData();
 
-    if (
-      !activeDelivery.name ||
-      !activeDelivery.phone ||
-      !activeDelivery.address ||
-      !activeDelivery.number
-    ) {
-      alert("Preencha nome, telefone, endereço e número.");
+    const validationError = validateDeliveryData({
+      mode,
+      isLoggedIn,
+      savedAddresses,
+      selectedAddressId,
+      showNewAddressForm,
+      activeDelivery,
+      total,
+      paymentMethods: PAYMENT_METHOD,
+    });
+
+    if (validationError) {
+      alert(validationError);
       return;
-    }
-
-    if (!activeDelivery.paymentMethod) {
-      alert("Selecione a forma de pagamento.");
-      return;
-    }
-
-    if (
-      activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
-      activeDelivery.needsChange
-    ) {
-      if (!activeDelivery.changeFor) {
-        alert("Informe o valor para troco.");
-        return;
-      }
-
-      const changeValue = parseMoneyValue(activeDelivery.changeFor);
-
-      if (changeValue <= 0) {
-        alert("Informe um valor de troco válido.");
-        return;
-      }
-
-      if (changeValue < total) {
-        alert("O valor do troco deve ser maior que o total do pedido.");
-        return;
-      }
     }
 
     setIsSubmitting(true);
@@ -575,13 +663,11 @@ export default function Checkout() {
         deliveryFee,
         customer: {
           name: activeDelivery.name,
-          email:
-            user?.email ??
-            (mode === "guest" ? "cliente-convidado@basestudiopizzas.com" : null),
-          phone: activeDelivery.phone,
+          email: user?.email ?? (mode === "guest" ? GUEST_TEST_EMAIL : null),
+          phone: normalizeDigits(activeDelivery.phone),
         },
         delivery: {
-          cep: activeDelivery.cep,
+          cep: normalizeDigits(activeDelivery.cep),
           address: activeDelivery.address,
           district: activeDelivery.district,
           city: activeDelivery.city,
@@ -636,10 +722,6 @@ export default function Checkout() {
           throw new Error("A sessão de pagamento não retornou uma URL.");
         }
 
-        if (mode === "guest") {
-          handleSaveGuestData();
-        }
-
         window.location.href = data.url;
         return;
       }
@@ -652,7 +734,7 @@ export default function Checkout() {
           activeDelivery,
         });
 
-        clearCartAndGuestIfNeeded();
+        clearCartOnly();
         navigate(`/payment-success?order_id=${order.id}`, { replace: true });
         return;
       }
@@ -665,7 +747,7 @@ export default function Checkout() {
           activeDelivery,
         });
 
-        clearCartAndGuestIfNeeded();
+        clearCartOnly();
         navigate(`/payment-success?order_id=${order.id}`, { replace: true });
         return;
       }
@@ -708,9 +790,7 @@ export default function Checkout() {
               <section className={styles.card}>
                 <h2 className={styles.sectionTitle}>Como deseja continuar?</h2>
                 <p className={styles.sectionDesc}>
-                  Você pode entrar em uma conta ou comprar sem cadastro. Ao comprar
-                  sem cadastro, salvaremos seus dados neste dispositivo para facilitar
-                  a próxima compra.
+                  Você pode entrar em uma conta ou comprar sem cadastro.
                 </p>
 
                 <div className={styles.choiceGrid}>
@@ -727,9 +807,7 @@ export default function Checkout() {
                   >
                     <span className={styles.choiceIcon}>🛍️</span>
                     <strong>Comprar sem cadastro</strong>
-                    <span>
-                      Seus dados ficam salvos neste navegador para a próxima compra.
-                    </span>
+                    <span>Finalize o pedido sem criar conta.</span>
                   </button>
                 </div>
               </section>
@@ -786,10 +864,11 @@ export default function Checkout() {
                       {savedAddresses.map((addr, index) => (
                         <div
                           key={addr.id}
-                          className={`${styles.addressCard} ${selectedAddressId === addr.id
-                            ? styles.addressCardActive
-                            : ""
-                            }`}
+                          className={`${styles.addressCard} ${
+                            selectedAddressId === addr.id
+                              ? styles.addressCardActive
+                              : ""
+                          }`}
                         >
                           <p className={styles.addressCardTitle}>
                             <strong>
@@ -932,6 +1011,7 @@ export default function Checkout() {
                           value={deliveryForm.state}
                           onChange={handleDeliveryChange}
                           placeholder="UF"
+                          maxLength={2}
                         />
                       </label>
 
@@ -991,9 +1071,7 @@ export default function Checkout() {
                   <div>
                     <h2 className={styles.sectionTitle}>Dados de entrega</h2>
                     <p className={styles.sectionDesc}>
-                      {hasSavedGuestData
-                        ? "Seus dados já foram encontrados e preenchidos automaticamente."
-                        : "Preencha seus dados para concluir o pedido."}
+                      Preencha seus dados para concluir o pedido.
                     </p>
                   </div>
 
@@ -1081,6 +1159,7 @@ export default function Checkout() {
                       value={deliveryForm.state}
                       onChange={handleDeliveryChange}
                       placeholder="UF"
+                      maxLength={2}
                     />
                   </label>
 
@@ -1208,7 +1287,9 @@ export default function Checkout() {
                     ) : null}
 
                     <p className={styles.summaryDeliveryText}>
-                      {activeDelivery.district ? `${activeDelivery.district} • ` : ""}
+                      {activeDelivery.district
+                        ? `${activeDelivery.district} • `
+                        : ""}
                       {activeDelivery.city}
                       {activeDelivery.state ? ` - ${activeDelivery.state}` : ""}
                     </p>

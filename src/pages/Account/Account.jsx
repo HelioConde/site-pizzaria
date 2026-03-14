@@ -182,12 +182,15 @@ export default function Account() {
         .from("orders")
         .select("*")
         .eq("user_id", userId)
+        .or("is_test_order.is.null,is_test_order.eq.false")
         .order("created_at", { ascending: false })
         .limit(10);
 
       if (ordersError) throw ordersError;
 
-      const safeOrders = ordersData ?? [];
+      const safeOrders = (ordersData ?? []).filter(
+        (order) => order.user_id === userId && !order.is_test_order
+      );
 
       if (!safeOrders.length) {
         setOrders([]);

@@ -16,236 +16,113 @@ const PAYMENT_STATUS = {
   CANCELLED: "cancelled",
 };
 
-const ORDER_STATUS = {
-  PENDING: "pending",
-  PREPARING: "preparing",
-  DELIVERY: "delivery",
-  DELIVERED: "delivered",
-  CANCELLED: "cancelled",
-};
+function formatPrice(value) {
+  if (value == null) return null;
 
-const STATUS_STEPS = [
-  { key: "paid", label: "Pagamento aprovado" },
-  { key: ORDER_STATUS.PENDING, label: "Aguardando" },
-  { key: ORDER_STATUS.PREPARING, label: "Em preparo" },
-  { key: ORDER_STATUS.DELIVERY, label: "Saiu para entrega" },
-  { key: ORDER_STATUS.DELIVERED, label: "Entregue" },
-];
-
-function normalizeOrderStatus(value) {
-  const raw = String(value || "").trim().toLowerCase();
-
-  if (
-    [
-      "pending",
-      "new",
-      "novo",
-      "confirmed",
-      "confirmado",
-      "awaiting",
-      "aguardando",
-    ].includes(raw)
-  ) {
-    return ORDER_STATUS.PENDING;
-  }
-
-  if (["preparing", "em_preparo", "preparo"].includes(raw)) {
-    return ORDER_STATUS.PREPARING;
-  }
-
-  if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(raw)) {
-    return ORDER_STATUS.DELIVERY;
-  }
-
-  if (["delivered", "entregue"].includes(raw)) {
-    return ORDER_STATUS.DELIVERED;
-  }
-
-  if (["cancelled", "canceled", "cancelado"].includes(raw)) {
-    return ORDER_STATUS.CANCELLED;
-  }
-
-  return ORDER_STATUS.PENDING;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value) || 0);
 }
 
-function getStatusLabel(orderStatus, paymentStatus, paymentMethod) {
-  const normalizedOrderStatus = normalizeOrderStatus(orderStatus);
-  const normalizedPaymentStatus = String(paymentStatus || "").trim().toLowerCase();
-  const normalizedPaymentMethod = String(paymentMethod || "").trim().toLowerCase();
+function getPaymentMethodLabel(paymentMethod) {
+  const normalized = String(paymentMethod || "").trim().toLowerCase();
 
-  if (normalizedOrderStatus === ORDER_STATUS.CANCELLED) {
+  if (normalized === PAYMENT_METHOD.ONLINE) return "Pagamento online";
+  if (normalized === PAYMENT_METHOD.CARD_ON_DELIVERY) return "Cartão na entrega";
+  if (normalized === PAYMENT_METHOD.CASH) return "Dinheiro";
+
+  return "Não informado";
+}
+
+function getPaymentStatusLabel(paymentStatus, paymentMethod) {
+  const normalizedStatus = String(paymentStatus || "").trim().toLowerCase();
+  const normalizedMethod = String(paymentMethod || "").trim().toLowerCase();
+
+  if (normalizedStatus === PAYMENT_STATUS.PAID) {
+    return "Pago";
+  }
+
+  if (
+    normalizedStatus === PAYMENT_STATUS.DELIVERY_PAYMENT ||
+    normalizedMethod === PAYMENT_METHOD.CASH ||
+    normalizedMethod === PAYMENT_METHOD.CARD_ON_DELIVERY
+  ) {
+    return "Pagamento na entrega";
+  }
+
+  if (normalizedStatus === PAYMENT_STATUS.CANCELLED) {
     return "Cancelado";
   }
 
-  if (
-    normalizedPaymentMethod === PAYMENT_METHOD.ONLINE &&
-    normalizedPaymentStatus !== PAYMENT_STATUS.PAID
-  ) {
-    return "Pagamento pendente";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.PENDING) {
-    return "Aguardando";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.PREPARING) {
-    return "Em preparo";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERY) {
-    return "Saiu para entrega";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERED) {
-    return "Entregue";
-  }
-
-  return "Aguardando";
+  return "Pendente";
 }
 
-function getStatusText(orderStatus, paymentStatus, paymentMethod) {
-  const normalizedOrderStatus = normalizeOrderStatus(orderStatus);
-  const normalizedPaymentStatus = String(paymentStatus || "").trim().toLowerCase();
-  const normalizedPaymentMethod = String(paymentMethod || "").trim().toLowerCase();
+function getSuccessTitle(order) {
+  if (!order) return "Carregando pedido";
 
-  if (normalizedOrderStatus === ORDER_STATUS.CANCELLED) {
-    return "Este pedido foi cancelado.";
+  const paymentMethod = String(order.payment_method || "").trim().toLowerCase();
+  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
+
+  if (paymentMethod === PAYMENT_METHOD.ONLINE) {
+    return paymentStatus === PAYMENT_STATUS.PAID
+      ? "Pagamento aprovado com sucesso"
+      : "Pedido recebido com pagamento pendente";
   }
 
-  if (
-    normalizedPaymentMethod === PAYMENT_METHOD.ONLINE &&
-    normalizedPaymentStatus !== PAYMENT_STATUS.PAID
-  ) {
-    return "Estamos aguardando a confirmação do pagamento para continuar o atendimento do pedido.";
+  if (paymentMethod === PAYMENT_METHOD.CASH) {
+    return "Pedido confirmado";
   }
 
-  if (normalizedOrderStatus === ORDER_STATUS.PENDING) {
-    return "Seu pedido foi recebido e está aguardando a próxima etapa.";
+  if (paymentMethod === PAYMENT_METHOD.CARD_ON_DELIVERY) {
+    return "Pedido confirmado";
   }
 
-  if (normalizedOrderStatus === ORDER_STATUS.PREPARING) {
-    return "Nossa equipe já começou a preparar seu pedido.";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERY) {
-    return "Seu pedido saiu para entrega e está a caminho.";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERED) {
-    return "Seu pedido foi entregue com sucesso.";
-  }
-
-  return "Seu pedido foi recebido com sucesso.";
+  return "Pedido confirmado";
 }
 
-function getSummaryText(orderStatus, paymentStatus, paymentMethod) {
-  const normalizedOrderStatus = normalizeOrderStatus(orderStatus);
-  const normalizedPaymentStatus = String(paymentStatus || "").trim().toLowerCase();
-  const normalizedPaymentMethod = String(paymentMethod || "").trim().toLowerCase();
-
-  if (normalizedOrderStatus === ORDER_STATUS.CANCELLED) {
-    return "O pedido foi cancelado. Caso tenha ocorrido algum problema, verifique sua conta ou fale com a loja.";
+function getSuccessSubtitle(order) {
+  if (!order) {
+    return "Estamos validando as informações do seu pedido.";
   }
 
-  if (
-    normalizedPaymentMethod === PAYMENT_METHOD.ONLINE &&
-    normalizedPaymentStatus === PAYMENT_STATUS.PAID &&
-    normalizedOrderStatus === ORDER_STATUS.PENDING
-  ) {
-    return "O pagamento foi confirmado e seu pedido está aguardando o início do preparo.";
+  const paymentMethod = String(order.payment_method || "").trim().toLowerCase();
+  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
+
+  if (paymentMethod === PAYMENT_METHOD.ONLINE) {
+    if (paymentStatus === PAYMENT_STATUS.PAID) {
+      return "Seu pagamento foi confirmado e seu pedido já foi registrado com sucesso.";
+    }
+
+    return "Seu pedido foi registrado. Assim que o pagamento for confirmado, o atendimento continuará normalmente.";
   }
 
-  if (
-    normalizedPaymentMethod === PAYMENT_METHOD.ONLINE &&
-    normalizedPaymentStatus !== PAYMENT_STATUS.PAID
-  ) {
-    return "Estamos aguardando a confirmação do pagamento online para prosseguir com o pedido.";
+  if (paymentMethod === PAYMENT_METHOD.CASH) {
+    return "Seu pedido foi registrado com sucesso. O pagamento será feito em dinheiro no momento da entrega.";
   }
 
-  if (normalizedOrderStatus === ORDER_STATUS.PREPARING) {
-    return "O pagamento foi confirmado e seu pedido já está sendo preparado. Em breve ele seguirá para entrega.";
+  if (paymentMethod === PAYMENT_METHOD.CARD_ON_DELIVERY) {
+    return "Seu pedido foi registrado com sucesso. O pagamento será feito com cartão no momento da entrega.";
   }
 
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERY) {
-    return "Seu pedido já saiu para entrega e em breve chegará ao endereço informado.";
-  }
-
-  if (normalizedOrderStatus === ORDER_STATUS.DELIVERED) {
-    return "Seu pedido foi concluído e entregue com sucesso.";
-  }
-
-  return "Seu pedido foi confirmado com sucesso e está aguardando andamento.";
+  return "Seu pedido foi registrado com sucesso.";
 }
 
-function buildTimeline(orderStatus, paymentStatus, paymentMethod) {
-  const normalizedOrderStatus = normalizeOrderStatus(orderStatus);
-  const normalizedPaymentStatus = String(paymentStatus || "").trim().toLowerCase();
-  const normalizedPaymentMethod = String(paymentMethod || "").trim().toLowerCase();
+function getNextStepText(order) {
+  if (!order) return "";
 
-  const isOnlinePayment = normalizedPaymentMethod === PAYMENT_METHOD.ONLINE;
-  const isPaid = normalizedPaymentStatus === PAYMENT_STATUS.PAID;
-  const isCancelled = normalizedOrderStatus === ORDER_STATUS.CANCELLED;
+  const paymentMethod = String(order.payment_method || "").trim().toLowerCase();
+  const paymentStatus = String(order.payment_status || "").trim().toLowerCase();
 
-  if (isCancelled) {
-    return [
-      {
-        key: ORDER_STATUS.CANCELLED,
-        label: "Cancelado",
-        done: true,
-        current: true,
-      },
-    ];
+  if (paymentMethod === PAYMENT_METHOD.ONLINE) {
+    if (paymentStatus === PAYMENT_STATUS.PAID) {
+      return "Agora é só aguardar. Você pode acompanhar a evolução do pedido pela sua conta.";
+    }
+
+    return "Você pode acompanhar a confirmação do pagamento e a evolução do pedido pela sua conta.";
   }
 
-  if (isOnlinePayment && !isPaid) {
-    return [
-      {
-        key: "payment_pending",
-        label: "Pagamento pendente",
-        done: true,
-        current: true,
-      },
-      {
-        key: ORDER_STATUS.PENDING,
-        label: "Aguardando",
-        done: false,
-        current: false,
-      },
-      {
-        key: ORDER_STATUS.PREPARING,
-        label: "Em preparo",
-        done: false,
-        current: false,
-      },
-      {
-        key: ORDER_STATUS.DELIVERY,
-        label: "Saiu para entrega",
-        done: false,
-        current: false,
-      },
-      {
-        key: ORDER_STATUS.DELIVERED,
-        label: "Entregue",
-        done: false,
-        current: false,
-      },
-    ];
-  }
-
-  const orderStepIndexMap = {
-    [ORDER_STATUS.PENDING]: 1,
-    [ORDER_STATUS.PREPARING]: 2,
-    [ORDER_STATUS.DELIVERY]: 3,
-    [ORDER_STATUS.DELIVERED]: 4,
-  };
-
-  const currentStepIndex = orderStepIndexMap[normalizedOrderStatus] ?? 1;
-
-  return STATUS_STEPS.map((step, index) => ({
-    ...step,
-    done: index <= currentStepIndex,
-    current: index === currentStepIndex,
-  }));
+  return "Você pode acompanhar o andamento do pedido pela sua conta.";
 }
 
 export default function PaymentSuccess() {
@@ -264,13 +141,7 @@ export default function PaymentSuccess() {
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
-    async function confirmOrderWithRpc() {
-      console.log("========= PAYMENT SUCCESS RPC DEBUG =========");
-      console.log("URL:", window.location.href);
-      console.log("rawOrderId:", rawOrderId);
-      console.log("orderId:", orderId);
-      console.log("sessionId:", sessionId);
-
+    async function loadOrder() {
       if (!orderId) {
         setErrorMessage("Pedido não encontrado.");
         setLoading(false);
@@ -278,6 +149,29 @@ export default function PaymentSuccess() {
       }
 
       try {
+        const { data: existingOrder, error: fetchError } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (!existingOrder) {
+          throw new Error("Pedido não encontrado.");
+        }
+
+        const paymentMethod = String(
+          existingOrder.payment_method || ""
+        ).trim().toLowerCase();
+
+        if (paymentMethod !== PAYMENT_METHOD.ONLINE) {
+          setOrder(existingOrder);
+          return;
+        }
+
         const { data, error } = await supabase.rpc(
           "confirm_online_order_payment",
           {
@@ -286,9 +180,6 @@ export default function PaymentSuccess() {
           }
         );
 
-        console.log("RPC data:", data);
-        console.log("RPC error:", error);
-
         if (error) {
           throw error;
         }
@@ -296,12 +187,12 @@ export default function PaymentSuccess() {
         const resolvedOrder = Array.isArray(data) ? data[0] : data;
 
         if (!resolvedOrder) {
-          throw new Error("A função SQL não retornou os dados do pedido.");
+          throw new Error("Não foi possível carregar os dados do pedido.");
         }
 
         setOrder(resolvedOrder);
       } catch (error) {
-        console.error("🔥 ERRO RPC COMPLETO:", error);
+        console.error("Erro ao carregar confirmação do pedido:", error);
         setErrorMessage(
           error?.message || "Não foi possível carregar os dados do pedido."
         );
@@ -310,93 +201,28 @@ export default function PaymentSuccess() {
       }
     }
 
-    confirmOrderWithRpc();
-  }, [orderId, sessionId, rawOrderId]);
+    loadOrder();
+  }, [orderId, sessionId]);
 
-  const timeline = useMemo(() => {
-    if (!order) return [];
-    return buildTimeline(
-      order.order_status,
-      order.payment_status,
-      order.payment_method
-    );
+  const successTitle = useMemo(() => getSuccessTitle(order), [order]);
+  const subtitle = useMemo(() => getSuccessSubtitle(order), [order]);
+  const nextStepText = useMemo(() => getNextStepText(order), [order]);
+
+  const isGuestTestOrder = useMemo(() => {
+    return Boolean(order?.is_test_order);
   }, [order]);
 
-  const statusLabel = useMemo(() => {
-    if (!order) return "Carregando";
-    return getStatusLabel(
-      order.order_status,
-      order.payment_status,
-      order.payment_method
-    );
-  }, [order]);
+  async function handleCopyOrderId() {
+    if (!orderId) return;
 
-  const statusText = useMemo(() => {
-    if (!order) return "";
-    return getStatusText(
-      order.order_status,
-      order.payment_status,
-      order.payment_method
-    );
-  }, [order]);
-
-  const summaryText = useMemo(() => {
-    if (!order) return "";
-    return getSummaryText(
-      order.order_status,
-      order.payment_status,
-      order.payment_method
-    );
-  }, [order]);
-
-  const successTitle = useMemo(() => {
-    if (!order) return "Carregando pedido";
-
-    if (
-      String(order.payment_method || "").toLowerCase() === PAYMENT_METHOD.ONLINE
-    ) {
-      return String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID
-        ? "Pagamento aprovado com sucesso"
-        : "Pagamento recebido";
+    try {
+      await navigator.clipboard.writeText(orderId);
+      alert("Número do pedido copiado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao copiar número do pedido:", error);
+      alert("Não foi possível copiar o número do pedido.");
     }
-
-    return "Pedido confirmado com sucesso";
-  }, [order]);
-
-  const subtitle = useMemo(() => {
-    if (!order) {
-      return "Estamos validando as informações do seu pedido.";
-    }
-
-    if (
-      String(order.payment_method || "").toLowerCase() === PAYMENT_METHOD.ONLINE
-    ) {
-      if (
-        String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID
-      ) {
-        return (
-          <>
-            Seu pedido foi recebido pela <strong>Base Studio Pizzas</strong> e o
-            pagamento já foi confirmado.
-          </>
-        );
-      }
-
-      return (
-        <>
-          Seu pedido foi recebido pela <strong>Base Studio Pizzas</strong> e
-          estamos aguardando a confirmação do pagamento.
-        </>
-      );
-    }
-
-    return (
-      <>
-        Seu pedido foi recebido pela <strong>Base Studio Pizzas</strong> e está
-        aguardando andamento.
-      </>
-    );
-  }, [order]);
+  }
 
   return (
     <main className={styles.page}>
@@ -425,135 +251,106 @@ export default function PaymentSuccess() {
           ) : null}
 
           {!errorMessage ? (
-            <div className={styles.timelineBoxControl}>
-              <div className={styles.statusHighlight}>
-                <span className={styles.statusBadge}>Status atual</span>
-                <strong className={styles.statusValue}>
-                  {loading ? "Carregando..." : statusLabel}
-                </strong>
-                <p className={styles.statusText}>
-                  {loading ? "Aguarde..." : statusText}
-                </p>
-                <span className={styles.estimate}>
-                  Tempo estimado: 35–45 minutos
-                </span>
-              </div>
+            <div className={styles.infoBox}>
+              <h2 className={styles.sectionTitle}>Resumo do pedido</h2>
 
-              <div className={styles.timelineBox}>
-                <h2 className={styles.sectionTitle}>Acompanhamento do pedido</h2>
-
-                <div className={styles.timeline}>
-                  {loading ? (
-                    <div className={styles.timelineItem}>
-                      <div
-                        className={`${styles.timelineMarker} ${styles.timelineMarkerCurrent}`}
-                      />
-                      <div className={styles.timelineContent}>
-                        <p className={styles.timelineLabel}>
-                          Carregando status do pedido...
-                        </p>
-                      </div>
+              {loading ? (
+                <p className={styles.infoText}>Carregando resumo do pedido...</p>
+              ) : (
+                <div className={styles.summaryGrid}>
+                  {orderId ? (
+                    <div className={`${styles.referenceRow} ${styles.referenceRowFull}`}>
+                      <span className={styles.referenceLabel}>Pedido</span>
+                      <code className={styles.referenceValue}>#{orderId}</code>
                     </div>
-                  ) : (
-                    timeline.map((step) => (
-                      <div key={step.key} className={styles.timelineItem}>
-                        <div
-                          className={`${styles.timelineMarker} ${
-                            step.done ? styles.timelineMarkerDone : ""
-                          } ${
-                            step.current ? styles.timelineMarkerCurrent : ""
-                          }`}
-                        >
-                          {step.done ? "✓" : ""}
-                        </div>
+                  ) : null}
 
-                        <div className={styles.timelineContent}>
-                          <p
-                            className={`${styles.timelineLabel} ${
-                              step.done ? styles.timelineLabelDone : ""
-                            }`}
-                          >
-                            {step.label}
-                          </p>
+                  <div className={styles.referenceRow}>
+                    <span className={styles.referenceLabel}>Forma de pagamento</span>
+                    <code className={styles.referenceValue}>
+                      {getPaymentMethodLabel(order?.payment_method)}
+                    </code>
+                  </div>
 
-                          {step.current ? (
-                            <p className={styles.timelineCurrentText}>
-                              Etapa atual do seu pedido
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  <div className={styles.referenceRow}>
+                    <span className={styles.referenceLabel}>Pagamento</span>
+                    <code className={styles.referenceValue}>
+                      {getPaymentStatusLabel(order?.payment_status, order?.payment_method)}
+                    </code>
+                  </div>
+
+                  {order?.total != null ? (
+                    <div className={styles.referenceRow}>
+                      <span className={styles.referenceLabel}>Total</span>
+                      <code className={styles.referenceValue}>
+                        {formatPrice(order.total)}
+                      </code>
+                    </div>
+                  ) : null}
+
+                  {order?.customer_name ? (
+                    <div className={styles.referenceRow}>
+                      <span className={styles.referenceLabel}>Cliente</span>
+                      <code className={styles.referenceValue}>{order.customer_name}</code>
+                    </div>
+                  ) : null}
+
+                  {order?.customer_phone ? (
+                    <div className={styles.referenceRow}>
+                      <span className={styles.referenceLabel}>Telefone</span>
+                      <code className={styles.referenceValue}>{order.customer_phone}</code>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
+              )}
             </div>
           ) : null}
 
-          <div className={styles.infoBox}>
-            <h2 className={styles.sectionTitle}>Resumo</h2>
+          {!errorMessage && !loading ? (
+            <div className={styles.infoBox}>
+              <h2 className={styles.sectionTitle}>Próximo passo</h2>
 
-            <p className={styles.infoText}>
-              {loading ? "Carregando resumo do pedido..." : summaryText}
-            </p>
-
-            {orderId ? (
-              <div className={styles.referenceRow}>
-                <span className={styles.referenceLabel}>Pedido</span>
-                <code className={styles.referenceValue}>#{orderId}</code>
-              </div>
-            ) : null}
-
-            {sessionId ? (
-              <div className={styles.referenceRow}>
-                <span className={styles.referenceLabel}>Sessão Stripe</span>
-                <code className={styles.referenceValue}>{sessionId}</code>
-              </div>
-            ) : null}
-
-            {order ? (
-              <>
-                <div className={styles.referenceRow}>
-                  <span className={styles.referenceLabel}>Pagamento</span>
-                  <code className={styles.referenceValue}>
-                    {String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID
-                      ? "Pago"
-                      : String(order.payment_status || "").toLowerCase() ===
-                        PAYMENT_STATUS.DELIVERY_PAYMENT
-                      ? "Pagamento na entrega"
-                      : String(order.payment_status || "").toLowerCase() ===
-                        PAYMENT_STATUS.CANCELLED
-                      ? "Cancelado"
-                      : "Pendente"}
-                  </code>
-                </div>
-
-                <div className={styles.referenceRow}>
-                  <span className={styles.referenceLabel}>Status do pedido</span>
-                  <code className={styles.referenceValue}>{statusLabel}</code>
-                </div>
-              </>
-            ) : null}
-
-            {!loading && order ? (
-              <p className={styles.tip}>
-                Você pode acompanhar a evolução do pedido pela sua conta, com
-                etapas como <strong>Aguardando</strong>,{" "}
-                <strong>Em preparo</strong>,{" "}
-                <strong>Saiu para entrega</strong> e{" "}
-                <strong>Entregue</strong>.
-              </p>
-            ) : null}
-          </div>
+              {isGuestTestOrder ? (
+                <>
+                  <p className={styles.infoText}>
+                    Esta compra foi feita sem cadastro. O acompanhamento pela conta não
+                    está disponível nesta sessão.
+                  </p>
+                  <p className={styles.tip}>
+                    Guarde o número do pedido para referência.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className={styles.infoText}>{nextStepText}</p>
+                  <p className={styles.tip}>
+                    O acompanhamento detalhado do pedido fica disponível na sua conta.
+                  </p>
+                </>
+              )}
+            </div>
+          ) : null}
 
           <div className={styles.actions}>
             <Link to="/menu" className={styles.secondaryBtn}>
               Voltar ao cardápio
             </Link>
 
-            <Link to="/account" className={styles.primaryBtn}>
-              Acompanhar pedido
-            </Link>
+            {!loading && !errorMessage ? (
+              isGuestTestOrder ? (
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  onClick={handleCopyOrderId}
+                >
+                  Copiar número do pedido
+                </button>
+              ) : (
+                <Link to="/account" className={styles.primaryBtn}>
+                  Acompanhar pedido
+                </Link>
+              )
+            ) : null}
           </div>
         </section>
       </div>

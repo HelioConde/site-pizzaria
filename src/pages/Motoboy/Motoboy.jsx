@@ -10,6 +10,12 @@ import MotoboyOrderCard from "./components/MotoboyOrderCard";
 import { ORDER_STATUS, USER_ROLE } from "./motoboy.constants";
 import { isSameDay, normalizeOrderStatus } from "../Admin/admin.utils";
 
+const DELIVERY_QUERY_STATUSES = [
+  "delivery",
+  "out_for_delivery",
+  "saiu_para_entrega",
+];
+
 export default function Motoboy() {
   const navigate = useNavigate();
 
@@ -31,16 +37,15 @@ export default function Motoboy() {
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
         .select("*")
+        .in("order_status", DELIVERY_QUERY_STATUSES)
         .order("created_at", { ascending: false });
 
       if (ordersError) throw ordersError;
 
-      const safeOrders = (ordersData ?? [])
-        .map((order) => ({
-          ...order,
-          normalized_status: normalizeOrderStatus(order),
-        }))
-        .filter((order) => order.normalized_status === ORDER_STATUS.DELIVERY);
+      const safeOrders = (ordersData ?? []).map((order) => ({
+        ...order,
+        normalized_status: normalizeOrderStatus(order),
+      }));
 
       if (!safeOrders.length) {
         setOrders([]);
@@ -66,10 +71,12 @@ export default function Motoboy() {
         return acc;
       }, {});
 
-      const mergedOrders = safeOrders.map((order) => ({
-        ...order,
-        order_items: itemsByOrderId[order.id] ?? [],
-      }));
+      const mergedOrders = safeOrders
+        .map((order) => ({
+          ...order,
+          order_items: itemsByOrderId[order.id] ?? [],
+        }))
+        .filter((order) => order.normalized_status === ORDER_STATUS.DELIVERY);
 
       setOrders(mergedOrders);
       setMessage("");
@@ -168,30 +175,32 @@ export default function Motoboy() {
     await supabase.auth.signOut();
     navigate("/", { replace: true });
   }
-async function handleMarkDelivered(orderId) {
-  setUpdatingOrderId(orderId);
-  setMessage("");
 
-  try {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        order_status: ORDER_STATUS.DELIVERED,
-        delivered_at: new Date().toISOString(),
-      })
-      .eq("id", orderId);
+  async function handleMarkDelivered(orderId) {
+    setUpdatingOrderId(orderId);
+    setMessage("");
 
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          order_status: ORDER_STATUS.DELIVERED,
+          delivered_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
 
-    setMessage("Pedido marcado como entregue com sucesso.");
-    await loadOrders();
-  } catch (error) {
-    console.error("Erro ao marcar pedido como entregue:", error);
-    setMessage("Não foi possível atualizar o pedido.");
-  } finally {
-    setUpdatingOrderId(null);
+      if (error) throw error;
+
+      setMessage("Pedido marcado como entregue com sucesso.");
+      await loadOrders();
+    } catch (error) {
+      console.error("Erro ao marcar pedido como entregue:", error);
+      setMessage("Não foi possível atualizar o pedido.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
   }
-}
+
   const stats = useMemo(() => {
     const today = new Date();
 
