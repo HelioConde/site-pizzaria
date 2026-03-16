@@ -1,6 +1,15 @@
 ## 🍕 Base Studio Pizzas  
 ### Plataforma Fullstack de Delivery
 
+## 🚧 Projeto em Desenvolvimento
+
+⚠️ Este projeto ainda está em desenvolvimento e novas funcionalidades estão sendo implementadas continuamente.
+
+Algumas funcionalidades podem estar incompletas ou em fase de testes.  
+O objetivo deste projeto é simular um **sistema real de delivery**, evoluindo gradualmente com melhorias de arquitetura, experiência do usuário e novas funcionalidades.
+
+Sugestões e feedbacks são bem-vindos.
+
 Plataforma completa de delivery para pizzarias modernas, com painel de **Cliente, Administrador e Motoboy**, incluindo **rastreamento em tempo real via GPS**.
 
 Projeto desenvolvido como simulação de produto real de mercado, com foco em **arquitetura escalável, controle de permissões e experiência do usuário (UX)**.
@@ -230,6 +239,44 @@ Este projeto demonstra:
 - Desenvolvimento de produto real
 
 ---
+
+## 🌐 Demo Online
+
+A aplicação está disponível online:
+
+🔗 https://helioconde.github.io/site-pizzaria/
+
+---
+
+## 🔑 Usuários para Teste
+
+Você pode testar os diferentes perfis do sistema utilizando os seguintes usuários.
+
+### 👤 Cliente
+
+Email: teste@teste.com  
+Senha: 12345678  
+
+---
+
+### 🛠️ Administrador
+
+Email: admin@admin.com  
+Senha: 12345678  
+
+---
+
+### 🛵 Motoboy
+
+Email: motoboy@motoboy.com  
+Senha: 12345678  
+
+---
+
+⚠️ Observação
+
+Este projeto é uma simulação de sistema real de delivery.  
+Durante os testes, outros usuários podem alterar o status dos pedidos.
 
 ## 👨‍💻 Autor
 
