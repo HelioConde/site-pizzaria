@@ -1,7 +1,7 @@
-# 🍕 Base Studio Pizzas  
-### Fullstack Delivery Platform
+## 🍕 Base Studio Pizzas  
+### Plataforma Fullstack de Delivery
 
-Plataforma completa de delivery para pizzarias modernas, com painel de **Cliente, Administrador e Motoboy**, incluindo rastreamento em tempo real via GPS.
+Plataforma completa de delivery para pizzarias modernas, com painel de **Cliente, Administrador e Motoboy**, incluindo **rastreamento em tempo real via GPS**.
 
 Projeto desenvolvido como simulação de produto real de mercado, com foco em **arquitetura escalável, controle de permissões e experiência do usuário (UX)**.
 
@@ -9,186 +9,233 @@ Projeto desenvolvido como simulação de produto real de mercado, com foco em **
 
 ## 🚀 Visão Geral
 
-O Base Studio Pizzas simula um sistema completo de delivery, permitindo:
+O **Base Studio Pizzas** simula um sistema completo de delivery, permitindo:
 
-- 📱 Clientes realizarem pedidos e acompanharem o status
-- 🛠️ Administradores gerenciarem pedidos e pagamentos
-- 🛵 Motoboys visualizarem entregas e compartilharem localização em tempo real
-- 📍 Rastreamento GPS ativo durante a entrega
+- 📱 Clientes realizarem pedidos online
+- 📦 Acompanhamento do status do pedido
+- 🛠️ Administradores gerenciarem pedidos
+- 🛵 Motoboys aceitarem entregas
+- 📍 Rastreamento da entrega em tempo real via GPS
 
-Este projeto faz parte do ecossistema **Base Studio Digital**, demonstrando capacidade de desenvolvimento fullstack com arquitetura modular.
+Este projeto demonstra a construção de uma **aplicação real de mercado**, com diferentes perfis de usuários e fluxo completo de entrega.
 
 ---
 
-# 🧠 Funcionalidades
+## 🧰 Tecnologias Utilizadas
 
-## 👤 Cliente
+Frontend  
+React • Vite • React Router
 
-- Cadastro e Login
-- Visualização do Cardápio
-- Carrinho de Compras
-- Finalização de Pedido
-- Acompanhamento de Status
+Backend (BaaS)  
+Supabase • PostgreSQL
+
+Mapas e Rastreamento  
+Leaflet • OpenStreetMap
+
+Pagamentos  
+Stripe
+
+Deploy  
+GitHub Pages
+
+---
+
+## 🧠 Funcionalidades
+
+### 👤 Cliente
+
+- Cadastro e login
+- Visualização do cardápio
+- Carrinho de compras
+- Finalização de pedido
+- Acompanhamento do status do pedido
 - Rastreamento da entrega em tempo real
 - Confirmação de recebimento
 
 ---
 
-## 🛠️ Administrador
+### 🛠️ Administrador
 
 - Login administrativo
 - Visualização global de pedidos
-- Alteração de status:
-  - Aguardando pagamento
-  - Pago
-  - Em preparo
-  - Saiu para entrega
-  - Entregue
+- Alteração de status do pedido
 - Atribuição de motoboy
 - Correção manual de status
+- Controle de fluxo da entrega
+
+Status possíveis:
+
+- Aguardando pagamento  
+- Pago  
+- Em preparo  
+- Aguardando motoboy  
+- Saiu para entrega  
+- Entregue  
 
 ---
 
-## 🛵 Motoboy
+### 🛵 Motoboy
 
 - Login exclusivo
-- Visualização de entregas atribuídas
-- Acesso ao endereço e contato do cliente
-- Botões:
-  - "Saiu para entrega"
-  - "Entregue"
-- Compartilhamento de localização via GPS
+- Visualização de pedidos disponíveis
+- Aceitar entregas
+- Acesso ao endereço do cliente
+- Botões de ação:
+  - **Aceitar entrega**
+  - **Saiu para entrega**
+  - **Entregue**
+- Compartilhamento de localização em tempo real
 
 ---
 
-# 📍 Rastreamento em Tempo Real
+## 📍 Rastreamento em Tempo Real
 
-Implementado utilizando:
+O sistema permite acompanhar o motoboy durante a entrega.
 
-- Geolocation API
-- Atualização periódica de coordenadas
-- Leaflet + OpenStreetMap para exibição em mapa
+Tecnologias utilizadas:
 
-🔐 O GPS é ativado apenas no status **"Saiu para entrega"**  
-🛑 Desativado automaticamente ao marcar **"Entregue"**
+- **Geolocation API**
+- **Leaflet**
+- **OpenStreetMap**
+- **Supabase Realtime**
 
----
+Regras de funcionamento:
 
-# 🔐 Controle de Permissões (RBAC)
-
-| Função                | Cliente | Admin | Motoboy |
-|-----------------------|---------|--------|----------|
-| Criar pedido          | ✅      | ❌     | ❌       |
-| Alterar status        | ❌      | ✅     | Parcial  |
-| Atribuir motoboy      | ❌      | ✅     | ❌       |
-| Marcar entregue       | ❌      | ✅     | ✅       |
-| Confirmar recebimento | ✅      | ❌     | ❌       |
+- 📍 GPS ativado quando o motoboy marca **"Saiu para entrega"**
+- 🛑 GPS desativado automaticamente quando o pedido é marcado **"Entregue"**
 
 ---
 
-# 🗂️ Arquitetura do Projeto
+## 🔐 Controle de Permissões (RBAC)
 
-## 🎨 Frontend
+| Ação | Cliente | Admin | Motoboy |
+|-----|------|------|------|
+Criar pedido | ✅ | ❌ | ❌ |
+Alterar status | ❌ | ✅ | Parcial |
+Atribuir motoboy | ❌ | ✅ | ❌ |
+Aceitar entrega | ❌ | ❌ | ✅ |
+Marcar entregue | ❌ | ✅ | ✅ |
+Confirmar recebimento | ✅ | ❌ | ❌ |
+
+---
+
+## 🗂️ Arquitetura do Projeto
+
+### 🎨 Frontend
 
 - React
 - Vite
-- CSS Modules / TailwindCSS
 - React Router
+- CSS Modules
 - Leaflet (Mapas)
-- Arquitetura modular por componentes
 
-## ⚙️ Backend
-
-- Node.js
-- Express
-- Prisma ORM
-- PostgreSQL
-- JWT Authentication
+Arquitetura baseada em **componentes reutilizáveis e separação de responsabilidades**.
 
 ---
 
-# 🗄️ Modelagem de Dados
+### ⚙️ Backend (BaaS)
 
-## User
+O projeto utiliza **Supabase** como backend.
+
+Tecnologias:
+
+- Supabase
+- PostgreSQL
+- Supabase Auth
+- Supabase Realtime
+
+Essa arquitetura permite:
+
+- autenticação integrada
+- banco de dados escalável
+- atualizações em tempo real
+- simplificação da infraestrutura backend
+
+---
+
+## 🗄️ Modelagem de Dados (Resumo)
+
+### Users
 
 - id
-- name
 - email
-- passwordHash
 - role (client | admin | delivery)
 
-## Product
+### Products
 
 - id
 - name
+- price
 - description
-- basePrice
-- sizes
 - active
 
-## Order
+### Orders
 
 - id
-- clientId
+- user_id
 - items
-- address
-- paymentMethod
-- paymentStatus
-- status
-- deliveryUserId
-- timestamps
+- delivery_address
+- payment_method
+- payment_status
+- order_status
+- delivery_user_id
+- created_at
 
 ---
 
-# 🏗️ Fluxo de Status do Pedido
+## 🏗️ Fluxo de Status do Pedido
 
-1. Criado  
-2. Aguardando pagamento  
-3. Pago  
-4. Em preparo  
-5. Saiu para entrega  
-6. Entregue  
-7. Confirmado pelo cliente  
-
----
-
-# 🎯 Diferenciais Técnicos
-
-- Sistema com múltiplos níveis de acesso (RBAC)
-- Rastreamento GPS em tempo real
-- Separação clara Frontend / Backend
-- Arquitetura preparada para escalar
-- Simulação de fluxo real de delivery
-- Estrutura de produto SaaS
+1️⃣ Criado  
+2️⃣ Aguardando pagamento  
+3️⃣ Pago  
+4️⃣ Em preparo  
+5️⃣ Aguardando entregador  
+6️⃣ Saiu para entrega  
+7️⃣ Entregue  
+8️⃣ Confirmado pelo cliente  
 
 ---
 
-# 📦 Roadmap (Melhorias Futuras)
+## 🎯 Diferenciais Técnicos
 
-- Integração com pagamento real (Stripe / Mercado Pago)
-- WebSocket para atualização instantânea
+- Sistema com **múltiplos níveis de acesso (RBAC)**
+- **Rastreamento GPS em tempo real**
+- Integração com **Supabase**
+- Arquitetura modular
+- Simulação de produto SaaS
+- Fluxo completo de delivery
+
+---
+
+## 📦 Roadmap (Melhorias Futuras)
+
+- Integração com pagamento real (**Stripe**)
+- WebSockets para atualização instantânea
 - Notificações push
 - Histórico de localização
 - Sistema de avaliações
-- Dashboard com métricas de venda
+- Dashboard administrativo com métricas
 
 ---
 
-# 🧪 Objetivo Profissional
+## 🧪 Objetivo Profissional
 
 Este projeto demonstra:
 
-- Organização de código
-- Arquitetura fullstack
-- Pensamento de produto
-- Controle de permissões
+- Arquitetura de aplicações modernas
+- Integração frontend + backend
 - Modelagem de dados
-- UX aplicada a sistema real
+- Controle de permissões
+- Rastreamento em tempo real
+- Desenvolvimento de produto real
 
 ---
 
-# 👨‍💻 Autor
+## 👨‍💻 Autor
 
-**Hélio Conde**  
-Desenvolvedor Front-End focado em aplicações interativas e sistemas reais.  
-Base Studio Digital
+**Hélio Conde**
+
+Desenvolvedor Front-End focado em **aplicações modernas, interativas e sistemas reais**.
+
+🔗 Linkedin  
+https://www.linkedin.com/in/helioconde/
