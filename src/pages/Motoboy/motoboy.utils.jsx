@@ -44,6 +44,18 @@ export function normalizeOrderStatus(order) {
     return ORDER_STATUS.PREPARING;
   }
 
+  if (
+    [
+      "waiting_courier",
+      "awaiting_courier",
+      "aguardando_motoboy",
+      "aguardando motoboy",
+      "waiting_delivery",
+    ].includes(raw)
+  ) {
+    return ORDER_STATUS.WAITING_COURIER;
+  }
+
   if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(raw)) {
     return ORDER_STATUS.DELIVERY;
   }
@@ -106,29 +118,12 @@ export function buildDeliveryAddress(order) {
 export function buildFullDeliveryAddress(order) {
   const parts = [];
 
-  if (order.delivery_address) {
-    parts.push(order.delivery_address);
-  }
-
-  if (order.delivery_number) {
-    parts.push(order.delivery_number);
-  }
-
-  if (order.delivery_district) {
-    parts.push(order.delivery_district);
-  }
-
-  if (order.delivery_city) {
-    parts.push(order.delivery_city);
-  }
-
-  if (order.delivery_state) {
-    parts.push(order.delivery_state);
-  }
-
-  if (order.delivery_cep) {
-    parts.push(order.delivery_cep);
-  }
+  if (order.delivery_address) parts.push(order.delivery_address);
+  if (order.delivery_number) parts.push(order.delivery_number);
+  if (order.delivery_district) parts.push(order.delivery_district);
+  if (order.delivery_city) parts.push(order.delivery_city);
+  if (order.delivery_state) parts.push(order.delivery_state);
+  if (order.delivery_cep) parts.push(order.delivery_cep);
 
   return parts.filter(Boolean).join(", ");
 }
@@ -142,9 +137,7 @@ export function getWhatsAppUrl(phone) {
 
   if (!digits) return null;
 
-  const withCountryCode =
-    digits.length >= 12 ? digits : `55${digits}`;
-
+  const withCountryCode = digits.length >= 12 ? digits : `55${digits}`;
   return `https://wa.me/${withCountryCode}`;
 }
 
@@ -161,9 +154,17 @@ export function getGoogleMapsRouteUrl(order) {
 
   if (!fullAddress) return null;
 
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
     fullAddress
-  )}`;
+  )}&travelmode=driving`;
+}
+
+export function getWazeRouteUrl(order) {
+  const fullAddress = buildFullDeliveryAddress(order);
+
+  if (!fullAddress) return null;
+
+  return `https://waze.com/ul?q=${encodeURIComponent(fullAddress)}&navigate=yes`;
 }
 
 export function parseArrayLike(value) {

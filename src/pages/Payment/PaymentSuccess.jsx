@@ -131,9 +131,10 @@ export default function PaymentSuccess() {
   const rawOrderId = searchParams.get("order_id");
   const sessionId = searchParams.get("session_id");
 
+
   const orderId = useMemo(() => {
     if (!rawOrderId) return null;
-    return rawOrderId.split("?")[0].trim();
+    return rawOrderId.trim();
   }, [rawOrderId]);
 
   const [loading, setLoading] = useState(true);
@@ -185,6 +186,11 @@ export default function PaymentSuccess() {
         }
 
         const resolvedOrder = Array.isArray(data) ? data[0] : data;
+
+        if (data?.paid) {
+          localStorage.removeItem("base-studio-pizzas-cart");
+        }
+
 
         if (!resolvedOrder) {
           throw new Error("Não foi possível carregar os dados do pedido.");

@@ -1,34 +1,318 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Motoboy.module.css";
+import MotoboyDeliveryMap from "../../components/maps/DeliveryRouteMap";
 
 import DashboardHeader from "../../components/layout/DashboardHeader/DashboardHeader";
-import MotoboyStats from "./components/MotoboyStats";
 import MotoboyOrderCard from "./components/MotoboyOrderCard";
 
 import { ORDER_STATUS, USER_ROLE } from "./motoboy.constants";
 import { isSameDay, normalizeOrderStatus } from "../Admin/admin.utils";
 
 const DELIVERY_QUERY_STATUSES = [
+  "waiting_courier",
+  "awaiting_courier",
+  "aguardando_motoboy",
   "delivery",
   "out_for_delivery",
   "saiu_para_entrega",
 ];
 
+const NOTIFICATION_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-order.mp3`;
+const GPS_MIN_SEND_INTERVAL = 5000;
+
 export default function Motoboy() {
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
+  const [availableOrders, setAvailableOrders] = useState([]);
+  const [myActiveOrder, setMyActiveOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accessLoading, setAccessLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [message, setMessage] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [userInfo, setUserInfo] = useState({
+    id: "",
     name: "Motoboy",
     email: "",
   });
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [showEnableSoundButton, setShowEnableSoundButton] = useState(false);
+  const [gpsActive, setGpsActive] = useState(false);
+  const [gpsError, setGpsError] = useState("");
+  const [lastGpsAt, setLastGpsAt] = useState(null);
+  const [currentCourierPosition, setCurrentCourierPosition] = useState({
+    latitude: null,
+    longitude: null,
+  });
+
+  const audioUnlockedRef = useRef(false);
+  const knownAvailableOrderIdsRef = useRef(new Set());
+  const pageTitleRef = useRef(document.title);
+  const titleBlinkIntervalRef = useRef(null);
+  const watchIdRef = useRef(null);
+  const lastSentLocationRef = useRef({
+    lat: null,
+    lng: null,
+    sentAt: 0,
+  });
+
+  const stopTitleBlink = useCallback(() => {
+    if (titleBlinkIntervalRef.current) {
+      clearInterval(titleBlinkIntervalRef.current);
+      titleBlinkIntervalRef.current = null;
+    }
+
+    document.title = pageTitleRef.current;
+  }, []);
+
+  const startTitleBlink = useCallback((text = "Nova entrega!") => {
+    if (titleBlinkIntervalRef.current) return;
+
+    let toggle = false;
+
+    titleBlinkIntervalRef.current = setInterval(() => {
+      document.title = toggle ? text : pageTitleRef.current;
+      toggle = !toggle;
+    }, 1000);
+  }, []);
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "default") {
+      try {
+        await Notification.requestPermission();
+      } catch (error) {
+        console.warn("Não foi possível pedir permissão de notificação:", error);
+      }
+    }
+  }, []);
+
+  const unlockAudio = useCallback(async () => {
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND_SRC);
+      audio.volume = 0.01;
+      audio.preload = "auto";
+
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+
+      audioUnlockedRef.current = true;
+      setAudioEnabled(true);
+      setShowEnableSoundButton(false);
+
+      await requestNotificationPermission();
+    } catch (error) {
+      audioUnlockedRef.current = false;
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+      console.warn("Áudio do motoboy ainda bloqueado:", error);
+    }
+  }, [requestNotificationPermission]);
+
+  const playNotificationSound = useCallback(() => {
+    if (!audioUnlockedRef.current) {
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+      return;
+    }
+
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND_SRC);
+      audio.volume = 0.5;
+      audio.preload = "auto";
+
+      audio.play().catch((error) => {
+        console.warn("Não foi possível tocar o som do motoboy:", error);
+        audioUnlockedRef.current = false;
+        setAudioEnabled(false);
+        setShowEnableSoundButton(true);
+      });
+    } catch (error) {
+      console.error("Erro ao tocar som do motoboy:", error);
+      audioUnlockedRef.current = false;
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+    }
+  }, []);
+
+  const showBrowserNotification = useCallback((order) => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      const notification = new Notification("Nova entrega disponível", {
+        body: `${order.customer_name || "Cliente"} • ${Number(
+          order.total || 0
+        ).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}`,
+        icon: `${import.meta.env.BASE_URL}favicon.ico`,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+      };
+    }
+  }, []);
+
+  const stopGpsTracking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    setGpsActive(false);
+    setCurrentCourierPosition({
+      latitude: null,
+      longitude: null,
+    });
+  }, []);
+
+  const sendLocation = useCallback(
+    async (orderId, latitude, longitude) => {
+      try {
+        const now = Date.now();
+        const { lat, lng, sentAt } = lastSentLocationRef.current;
+
+        const samePosition = lat === latitude && lng === longitude;
+        const tooSoon = now - sentAt < GPS_MIN_SEND_INTERVAL;
+
+        if (samePosition && tooSoon) {
+          return;
+        }
+
+        if (tooSoon) {
+          return;
+        }
+
+        const { error } = await supabase
+          .from("order_delivery_tracking")
+          .insert({
+            order_id: orderId,
+            courier_id: userInfo.id,
+            latitude,
+            longitude,
+          });
+
+        if (error) throw error;
+
+        lastSentLocationRef.current = {
+          lat: latitude,
+          lng: longitude,
+          sentAt: now,
+        };
+
+        setLastGpsAt(new Date().toISOString());
+        setGpsError("");
+      } catch (error) {
+        console.error("Erro ao enviar localização:", error);
+        setGpsError("Não foi possível atualizar a localização.");
+      }
+    },
+    [userInfo.id]
+  );
+
+  const startGpsTracking = useCallback(
+    (orderId) => {
+      if (!navigator.geolocation) {
+        setGpsError("Geolocalização não é suportada neste dispositivo.");
+        return;
+      }
+
+      if (!orderId) {
+        setGpsError("Nenhuma entrega ativa para rastrear.");
+        return;
+      }
+
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+
+      setGpsError("");
+
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          setCurrentCourierPosition({
+            latitude,
+            longitude,
+          });
+
+          setGpsActive(true);
+          await sendLocation(orderId, latitude, longitude);
+        },
+        (error) => {
+          console.error("Erro ao obter GPS:", error);
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setGpsError("Permissão de localização negada.");
+              break;
+            case error.POSITION_UNAVAILABLE:
+              setGpsError("Localização indisponível no momento.");
+              break;
+            case error.TIMEOUT:
+              setGpsError("Tempo esgotado ao obter localização.");
+              break;
+            default:
+              setGpsError("Não foi possível iniciar o GPS.");
+          }
+
+          setGpsActive(false);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000,
+        }
+      );
+
+      watchIdRef.current = watchId;
+    },
+    [sendLocation]
+  );
+
+  const mapOrdersWithItems = useCallback(async (ordersData) => {
+    const safeOrders = (ordersData ?? []).map((order) => ({
+      ...order,
+      normalized_status: normalizeOrderStatus(order),
+    }));
+
+    if (!safeOrders.length) {
+      return [];
+    }
+
+    const orderIds = safeOrders.map((order) => order.id);
+
+    const { data: itemsData, error: itemsError } = await supabase
+      .from("order_items")
+      .select("*")
+      .in("order_id", orderIds);
+
+    if (itemsError) throw itemsError;
+
+    const itemsByOrderId = (itemsData ?? []).reduce((acc, item) => {
+      if (!acc[item.order_id]) {
+        acc[item.order_id] = [];
+      }
+
+      acc[item.order_id].push(item);
+      return acc;
+    }, {});
+
+    return safeOrders.map((order) => ({
+      ...order,
+      order_items: itemsByOrderId[order.id] ?? [],
+    }));
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -42,52 +326,90 @@ export default function Motoboy() {
 
       if (ordersError) throw ordersError;
 
-      const safeOrders = (ordersData ?? []).map((order) => ({
-        ...order,
-        normalized_status: normalizeOrderStatus(order),
-      }));
+      const mergedOrders = await mapOrdersWithItems(ordersData ?? []);
 
-      if (!safeOrders.length) {
-        setOrders([]);
-        setMessage("");
-        return;
-      }
+      const nextAvailableOrders = mergedOrders.filter((order) => {
+        const normalizedStatus = order.normalized_status;
+        const assignedToCourier = Boolean(order.delivery_user_id);
 
-      const orderIds = safeOrders.map((order) => order.id);
+        return (
+          normalizedStatus === ORDER_STATUS.WAITING_COURIER &&
+          !assignedToCourier
+        );
+      });
 
-      const { data: itemsData, error: itemsError } = await supabase
-        .from("order_items")
-        .select("*")
-        .in("order_id", orderIds);
+      const nextMyActiveOrder =
+        mergedOrders.find((order) => {
+          const normalizedStatus = order.normalized_status;
+          const assignedToMe =
+            String(order.delivery_user_id || "") === String(userInfo.id || "");
 
-      if (itemsError) throw itemsError;
-
-      const itemsByOrderId = (itemsData ?? []).reduce((acc, item) => {
-        if (!acc[item.order_id]) {
-          acc[item.order_id] = [];
-        }
-
-        acc[item.order_id].push(item);
-        return acc;
-      }, {});
-
-      const mergedOrders = safeOrders
-        .map((order) => ({
-          ...order,
-          order_items: itemsByOrderId[order.id] ?? [],
-        }))
-        .filter((order) => order.normalized_status === ORDER_STATUS.DELIVERY);
+          return normalizedStatus === ORDER_STATUS.DELIVERY && assignedToMe;
+        }) || null;
 
       setOrders(mergedOrders);
+      setAvailableOrders(nextAvailableOrders);
+      setMyActiveOrder(nextMyActiveOrder);
       setMessage("");
+
+      knownAvailableOrderIdsRef.current = new Set(
+        nextAvailableOrders.map((order) => order.id)
+      );
     } catch (error) {
       console.error("Erro ao carregar pedidos do motoboy:", error);
       setOrders([]);
+      setAvailableOrders([]);
+      setMyActiveOrder(null);
       setMessage("Não foi possível carregar os pedidos para entrega.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mapOrdersWithItems, userInfo.id]);
+
+  useEffect(() => {
+    async function checkAudioPermission() {
+      try {
+        const audio = new Audio(NOTIFICATION_SOUND_SRC);
+        audio.volume = 0.01;
+        audio.preload = "auto";
+
+        await audio.play();
+        audio.pause();
+        audio.currentTime = 0;
+
+        audioUnlockedRef.current = true;
+        setAudioEnabled(true);
+        setShowEnableSoundButton(false);
+      } catch {
+        audioUnlockedRef.current = false;
+        setAudioEnabled(false);
+        setShowEnableSoundButton(true);
+      }
+    }
+
+    checkAudioPermission();
+
+    const handleFocus = () => {
+      stopTitleBlink();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      stopTitleBlink();
+    };
+  }, [stopTitleBlink]);
+
+  useEffect(() => {
+    window.addEventListener("click", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, [unlockAudio]);
 
   useEffect(() => {
     let active = true;
@@ -109,9 +431,7 @@ export default function Motoboy() {
           .eq("id", session.user.id)
           .maybeSingle();
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         const role = String(profile?.role || "").trim().toLowerCase();
 
@@ -123,6 +443,7 @@ export default function Motoboy() {
         if (!active) return;
 
         setUserInfo({
+          id: session.user.id,
           name:
             profile?.name ||
             session.user.user_metadata?.name ||
@@ -132,7 +453,6 @@ export default function Motoboy() {
         });
 
         setHasAccess(true);
-        await loadOrders();
       } catch (error) {
         console.error("Erro ao validar acesso do motoboy:", error);
         navigate("/", { replace: true });
@@ -148,32 +468,159 @@ export default function Motoboy() {
     return () => {
       active = false;
     };
-  }, [navigate, loadOrders]);
+  }, [navigate]);
 
   useEffect(() => {
-    if (!hasAccess) return;
+    if (!hasAccess || !userInfo.id) return;
+    loadOrders();
+  }, [hasAccess, userInfo.id, loadOrders]);
+
+  useEffect(() => {
+    if (!hasAccess || !userInfo.id) return;
+
+    function isAvailableForCourier(order) {
+      const normalizedStatus = normalizeOrderStatus(order);
+      return (
+        normalizedStatus === ORDER_STATUS.WAITING_COURIER &&
+        !order.delivery_user_id
+      );
+    }
+
+    function notifyAvailableDelivery(order) {
+      setMessage(
+        `Nova entrega disponível para ${order.customer_name || "cliente"}.`
+      );
+      playNotificationSound();
+      showBrowserNotification(order);
+      startTitleBlink("🛵 Nova entrega!");
+    }
 
     const channel = supabase
       .channel("orders-motoboy")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "orders",
         },
-        loadOrders
+        async (payload) => {
+          const newOrder = payload.new;
+          const alreadyKnown = knownAvailableOrderIdsRef.current.has(newOrder.id);
+
+          await loadOrders();
+
+          if (alreadyKnown) return;
+
+          if (isAvailableForCourier(newOrder)) {
+            notifyAvailableDelivery(newOrder);
+          }
+        }
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+        },
+        async (payload) => {
+          const oldOrder = payload.old;
+          const newOrder = payload.new;
+
+          const wasAvailable = isAvailableForCourier(oldOrder);
+          const isAvailable = isAvailableForCourier(newOrder);
+
+          await loadOrders();
+
+          if (!wasAvailable && isAvailable) {
+            notifyAvailableDelivery(newOrder);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log("MOTOBOY realtime subscribe status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasAccess, loadOrders]);
+  }, [
+    hasAccess,
+    userInfo.id,
+    loadOrders,
+    playNotificationSound,
+    showBrowserNotification,
+    startTitleBlink,
+  ]);
+
+  useEffect(() => {
+    if (myActiveOrder?.id) {
+      startGpsTracking(myActiveOrder.id);
+    } else {
+      stopGpsTracking();
+    }
+  }, [myActiveOrder?.id, startGpsTracking, stopGpsTracking]);
+
+  useEffect(() => {
+    return () => {
+      stopGpsTracking();
+    };
+  }, [stopGpsTracking]);
 
   async function handleLogout() {
+    stopGpsTracking();
     await supabase.auth.signOut();
     navigate("/", { replace: true });
+  }
+
+  async function handleAcceptDelivery(orderId) {
+    console.log("HANDLE ACCEPT DELIVERY INICIO", {
+      orderId,
+      myActiveOrder,
+      userInfo,
+    });
+
+    if (myActiveOrder) {
+      setMessage("Você já possui uma entrega em andamento.");
+      return;
+    }
+
+    setUpdatingOrderId(orderId);
+    setMessage("");
+
+    try {
+      console.log("ANTES DO UPDATE");
+
+      const { data, error } = await supabase
+        .from("orders")
+        .update({
+          order_status: ORDER_STATUS.DELIVERY,
+          delivery_user_id: userInfo.id,
+          delivery_started_at: new Date().toISOString(),
+        })
+        .eq("id", orderId)
+        .is("delivery_user_id", null)
+        .select("*");
+
+      console.log("RESULTADO UPDATE", { data, error });
+
+      if (error) throw error;
+
+      if (!data || !data.length) {
+        setMessage("Essa entrega já foi aceita por outro motoboy.");
+        await loadOrders();
+        return;
+      }
+
+      setMessage("Entrega aceita com sucesso. GPS iniciado.");
+      await loadOrders();
+    } catch (error) {
+      console.error("Erro ao aceitar entrega:", error);
+      setMessage(error?.message || "Não foi possível aceitar a entrega.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
   }
 
   async function handleMarkDelivered(orderId) {
@@ -181,13 +628,16 @@ export default function Motoboy() {
     setMessage("");
 
     try {
+      stopGpsTracking();
+
       const { error } = await supabase
         .from("orders")
         .update({
           order_status: ORDER_STATUS.DELIVERED,
           delivered_at: new Date().toISOString(),
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .eq("delivery_user_id", userInfo.id);
 
       if (error) throw error;
 
@@ -205,19 +655,20 @@ export default function Motoboy() {
     const today = new Date();
 
     const deliveredToday = orders.filter((order) => {
-      if (!order.created_at) return false;
+      if (!order.delivered_at) return false;
 
-      const createdAt = new Date(order.created_at);
-      if (Number.isNaN(createdAt.getTime())) return false;
+      const deliveredAt = new Date(order.delivered_at);
+      if (Number.isNaN(deliveredAt.getTime())) return false;
 
-      return isSameDay(createdAt, today);
+      return isSameDay(deliveredAt, today);
     }).length;
 
     return {
-      totalRoutes: orders.length,
+      availableRoutes: availableOrders.length,
+      activeRoute: myActiveOrder ? 1 : 0,
       deliveredToday,
     };
-  }, [orders]);
+  }, [orders, availableOrders, myActiveOrder]);
 
   if (accessLoading) {
     return (
@@ -248,13 +699,96 @@ export default function Motoboy() {
         onLogout={handleLogout}
       />
 
+      {showEnableSoundButton ? (
+        <div className={styles.soundAlert}>
+          <div className={styles.soundAlertContent}>
+            <span className={styles.soundAlertText}>
+              O som das notificações está desativado.
+            </span>
+
+            <button
+              type="button"
+              className={styles.soundAlertButton}
+              onClick={unlockAudio}
+            >
+              Ativar som
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <section className={styles.hero}>
         <div className={styles.container}>
           <span className={styles.kicker}>Painel do motoboy</span>
-          <h1 className={styles.title}>Entregas em rota</h1>
+          <h1 className={styles.title}>Gestão de entregas</h1>
           <p className={styles.subtitle}>
-            Veja os pedidos prontos para entrega e marque quando forem concluídos.
+            Aceite pedidos disponíveis, acompanhe sua entrega atual e marque quando concluir.
           </p>
+
+          {audioEnabled ? (
+            <p className={styles.audioStatus}>🔊 Som ativo</p>
+          ) : null}
+
+          <div className={styles.heroTopGrid}>
+            {myActiveOrder ? (
+              <div className={styles.gpsStatusBox}>
+                <div className={styles.gpsStatusTop}>
+                  <span
+                    className={`${styles.gpsBadge} ${gpsActive ? styles.gpsBadgeActive : styles.gpsBadgeInactive
+                      }`}
+                  >
+                    {gpsActive ? "📍 GPS ativo" : "⚠️ GPS inativo"}
+                  </span>
+
+                  {lastGpsAt ? (
+                    <span className={styles.gpsMeta}>
+                      Última atualização:{" "}
+                      {new Date(lastGpsAt).toLocaleTimeString("pt-BR")}
+                    </span>
+                  ) : null}
+                </div>
+
+                {gpsError ? (
+                  <span className={styles.gpsError}>{gpsError}</span>
+                ) : null}
+
+                <div className={styles.gpsActions}>
+                  {!gpsActive ? (
+                    <button
+                      type="button"
+                      className={styles.primaryAction}
+                      onClick={() => startGpsTracking(myActiveOrder.id)}
+                    >
+                      Iniciar GPS
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.secondaryAction}
+                      onClick={stopGpsTracking}
+                    >
+                      Parar GPS
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>GPS</span>
+                <strong className={styles.statValue}>—</strong>
+              </div>
+            )}
+
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Em rota</span>
+              <strong className={styles.statValue}>{stats.activeRoute}</strong>
+            </div>
+
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Entregues hoje</span>
+              <strong className={styles.statValue}>{stats.deliveredToday}</strong>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -266,33 +800,78 @@ export default function Motoboy() {
             </p>
           ) : null}
 
-          <MotoboyStats
-            totalRoutes={stats.totalRoutes}
-            deliveredToday={stats.deliveredToday}
-          />
+
+
+          {myActiveOrder ? (
+            <div className={styles.mapSection}>
+              <h2 className={styles.sectionTitle}>Mapa da entrega</h2>
+
+              <MotoboyDeliveryMap
+                courierLatitude={currentCourierPosition.latitude}
+                courierLongitude={currentCourierPosition.longitude}
+                customerLatitude={myActiveOrder.delivery_lat}
+                customerLongitude={myActiveOrder.delivery_lng}
+              />
+            </div>
+          ) : null}
+
+
+
+          {myActiveOrder ? (
+            <section className={styles.ordersSection}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Minha entrega atual</h2>
+              </div>
+
+              <div className={styles.ordersList}>
+                <MotoboyOrderCard
+                  order={myActiveOrder}
+                  updatingOrderId={updatingOrderId}
+                  onMarkDelivered={handleMarkDelivered}
+                  mode="active"
+                />
+              </div>
+            </section>
+          ) : null}
 
           <section className={styles.ordersSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Pedidos disponíveis</h2>
+            </div>
+            {myActiveOrder ? (
+              <div className={styles.warningBox}>
+                <strong>Você já está em uma entrega.</strong>
+                <span>
+                  Para aceitar outro pedido, finalize primeiro a entrega atual.
+                </span>
+              </div>
+            ) : null}
+
             {loading ? (
               <div className={styles.emptyState}>
                 <p>Carregando entregas...</p>
               </div>
-            ) : !orders.length ? (
+            ) : !availableOrders.length ? (
               <div className={styles.emptyState}>
-                <p>Nenhum pedido em rota no momento.</p>
+                <p>Nenhum pedido aguardando motoboy no momento.</p>
               </div>
             ) : (
               <div className={styles.ordersList}>
-                {orders.map((order) => (
+                {availableOrders.map((order) => (
                   <MotoboyOrderCard
                     key={order.id}
                     order={order}
                     updatingOrderId={updatingOrderId}
-                    onMarkDelivered={handleMarkDelivered}
+                    onAcceptDelivery={handleAcceptDelivery}
+                    mode="available"
+                    hasActiveDelivery={Boolean(myActiveOrder)}
                   />
                 ))}
               </div>
             )}
+
           </section>
+
         </div>
       </section>
     </main>

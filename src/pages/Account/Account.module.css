@@ -530,6 +530,58 @@
   white-space: nowrap;
 }
 
+.orderTrackingMapSection {
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.orderTrackingMapHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.orderTrackingMapHeader span {
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.deliveryMapWrap {
+  width: 100%;
+}
+
+.deliveryMapMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.mapMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.92rem;
+}
+
+.mapError {
+  color: #dc2626;
+  margin-bottom: 12px;
+  font-size: 0.92rem;
+}
+
 @media (max-width: 1200px) {
   .orderRowCard {
     grid-template-columns: 1fr;

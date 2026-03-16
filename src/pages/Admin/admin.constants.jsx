@@ -42,6 +42,7 @@ export const PAYMENT_STATUS = {
 export const ORDER_STATUS = {
   PENDING: "pending",
   PREPARING: "preparing",
+  WAITING_COURIER: "waiting_courier",
   DELIVERY: "delivery",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",
@@ -59,6 +60,12 @@ export const STATUS_META = {
     label: "Em preparo",
     filterLabel: "Em preparo",
     badgeClass: "statusBadgePreparing",
+  },
+  [ORDER_STATUS.WAITING_COURIER]: {
+    value: ORDER_STATUS.WAITING_COURIER,
+    label: "Aguardando motoboy",
+    filterLabel: "Aguardando motoboy",
+    badgeClass: "statusBadgeWaitingCourier",
   },
   [ORDER_STATUS.DELIVERY]: {
     value: ORDER_STATUS.DELIVERY,

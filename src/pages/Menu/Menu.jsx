@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Menu.module.css";
 import Button from "../../components/ui/Button/Button";
@@ -18,7 +18,7 @@ function formatPrice(value) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-  }).format(value);
+  }).format(Number(value) || 0);
 }
 
 function normalizeText(value) {
@@ -64,8 +64,24 @@ function isCustomizableProduct(product) {
   );
 }
 
+function getInitialCartItems() {
+  try {
+    if (typeof window === "undefined") return [];
+
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (!savedCart) return [];
+
+    const parsedCart = JSON.parse(savedCart);
+    return Array.isArray(parsedCart) ? parsedCart : [];
+  } catch (error) {
+    console.error("Erro ao carregar carrinho do localStorage:", error);
+    return [];
+  }
+}
+
 export default function Menu() {
   const location = useLocation();
+  const navigate = useNavigate();
   const didPreselectRef = useRef(false);
 
   const [categories, setCategories] = useState([]);
@@ -75,7 +91,7 @@ export default function Menu() {
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(getInitialCartItems);
   const [cartOpen, setCartOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -85,7 +101,7 @@ export default function Menu() {
   const [withoutTomato, setWithoutTomato] = useState(false);
   const [withoutOlive, setWithoutOlive] = useState(false);
 
-  async function loadMenuData() {
+  const loadMenuData = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -95,7 +111,7 @@ export default function Menu() {
       ] = await Promise.all([
         supabase
           .from("product_categories")
-          .select("id, slug, name, is_active, sort_order")
+          .select("id, slug, name, is_active, sort_order, created_at")
           .eq("is_active", true)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true }),
@@ -114,6 +130,7 @@ export default function Menu() {
             is_active,
             is_featured,
             sort_order,
+            created_at,
             category_id
           `)
           .eq("is_active", true)
@@ -146,12 +163,13 @@ export default function Menu() {
           categoryName: category?.name || "",
           description: product.description,
           price: Number(product.price || 0),
-          oldPrice: product.old_price != null ? Number(product.old_price) : null,
+          oldPrice:
+            product.old_price != null ? Number(product.old_price) : null,
           rating: product.rating != null ? Number(product.rating) : null,
-          tag: product.tag,
-          image: product.image_url,
-          active: product.is_active,
-          hero: product.is_featured,
+          tag: product.tag || null,
+          image: product.image_url || null,
+          active: !!product.is_active,
+          hero: !!product.is_featured,
           isCustomizable: isPizzaCategory(category),
         };
       });
@@ -167,7 +185,7 @@ export default function Menu() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   const baseProducts = useMemo(() => {
     return productsFromDb.filter((item) => item.active);
@@ -211,12 +229,16 @@ export default function Menu() {
   }, [activeCategory, categories]);
 
   const cartCount = useMemo(
-    () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
+    () => cartItems.reduce((acc, item) => acc + Number(item.quantity || 0), 0),
     [cartItems]
   );
 
   const subtotal = useMemo(
-    () => cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
+    () =>
+      cartItems.reduce(
+        (acc, item) => acc + Number(item.price || 0) * Number(item.quantity || 0),
+        0
+      ),
     [cartItems]
   );
 
@@ -264,8 +286,8 @@ export default function Menu() {
         id: `${selectedProduct.id}-${Date.now()}`,
         productId: selectedProduct.id,
         name: selectedProduct.name,
-        price: selectedProduct.price,
-        image: selectedProduct.image,
+        price: Number(selectedProduct.price || 0),
+        image: selectedProduct.image || null,
         quantity: 1,
         notes: trimmedNotes,
         removedIngredients,
@@ -281,10 +303,10 @@ export default function Menu() {
       prev
         .map((item) =>
           item.id === cartItemId
-            ? { ...item, quantity: item.quantity - 1 }
+            ? { ...item, quantity: Number(item.quantity || 0) - 1 }
             : item
         )
-        .filter((item) => item.quantity > 0)
+        .filter((item) => Number(item.quantity || 0) > 0)
     );
   }
 
@@ -292,7 +314,7 @@ export default function Menu() {
     setCartItems((prev) =>
       prev.map((item) =>
         item.id === cartItemId
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: Number(item.quantity || 0) + 1 }
           : item
       )
     );
@@ -318,7 +340,9 @@ export default function Menu() {
           schema: "public",
           table: "products",
         },
-        loadMenuData
+        () => {
+          loadMenuData();
+        }
       )
       .subscribe();
 
@@ -331,7 +355,9 @@ export default function Menu() {
           schema: "public",
           table: "product_categories",
         },
-        loadMenuData
+        () => {
+          loadMenuData();
+        }
       )
       .subscribe();
 
@@ -339,7 +365,7 @@ export default function Menu() {
       supabase.removeChannel(productsChannel);
       supabase.removeChannel(categoriesChannel);
     };
-  }, []);
+  }, [loadMenuData]);
 
   useEffect(() => {
     document.body.style.overflow = cartOpen || productModalOpen ? "hidden" : "";
@@ -360,21 +386,6 @@ export default function Menu() {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [cartOpen, productModalOpen]);
-
-  useEffect(() => {
-    try {
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-      if (!savedCart) return;
-
-      const parsedCart = JSON.parse(savedCart);
-
-      if (Array.isArray(parsedCart)) {
-        setCartItems(parsedCart);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar carrinho do localStorage:", error);
-    }
-  }, []);
 
   useEffect(() => {
     try {
@@ -406,7 +417,9 @@ export default function Menu() {
     });
     resetProductOptions();
     setProductModalOpen(true);
-  }, [location.state, productsFromDb]);
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.pathname, location.state, navigate, productsFromDb]);
 
   return (
     <>
@@ -459,7 +472,12 @@ export default function Menu() {
               <p>{menuMessage}</p>
 
               <div className={styles.emptyCatalogActions}>
-                <Button type="button" variant="ghost" size="md" onClick={loadMenuData}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  onClick={loadMenuData}
+                >
                   Tentar novamente
                 </Button>
               </div>

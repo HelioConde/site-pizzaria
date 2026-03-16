@@ -18,6 +18,7 @@ export const PAYMENT_STATUS = {
 export const ORDER_STATUS = {
   PENDING: "pending",
   PREPARING: "preparing",
+  WAITING_COURIER: "waiting_courier",
   DELIVERY: "delivery",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",

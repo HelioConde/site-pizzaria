@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./styles/global.css";
+import "leaflet/dist/leaflet.css";
 
 const basePath = import.meta.env.BASE_URL;
 const params = new URLSearchParams(window.location.search);

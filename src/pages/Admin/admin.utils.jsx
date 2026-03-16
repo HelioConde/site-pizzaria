@@ -73,6 +73,18 @@ export function normalizeOrderStatus(order) {
     return ORDER_STATUS.PREPARING;
   }
 
+  if (
+    [
+      "waiting_courier",
+      "awaiting_courier",
+      "aguardando_motoboy",
+      "aguardando motoboy",
+      "waiting_delivery",
+    ].includes(raw)
+  ) {
+    return ORDER_STATUS.WAITING_COURIER;
+  }
+
   if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(raw)) {
     return ORDER_STATUS.DELIVERY;
   }
@@ -212,7 +224,10 @@ export function canAdvanceOrder(order, nextStatus) {
     return false;
   }
 
-  if (currentStatus === ORDER_STATUS.DELIVERED && nextStatus !== ORDER_STATUS.DELIVERED) {
+  if (
+    currentStatus === ORDER_STATUS.DELIVERED &&
+    nextStatus !== ORDER_STATUS.DELIVERED
+  ) {
     return false;
   }
 
@@ -223,15 +238,32 @@ export function canAdvanceOrder(order, nextStatus) {
   if (
     isOnlinePayment &&
     !isPaid &&
-    [ORDER_STATUS.PREPARING, ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(nextStatus)
+    [
+      ORDER_STATUS.PREPARING,
+      ORDER_STATUS.WAITING_COURIER,
+      ORDER_STATUS.DELIVERY,
+      ORDER_STATUS.DELIVERED,
+    ].includes(nextStatus)
   ) {
     return false;
   }
 
   const allowedTransitions = {
-    [ORDER_STATUS.PENDING]: [ORDER_STATUS.PREPARING, ORDER_STATUS.CANCELLED],
-    [ORDER_STATUS.PREPARING]: [ORDER_STATUS.DELIVERY, ORDER_STATUS.CANCELLED],
-    [ORDER_STATUS.DELIVERY]: [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED],
+    [ORDER_STATUS.PENDING]: [
+      ORDER_STATUS.PREPARING,
+      ORDER_STATUS.CANCELLED,
+    ],
+    [ORDER_STATUS.PREPARING]: [
+      ORDER_STATUS.WAITING_COURIER,
+      ORDER_STATUS.CANCELLED,
+    ],
+    [ORDER_STATUS.WAITING_COURIER]: [
+      ORDER_STATUS.CANCELLED,
+    ],
+    [ORDER_STATUS.DELIVERY]: [
+      ORDER_STATUS.DELIVERED,
+      ORDER_STATUS.CANCELLED,
+    ],
     [ORDER_STATUS.DELIVERED]: [],
     [ORDER_STATUS.CANCELLED]: [],
   };

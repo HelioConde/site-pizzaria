@@ -30,8 +30,7 @@ function normalizeHomeProduct(product) {
     name: product.name,
     description: product.description,
     price: Number(product.price || 0),
-    oldPrice:
-      product.old_price != null ? Number(product.old_price) : null,
+    oldPrice: product.old_price != null ? Number(product.old_price) : null,
     rating: product.rating != null ? Number(product.rating) : null,
     tag: product.tag || null,
     image: product.image_url || null,
@@ -42,7 +41,6 @@ function normalizeHomeProduct(product) {
 
 function Home() {
   const { sections } = db;
-
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
@@ -72,7 +70,6 @@ function Home() {
           .order("created_at", { ascending: true });
 
         if (error) throw error;
-
         if (!active) return;
 
         setProducts((data ?? []).map(normalizeHomeProduct));
@@ -80,7 +77,6 @@ function Home() {
         console.error("Erro ao carregar destaques da home:", error);
 
         if (!active) return;
-
         setProducts([]);
       }
     }
@@ -112,10 +108,7 @@ function Home() {
         <Carousel slides={sections.carousel} />
 
         <section id="destaques">
-          <Highlights
-            data={sections.highlights}
-            products={products}
-          />
+          <Highlights data={sections.highlights} products={products} />
         </section>
 
         <section id="como-funciona">
@@ -137,16 +130,14 @@ function Home() {
 }
 
 function AuthRedirect({ isLoading, isAuthenticated, userRole }) {
-  if (isLoading) {
-    return null;
-  }
+  if (isLoading) return null;
 
   if (!isAuthenticated) {
     return <Auth />;
   }
 
   if (userRole === "admin") {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   if (userRole === "delivery") {
@@ -160,8 +151,9 @@ function AppContent() {
   const location = useLocation();
   const { isLoading, isAuthenticated, userRole } = useAuthRole();
 
-  const hideNavbarRoutes = ["/admin", "/motoboy"];
-  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
+  const shouldHideNavbar =
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/motoboy");
 
   return (
     <>
@@ -198,7 +190,7 @@ function AppContent() {
         />
 
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
             <ProtectedRoute
               isLoading={isLoading}

@@ -6,15 +6,18 @@ import {
   getGoogleMapsRouteUrl,
   getPaymentMethodLabel,
   getPaymentStatusLabel,
+  groupOrderItems,
   getPhoneCallUrl,
   getWhatsAppUrl,
-  groupOrderItems,
 } from "../motoboy.utils";
 
 export default function MotoboyOrderCard({
   order,
   updatingOrderId,
   onMarkDelivered,
+  onAcceptDelivery,
+  mode = "available",
+  hasActiveDelivery = false,
 }) {
   const groupedItems = groupOrderItems(order.order_items);
   const isUpdating = updatingOrderId === order.id;
@@ -22,6 +25,9 @@ export default function MotoboyOrderCard({
   const whatsappUrl = getWhatsAppUrl(order.customer_phone);
   const callUrl = getPhoneCallUrl(order.customer_phone);
   const mapsUrl = getGoogleMapsRouteUrl(order);
+
+  const isAvailableMode = mode === "available";
+  const isActiveMode = mode === "active";
 
   return (
     <article className={styles.orderCard}>
@@ -55,6 +61,13 @@ export default function MotoboyOrderCard({
         <div className={styles.infoBlock}>
           <span className={styles.infoLabel}>Pagamento</span>
           <strong>{getPaymentStatusLabel(order)}</strong>
+        </div>
+
+        <div className={styles.infoBlock}>
+          <span className={styles.infoLabel}>Status</span>
+          <strong>
+            {isAvailableMode ? "Aguardando motoboy" : "Saiu para entrega"}
+          </strong>
         </div>
 
         <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
@@ -105,14 +118,32 @@ export default function MotoboyOrderCard({
       </div>
 
       <div className={styles.actionsRow}>
-        <button
-          type="button"
-          className={styles.primaryAction}
-          onClick={() => onMarkDelivered(order.id)}
-          disabled={isUpdating}
-        >
-          {isUpdating ? "Atualizando..." : "Marcar como entregue"}
-        </button>
+        {isAvailableMode ? (
+          <button
+            type="button"
+            className={styles.primaryAction}
+            onClick={() => onAcceptDelivery?.(order.id)}
+            disabled={isUpdating || hasActiveDelivery}
+            title={
+              hasActiveDelivery
+                ? "Finalize a entrega atual para aceitar outro pedido."
+                : ""
+            }
+          >
+            {isUpdating ? "Aceitando..." : "Aceitar entrega"}
+          </button>
+        ) : null}
+
+        {isActiveMode ? (
+          <button
+            type="button"
+            className={styles.primaryAction}
+            onClick={() => onMarkDelivered?.(order.id)}
+            disabled={isUpdating}
+          >
+            {isUpdating ? "Atualizando..." : "Marcar como entregue"}
+          </button>
+        ) : null}
 
         {mapsUrl ? (
           <a

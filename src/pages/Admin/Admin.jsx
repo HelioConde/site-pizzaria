@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Admin.module.css";
 
@@ -27,8 +27,11 @@ import PaymentsSection from "./sections/PaymentsSection";
 import ReportsSection from "./sections/ReportsSection";
 import SettingsSection from "./sections/SettingsSection";
 
+const NOTIFICATION_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-order.mp3`;
+
 export default function Admin() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,14 +40,216 @@ export default function Admin() {
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
-  const [activeSection, setActiveSection] = useState(ADMIN_SECTION.DASHBOARD);
   const [userInfo, setUserInfo] = useState({
     name: "Administrador",
     email: "",
   });
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [showEnableSoundButton, setShowEnableSoundButton] = useState(false);
+
+  const audioUnlockedRef = useRef(false);
+  const knownOrderIdsRef = useRef(new Set());
+  const pageTitleRef = useRef(document.title);
+  const titleBlinkIntervalRef = useRef(null);
+  
+
+  const activeSection = useMemo(() => {
+    const rawSection = String(searchParams.get("section") || "")
+      .trim()
+      .toLowerCase();
+
+    const validSections = Object.values(ADMIN_SECTION);
+
+    if (validSections.includes(rawSection)) {
+      return rawSection;
+    }
+
+    return ADMIN_SECTION.DASHBOARD;
+  }, [searchParams]);
+
+  const stopTitleBlink = useCallback(() => {
+    if (titleBlinkIntervalRef.current) {
+      clearInterval(titleBlinkIntervalRef.current);
+      titleBlinkIntervalRef.current = null;
+    }
+
+    document.title = pageTitleRef.current;
+  }, []);
+
+  const startTitleBlink = useCallback((text = "Novo pedido!") => {
+    if (titleBlinkIntervalRef.current) return;
+
+    let toggle = false;
+
+    titleBlinkIntervalRef.current = setInterval(() => {
+      document.title = toggle ? text : pageTitleRef.current;
+      toggle = !toggle;
+    }, 1000);
+  }, []);
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "default") {
+      try {
+        await Notification.requestPermission();
+      } catch (error) {
+        console.warn("Não foi possível pedir permissão de notificação:", error);
+      }
+    }
+  }, []);
+
+  const unlockAudio = useCallback(async () => {
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND_SRC);
+      audio.volume = 0.01;
+      audio.preload = "auto";
+
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+
+      audioUnlockedRef.current = true;
+      setAudioEnabled(true);
+      setShowEnableSoundButton(false);
+
+      await requestNotificationPermission();
+    } catch (error) {
+      audioUnlockedRef.current = false;
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+      console.warn("Áudio ainda bloqueado pelo navegador:", error);
+    }
+  }, [requestNotificationPermission]);
+
+  const unlockAudioManually = useCallback(async () => {
+    if (audioUnlockedRef.current) return;
+    await unlockAudio();
+  }, [unlockAudio]);
+
+  const playNotificationSound = useCallback(() => {
+    if (!audioUnlockedRef.current) {
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+      return;
+    }
+
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND_SRC);
+      audio.volume = 0.5;
+      audio.preload = "auto";
+
+      audio.play().catch((error) => {
+        console.warn("Não foi possível tocar o som:", error);
+        audioUnlockedRef.current = false;
+        setAudioEnabled(false);
+        setShowEnableSoundButton(true);
+      });
+    } catch (error) {
+      console.error("Erro ao tocar som de notificação:", error);
+      audioUnlockedRef.current = false;
+      setAudioEnabled(false);
+      setShowEnableSoundButton(true);
+    }
+  }, []);
+
+  const showBrowserNotification = useCallback((order) => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      const notification = new Notification("Novo pedido recebido", {
+        body: `${order.customer_name || "Cliente"} • ${Number(
+          order.total || 0
+        ).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}`,
+        icon: `${import.meta.env.BASE_URL}favicon.ico`,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+      };
+    }
+  }, []);
+
+  const handleChangeSection = useCallback(
+    async (section) => {
+      const validSections = Object.values(ADMIN_SECTION);
+
+      const nextSection = validSections.includes(section)
+        ? section
+        : ADMIN_SECTION.DASHBOARD;
+
+      if (nextSection === ADMIN_SECTION.ORDERS) {
+        await unlockAudioManually();
+      }
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("section", nextSection);
+
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams, unlockAudioManually]
+  );
+
+  useEffect(() => {
+    const currentSection = searchParams.get("section");
+    const validSections = Object.values(ADMIN_SECTION);
+
+    if (!currentSection || !validSections.includes(currentSection)) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("section", ADMIN_SECTION.DASHBOARD);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    async function checkAudioPermission() {
+      try {
+        const audio = new Audio(NOTIFICATION_SOUND_SRC);
+        audio.volume = 0.01;
+        audio.preload = "auto";
+
+        await audio.play();
+        audio.pause();
+        audio.currentTime = 0;
+
+        audioUnlockedRef.current = true;
+        setAudioEnabled(true);
+        setShowEnableSoundButton(false);
+      } catch (error) {
+        audioUnlockedRef.current = false;
+        setAudioEnabled(false);
+        setShowEnableSoundButton(true);
+      }
+    }
+
+    checkAudioPermission();
+
+    const handleFocus = () => {
+      stopTitleBlink();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      stopTitleBlink();
+    };
+  }, [stopTitleBlink]);
+
+  useEffect(() => {
+    window.addEventListener("click", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, [unlockAudio]);
 
   const loadOrders = useCallback(async () => {
-    console.log("=== ADMIN loadOrders INICIO ===");
     setLoading(true);
 
     try {
@@ -53,31 +258,23 @@ export default function Admin() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("ADMIN ordersData:", ordersData);
-      console.log("ADMIN ordersError:", ordersError);
-
       if (ordersError) throw ordersError;
 
       const safeOrders = ordersData ?? [];
-      console.log("ADMIN safeOrders.length:", safeOrders.length);
 
       if (!safeOrders.length) {
-        console.log("ADMIN nenhum pedido encontrado");
         setOrders([]);
         setMessage("");
+        knownOrderIdsRef.current = new Set();
         return;
       }
 
       const orderIds = safeOrders.map((order) => order.id);
-      console.log("ADMIN orderIds:", orderIds);
 
       const { data: itemsData, error: itemsError } = await supabase
         .from("order_items")
         .select("*")
         .in("order_id", orderIds);
-
-      console.log("ADMIN itemsData:", itemsData);
-      console.log("ADMIN itemsError:", itemsError);
 
       if (itemsError) throw itemsError;
 
@@ -96,17 +293,15 @@ export default function Admin() {
         order_items: itemsByOrderId[order.id] ?? [],
       }));
 
-      console.log("ADMIN mergedOrders:", mergedOrders);
-
       setOrders(mergedOrders);
       setMessage("");
+      knownOrderIdsRef.current = new Set(mergedOrders.map((order) => order.id));
     } catch (error) {
       console.error("Erro ao carregar pedidos do admin:", error);
       setOrders([]);
       setMessage("Não foi possível carregar os pedidos.");
     } finally {
       setLoading(false);
-      console.log("=== ADMIN loadOrders FIM ===");
     }
   }, []);
 
@@ -114,17 +309,12 @@ export default function Admin() {
     let active = true;
 
     async function validateAdminAccess() {
-      console.log("=== ADMIN validateAdminAccess INICIO ===");
-
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
-        console.log("ADMIN session:", session);
-
         if (!session) {
-          console.log("ADMIN sem sessão, redirecionando para /auth");
           navigate("/auth", { replace: true, state: { from: "/admin" } });
           return;
         }
@@ -135,18 +325,11 @@ export default function Admin() {
           .eq("id", session.user.id)
           .maybeSingle();
 
-        console.log("ADMIN profile:", profile);
-        console.log("ADMIN profile error:", error);
-
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         const role = String(profile?.role || "").trim().toLowerCase();
-        console.log("ADMIN role normalizada:", role);
 
         if (role !== USER_ROLE.ADMIN) {
-          console.log("ADMIN usuário não é admin, redirecionando para /");
           navigate("/", { replace: true });
           return;
         }
@@ -162,7 +345,6 @@ export default function Admin() {
           email: session.user.email || "",
         });
 
-        console.log("ADMIN acesso liberado");
         setHasAccess(true);
         await loadOrders();
       } catch (error) {
@@ -172,7 +354,6 @@ export default function Admin() {
         if (active) {
           setAccessLoading(false);
         }
-        console.log("=== ADMIN validateAdminAccess FIM ===");
       }
     }
 
@@ -186,20 +367,61 @@ export default function Admin() {
   useEffect(() => {
     if (!hasAccess) return;
 
-    console.log("ADMIN realtime habilitado para orders");
+    function isOrderReadyForAdmin(order) {
+      return (
+        order?.payment_status === PAYMENT_STATUS.PAID ||
+        order?.payment_status === PAYMENT_STATUS.DELIVERY_PAYMENT
+      );
+    }
+
+    function notifyNewReadyOrder(order) {
+      setMessage(`Novo pedido recebido de ${order.customer_name || "Cliente"}.`);
+      playNotificationSound();
+      showBrowserNotification(order);
+      startTitleBlink("🔔 Novo pedido!");
+    }
 
     const channel = supabase
       .channel("orders-admin")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "orders",
         },
-        (payload) => {
-          console.log("ADMIN realtime payload orders:", payload);
-          loadOrders();
+        async (payload) => {
+          const newOrder = payload.new;
+          const alreadyKnown = knownOrderIdsRef.current.has(newOrder.id);
+
+          await loadOrders();
+
+          if (alreadyKnown) return;
+
+          if (isOrderReadyForAdmin(newOrder)) {
+            notifyNewReadyOrder(newOrder);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+        },
+        async (payload) => {
+          const oldOrder = payload.old;
+          const newOrder = payload.new;
+
+          const wasReady = isOrderReadyForAdmin(oldOrder);
+          const isReady = isOrderReadyForAdmin(newOrder);
+
+          await loadOrders();
+
+          if (!wasReady && isReady) {
+            notifyNewReadyOrder(newOrder);
+          }
         }
       )
       .subscribe((status) => {
@@ -207,37 +429,30 @@ export default function Admin() {
       });
 
     return () => {
-      console.log("ADMIN removendo canal realtime");
       supabase.removeChannel(channel);
     };
-  }, [hasAccess, loadOrders]);
+  }, [
+    hasAccess,
+    loadOrders,
+    playNotificationSound,
+    showBrowserNotification,
+    startTitleBlink,
+  ]);
 
   async function handleLogout() {
-    console.log("ADMIN logout");
     await supabase.auth.signOut();
     navigate("/", { replace: true });
   }
 
   async function handleUpdateOrderStatus(orderId, nextStatus) {
-    console.log("=== ADMIN handleUpdateOrderStatus INICIO ===");
-    console.log("ADMIN orderId recebido:", orderId);
-    console.log("ADMIN nextStatus recebido:", nextStatus);
-    console.log("ADMIN orders atuais:", orders);
-
     const currentOrder = orders.find((order) => order.id === orderId);
 
-    console.log("ADMIN currentOrder encontrado:", currentOrder);
-
     if (!currentOrder) {
-      console.warn("ADMIN pedido não encontrado no estado local");
       setMessage("Pedido não encontrado.");
       return;
     }
 
-    console.log("ADMIN currentOrder.normalized_status:", currentOrder.normalized_status);
-
     if (currentOrder.normalized_status === nextStatus) {
-      console.log("ADMIN status atual já é igual ao próximo status, nada a fazer");
       return;
     }
 
@@ -245,7 +460,6 @@ export default function Admin() {
     setMessage("");
 
     const previousOrders = orders;
-    console.log("ADMIN previousOrders salvo para rollback:", previousOrders);
 
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
@@ -264,8 +478,9 @@ export default function Admin() {
         order_status: nextStatus,
       };
 
-      if (nextStatus === ORDER_STATUS.DELIVERY) {
-        updatePayload.delivery_started_at = new Date().toISOString();
+      if (nextStatus === ORDER_STATUS.WAITING_COURIER) {
+        updatePayload.delivery_user_id = null;
+        updatePayload.delivery_started_at = null;
       }
 
       if (nextStatus === ORDER_STATUS.CANCELLED) {
@@ -275,39 +490,25 @@ export default function Admin() {
             : currentOrder.payment_status;
       }
 
-      console.log("ADMIN updatePayload final:", updatePayload);
-      console.log("ADMIN iniciando update no Supabase...");
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("orders")
         .update(updatePayload)
-        .eq("id", orderId)
-        .select("*");
-
-      console.log("ADMIN update response data:", data);
-      console.log("ADMIN update response error:", error);
+        .eq("id", orderId);
 
       if (error) throw error;
 
-      console.log("ADMIN update concluído com sucesso");
       setMessage("Status do pedido atualizado com sucesso.");
-
-      console.log("ADMIN recarregando pedidos após update...");
       await loadOrders();
     } catch (error) {
       console.error("Erro ao atualizar status do pedido:", error);
-      console.log("ADMIN restaurando previousOrders por rollback");
       setOrders(previousOrders);
       setMessage("Não foi possível atualizar o status do pedido.");
     } finally {
       setUpdatingOrderId(null);
-      console.log("=== ADMIN handleUpdateOrderStatus FIM ===");
     }
   }
 
   const filteredOrders = useMemo(() => {
-    console.log("ADMIN recalculando filteredOrders. statusFilter:", statusFilter);
-
     if (statusFilter === "all") return orders;
     return orders.filter((order) => order.normalized_status === statusFilter);
   }, [orders, statusFilter]);
@@ -324,13 +525,16 @@ export default function Admin() {
       return isSameDay(createdAt, today);
     });
 
-    const calculatedStats = {
+    return {
       totalToday: sameDayOrders.length,
       pending: orders.filter(
         (order) => order.normalized_status === ORDER_STATUS.PENDING
       ).length,
       preparing: orders.filter(
         (order) => order.normalized_status === ORDER_STATUS.PREPARING
+      ).length,
+      waitingCourier: orders.filter(
+        (order) => order.normalized_status === ORDER_STATUS.WAITING_COURIER
       ).length,
       outForDelivery: orders.filter(
         (order) => order.normalized_status === ORDER_STATUS.DELIVERY
@@ -342,10 +546,6 @@ export default function Admin() {
         .filter((order) => order.normalized_status !== ORDER_STATUS.CANCELLED)
         .reduce((total, order) => total + Number(order.total || 0), 0),
     };
-
-    console.log("ADMIN stats calculados:", calculatedStats);
-
-    return calculatedStats;
   }, [orders]);
 
   function renderSection() {
@@ -418,20 +618,36 @@ export default function Admin() {
         userName={userInfo.name}
         userEmail={userInfo.email}
         accountLabel="Minha conta"
-        accountRoute="/admin"
+        accountRoute={`/admin?section=${activeSection}`}
         onLogout={handleLogout}
       />
+
+      {showEnableSoundButton ? (
+        <div className={styles.soundAlert}>
+          <div className={styles.soundAlertContent}>
+            <span className={styles.soundAlertText}>
+              O som das notificações está desativado.
+            </span>
+
+            <button
+              type="button"
+              className={styles.soundAlertButton}
+              onClick={unlockAudio}
+            >
+              Ativar som
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className={styles.adminShell}>
         <AdminSidebar
           sections={ADMIN_SECTIONS}
           activeSection={activeSection}
-          onChangeSection={setActiveSection}
+          onChangeSection={handleChangeSection}
         />
 
-        <div className={styles.adminMain}>
-          {renderSection()}
-        </div>
+        <div className={styles.adminMain}>{renderSection()}</div>
       </div>
     </main>
   );

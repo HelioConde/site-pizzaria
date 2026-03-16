@@ -878,253 +878,341 @@
 }
 
 .paymentGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
 }
 
 .paymentCard {
-  background: #ffffff;
-  border: 1px solid #dde5f0;
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+    background: #ffffff;
+    border: 1px solid #dde5f0;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 .paymentHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
 }
 
 .paymentTitle {
-  margin: 0 0 6px;
-  color: #0f172a;
-  font-size: 1.16rem;
+    margin: 0 0 6px;
+    color: #0f172a;
+    font-size: 1.16rem;
 }
 
 .paymentSubtext {
-  margin: 0;
-  color: #64748b;
+    margin: 0;
+    color: #64748b;
 }
 
 .paymentInfoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
 }
 
 .paymentInfoBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
-  background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #f8fafc;
 }
 
 .paymentInfoBlockWide {
-  grid-column: 1 / -1;
+    grid-column: 1 / -1;
 }
 
 .paymentInfoLabel {
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
 }
 
 .paymentBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font-weight: 700;
-  white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 .paymentPaid {
-  background: #ecfdf5;
-  color: #15803d;
+    background: #ecfdf5;
+    color: #15803d;
 }
 
 .paymentPending {
-  background: #fff7ed;
-  color: #c2410c;
+    background: #fff7ed;
+    color: #c2410c;
 }
 
 .paymentCancelled {
-  background: #fef2f2;
-  color: #b91c1c;
+    background: #fef2f2;
+    color: #b91c1c;
 }
 
 .paymentDelivery {
-  background: #eff6ff;
-  color: #1d4ed8;
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 @media (max-width: 900px) {
-  .paymentGrid {
-    grid-template-columns: 1fr;
-  }
+    .paymentGrid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
-  .paymentHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+    .paymentHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-  .paymentInfoGrid {
-    grid-template-columns: 1fr;
-  }
+    .paymentInfoGrid {
+        grid-template-columns: 1fr;
+    }
 
-  .paymentInfoBlockWide {
-    grid-column: auto;
-  }
+    .paymentInfoBlockWide {
+        grid-column: auto;
+    }
 }
 
 .reportGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
 }
 
 .reportCard {
-  background: #ffffff;
-  border: 1px solid #dde5f0;
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+    background: #ffffff;
+    border: 1px solid #dde5f0;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 .reportCardHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .reportCardTitle {
-  margin: 0;
-  color: #0f172a;
-  font-size: 1.12rem;
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.12rem;
 }
 
 .reportCardSubtitle {
-  color: #64748b;
-  font-size: 0.94rem;
+    color: #64748b;
+    font-size: 0.94rem;
 }
 
 .reportList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .reportListRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #f8fafc;
 }
 
 .reportListRow div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .reportListRow span {
-  color: #64748b;
-  font-size: 0.92rem;
+    color: #64748b;
+    font-size: 0.92rem;
 }
 
 .settingsForm {
-  background: #ffffff;
-  border: 1px solid #dde5f0;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    background: #ffffff;
+    border: 1px solid #dde5f0;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
 }
 
 .settingsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
 }
 
 .settingsField {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .settingsField span {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #334155;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #334155;
 }
 
 .settingsField input,
 .settingsField textarea {
-  width: 100%;
-  border: 1px solid #dbe5f0;
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: #fff;
-  color: #0f172a;
-  font: inherit;
+    width: 100%;
+    border: 1px solid #dbe5f0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
 }
 
 .settingsField textarea {
-  resize: vertical;
-  min-height: 110px;
+    resize: vertical;
+    min-height: 110px;
 }
 
 .settingsFieldWide {
-  grid-column: 1 / -1;
+    grid-column: 1 / -1;
 }
 
 .settingsActions {
-  margin-top: 20px;
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.soundAlert {
+    padding: 0 24px 16px;
+}
+
+.soundAlertContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    border-radius: 16px;
+    padding: 14px 16px;
+}
+
+.soundAlertText {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.soundAlertButton {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    background: #ea580c;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.soundAlertButton:hover {
+    opacity: 0.92;
+}
+
+.statusBadgeWaitingCourier {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+}
+
+.courierLocationBox {
+    margin-top: 8px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #dde5f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.locationMeta {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.deliveryMapWrap {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.deliveryMapMeta {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.mapMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  border: 1px solid #d8e1ee;
+  font-size: 0.95rem;
+}
+
+.mapError {
+  margin: 0 0 12px;
+  color: #c62828;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 768px) {
-  .settingsGrid {
-    grid-template-columns: 1fr;
-  }
+    .settingsGrid {
+        grid-template-columns: 1fr;
+    }
 
-  .settingsFieldWide {
-    grid-column: auto;
-  }
+    .settingsFieldWide {
+        grid-column: auto;
+    }
 }
 
 @media (max-width: 900px) {
-  .reportGrid {
-    grid-template-columns: 1fr;
-  }
+    .reportGrid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
-  .reportListRow {
-    flex-direction: column;
-  }
+    .reportListRow {
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 900px) {

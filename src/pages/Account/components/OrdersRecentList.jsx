@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../../lib/supabase";
 import styles from "../Account.module.css";
 import Button from "../../../components/ui/Button/Button";
+import DeliveryRouteMap from "../../../components/maps/DeliveryRouteMap";
 
 const PAYMENT_METHOD = {
   CASH: "dinheiro",
@@ -18,6 +21,7 @@ const PAYMENT_STATUS = {
 const ORDER_STATUS = {
   PENDING: "pending",
   PREPARING: "preparing",
+  WAITING_COURIER: "waiting_courier",
   DELIVERY: "delivery",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",
@@ -56,7 +60,7 @@ function getPaymentLabel(method) {
 
 function normalizeOrderStage(order) {
   const rawStatus = String(
-    order.display_status || order.order_status || order.status || ""
+    order.order_status || order.display_status || order.status || ""
   )
     .trim()
     .toLowerCase();
@@ -79,7 +83,19 @@ function normalizeOrderStage(order) {
     return ORDER_STATUS.PREPARING;
   }
 
-  if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(rawStatus)) {
+  if (
+    [
+      "waiting_courier",
+      "awaiting_courier",
+      "aguardando_motoboy",
+    ].includes(rawStatus)
+  ) {
+    return ORDER_STATUS.WAITING_COURIER;
+  }
+
+  if (
+    ["delivery", "out_for_delivery", "saiu_para_entrega"].includes(rawStatus)
+  ) {
     return ORDER_STATUS.DELIVERY;
   }
 
@@ -129,6 +145,12 @@ function getTimeline(order) {
         current: false,
       },
       {
+        key: "waiting_courier",
+        label: "Aguardando motoboy",
+        active: false,
+        current: false,
+      },
+      {
         key: "delivery",
         label: "Saiu para entrega",
         active: false,
@@ -153,13 +175,30 @@ function getTimeline(order) {
     {
       key: "preparing",
       label: "Em preparo",
-      active: [ORDER_STATUS.PREPARING, ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(orderStage),
+      active: [
+        ORDER_STATUS.PREPARING,
+        ORDER_STATUS.WAITING_COURIER,
+        ORDER_STATUS.DELIVERY,
+        ORDER_STATUS.DELIVERED,
+      ].includes(orderStage),
       current: orderStage === ORDER_STATUS.PREPARING,
+    },
+    {
+      key: "waiting_courier",
+      label: "Aguardando motoboy",
+      active: [
+        ORDER_STATUS.WAITING_COURIER,
+        ORDER_STATUS.DELIVERY,
+        ORDER_STATUS.DELIVERED,
+      ].includes(orderStage),
+      current: orderStage === ORDER_STATUS.WAITING_COURIER,
     },
     {
       key: "delivery",
       label: "Saiu para entrega",
-      active: [ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(orderStage),
+      active: [ORDER_STATUS.DELIVERY, ORDER_STATUS.DELIVERED].includes(
+        orderStage
+      ),
       current: orderStage === ORDER_STATUS.DELIVERY,
     },
     {
@@ -231,7 +270,88 @@ function getRemovedIngredientsLabel(removedIngredients) {
     .join(" • ");
 }
 
+function hasValidCoordinates(lat, lng) {
+  return (
+    lat != null &&
+    lng != null &&
+    !Number.isNaN(Number(lat)) &&
+    !Number.isNaN(Number(lng))
+  );
+}
+
 export default function OrdersRecentList({ orders = [], loading = false }) {
+  const [trackingByOrderId, setTrackingByOrderId] = useState({});
+
+  const deliveryOrders = useMemo(() => {
+    return orders.filter((order) => normalizeOrderStage(order) === ORDER_STATUS.DELIVERY);
+  }, [orders]);
+
+  useEffect(() => {
+    let active = true;
+    const channels = [];
+
+    async function loadTracking() {
+      const nextTracking = {};
+
+      await Promise.all(
+        deliveryOrders.map(async (order) => {
+          const { data, error } = await supabase
+            .from("order_delivery_tracking")
+            .select("*")
+            .eq("order_id", order.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!error && data && active) {
+            nextTracking[order.id] = data;
+          }
+        })
+      );
+
+      if (active) {
+        setTrackingByOrderId((prev) => ({
+          ...prev,
+          ...nextTracking,
+        }));
+      }
+    }
+
+    loadTracking();
+
+    deliveryOrders.forEach((order) => {
+      const channel = supabase
+        .channel(`account-order-tracking-${order.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "order_delivery_tracking",
+            filter: `order_id=eq.${order.id}`,
+          },
+          (payload) => {
+            if (!active) return;
+
+            setTrackingByOrderId((prev) => ({
+              ...prev,
+              [order.id]: payload.new,
+            }));
+          }
+        )
+        .subscribe();
+
+      channels.push(channel);
+    });
+
+    return () => {
+      active = false;
+      channels.forEach((channel) => {
+        supabase.removeChannel(channel);
+      });
+    };
+  }, [deliveryOrders]);
+
   return (
     <article className={`${styles.card} ${styles.cardWide}`}>
       <div className={styles.cardHeader}>
@@ -255,8 +375,31 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
         <div className={styles.ordersCompactList}>
           {orders.map((order) => {
             const timeline = getTimeline(order);
+            const orderStage = normalizeOrderStage(order);
             const firstItem = order.order_items?.[0];
             const hasMoreItems = (order.order_items?.length ?? 0) > 1;
+
+            const latestTracking = trackingByOrderId[order.id] || null;
+
+            const courierLatitude =
+              latestTracking?.latitude ?? order.courier_lat ?? null;
+            const courierLongitude =
+              latestTracking?.longitude ?? order.courier_lng ?? null;
+
+            const hasCourierCoordinates = hasValidCoordinates(
+              courierLatitude,
+              courierLongitude
+            );
+
+            const hasCustomerCoordinates = hasValidCoordinates(
+              order.delivery_lat,
+              order.delivery_lng
+            );
+
+            const shouldShowTrackingMap =
+              orderStage === ORDER_STATUS.DELIVERY &&
+              hasCourierCoordinates &&
+              hasCustomerCoordinates;
 
             return (
               <div key={order.id} className={styles.orderRowCard}>
@@ -275,18 +418,19 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                     {timeline.map((step) => (
                       <div key={step.key} className={styles.timelineInlineStep}>
                         <div
-                          className={`${styles.timelineInlineDot} ${
-                            step.active ? styles.timelineInlineDotActive : ""
-                          } ${step.current ? styles.timelineInlineDotCurrent : ""}`}
+                          className={`${styles.timelineInlineDot} ${step.active ? styles.timelineInlineDotActive : ""
+                            } ${step.current ? styles.timelineInlineDotCurrent : ""
+                            }`}
                         >
                           {step.active ? "✓" : ""}
                         </div>
 
                         <div className={styles.timelineInlineText}>
                           <strong
-                            className={`${styles.timelineInlineLabel} ${
-                              step.active ? styles.timelineInlineLabelActive : ""
-                            }`}
+                            className={`${styles.timelineInlineLabel} ${step.active
+                                ? styles.timelineInlineLabelActive
+                                : ""
+                              }`}
                           >
                             {step.label}
                           </strong>
@@ -303,7 +447,9 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
 
                   <div className={styles.orderSummaryColumn}>
                     <div className={styles.orderInfoMini}>
-                      <span className={styles.orderInfoMiniLabel}>Pagamento</span>
+                      <span className={styles.orderInfoMiniLabel}>
+                        Pagamento
+                      </span>
                       <strong className={styles.orderInfoMiniValue}>
                         {getPaymentStatusLabel(order)}
                       </strong>
@@ -313,13 +459,16 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                       <span className={styles.orderInfoMiniLabel}>Entrega</span>
                       <strong className={styles.orderInfoMiniValue}>
                         {order.delivery_address
-                          ? `${order.delivery_address}, ${order.delivery_number || "s/n"}`
+                          ? `${order.delivery_address}, ${order.delivery_number || "s/n"
+                          }`
                           : "Endereço não informado"}
                       </strong>
                     </div>
 
                     <div className={styles.orderItemsMini}>
-                      <span className={styles.orderInfoMiniLabel}>Itens do pedido</span>
+                      <span className={styles.orderInfoMiniLabel}>
+                        Itens do pedido
+                      </span>
 
                       {firstItem ? (
                         <>
@@ -330,14 +479,19 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
 
                             <strong>
                               {formatPrice(
-                                Number(firstItem.unit_price) * firstItem.quantity
+                                Number(firstItem.unit_price) *
+                                firstItem.quantity
                               )}
                             </strong>
                           </div>
 
-                          {parseRemovedIngredients(firstItem.removed_ingredients).length > 0 ? (
+                          {parseRemovedIngredients(
+                            firstItem.removed_ingredients
+                          ).length > 0 ? (
                             <p className={styles.orderItemMiniNote}>
-                              {getRemovedIngredientsLabel(firstItem.removed_ingredients)}
+                              {getRemovedIngredientsLabel(
+                                firstItem.removed_ingredients
+                              )}
                             </p>
                           ) : null}
 
@@ -365,6 +519,31 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                     {formatPrice(order.total)}
                   </strong>
                 </div>
+
+                {shouldShowTrackingMap ? (
+                  <div className={styles.orderTrackingMapSection}>
+                    <div className={styles.orderTrackingMapHeader}>
+                      <strong>Acompanhe seu pedido</strong>
+                      <span>
+                        O motoboy está a caminho do seu endereço.
+                      </span>
+                    </div>
+
+                    <DeliveryRouteMap
+                      courierLatitude={courierLatitude}
+                      courierLongitude={courierLongitude}
+                      customerLatitude={order.delivery_lat}
+                      customerLongitude={order.delivery_lng}
+                      courierLabel="Seu entregador"
+                      customerLabel="Seu endereço"
+                      height={280}
+                      className={styles.deliveryMapWrap}
+                      metaClassName={styles.deliveryMapMeta}
+                      metaBadgeClassName={styles.mapMetaBadge}
+                      errorClassName={styles.mapError}
+                    />
+                  </div>
+                ) : null}
               </div>
             );
           })}

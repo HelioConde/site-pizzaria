@@ -1,5 +1,13 @@
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../../lib/supabase";
 import styles from "../Admin.module.css";
-import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS, STATUS_META } from "../admin.constants";
+import DeliveryRouteMap from "../../../components/maps/DeliveryRouteMap";
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_OPTIONS,
+  PAYMENT_STATUS,
+  STATUS_META,
+} from "../admin.constants";
 import {
   buildDeliveryAddress,
   canAdvanceOrder,
@@ -18,13 +26,69 @@ export default function AdminOrderCard({
   onUpdateStatus,
 }) {
   const groupedItems = groupOrderItems(order.order_items);
+  const [courierLocation, setCourierLocation] = useState(null);
+
   const statusClass =
     styles[
-      STATUS_META[order.normalized_status]?.badgeClass || "statusBadgeDefault"
+    STATUS_META[order.normalized_status]?.badgeClass || "statusBadgeDefault"
     ];
 
   const isPaid =
     String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID;
+
+  const mapsUrl = useMemo(() => {
+    if (!courierLocation?.latitude || !courierLocation?.longitude) return null;
+
+    return `https://www.google.com/maps?q=${courierLocation.latitude},${courierLocation.longitude}`;
+  }, [courierLocation]);
+
+  const hasCustomerCoordinates =
+    order.delivery_lat != null &&
+    order.delivery_lng != null &&
+    !Number.isNaN(Number(order.delivery_lat)) &&
+    !Number.isNaN(Number(order.delivery_lng));
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadLastLocation() {
+      const { data, error } = await supabase
+        .from("order_delivery_tracking")
+        .select("*")
+        .eq("order_id", order.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && active) {
+        setCourierLocation(data);
+      }
+    }
+
+    loadLastLocation();
+
+    const channel = supabase
+      .channel(`tracking-${order.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "order_delivery_tracking",
+          filter: `order_id=eq.${order.id}`,
+        },
+        (payload) => {
+          if (!active) return;
+          setCourierLocation(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [order.id]);
 
   return (
     <article className={styles.orderCard}>
@@ -63,9 +127,8 @@ export default function AdminOrderCard({
         <div className={styles.infoBlock}>
           <span className={styles.infoLabel}>Pagamento</span>
           <span
-            className={`${styles.paymentBadge} ${
-              isPaid ? styles.paymentPaid : styles.paymentPending
-            }`}
+            className={`${styles.paymentBadge} ${isPaid ? styles.paymentPaid : styles.paymentPending
+              }`}
           >
             {getPaymentStatusLabel(order)}
           </span>
@@ -80,6 +143,60 @@ export default function AdminOrderCard({
           <span className={styles.infoLabel}>Entrega</span>
           <strong>{buildDeliveryAddress(order)}</strong>
         </div>
+
+        {order.normalized_status === ORDER_STATUS.DELIVERY ? (
+          <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
+            <span className={styles.infoLabel}>Motoboy em rota</span>
+
+            {courierLocation ? (
+              <div className={styles.courierLocationBox}>
+                <strong>
+                  {Number(courierLocation.latitude).toFixed(6)},{" "}
+                  {Number(courierLocation.longitude).toFixed(6)}
+                </strong>
+
+                <span className={styles.locationMeta}>
+                  Atualizado em {formatDate(courierLocation.created_at)}
+                </span>
+
+                {mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.secondaryAction}
+                  >
+                    Ver no mapa
+                  </a>
+                ) : null}
+
+                {hasCustomerCoordinates ? (
+                  <DeliveryRouteMap
+                    courierLatitude={courierLocation.latitude}
+                    courierLongitude={courierLocation.longitude}
+                    customerLatitude={order.delivery_lat}
+                    customerLongitude={order.delivery_lng}
+                    courierLabel="Motoboy"
+                    customerLabel={order.customer_name || "Cliente"}
+                    height={320}
+                    className={styles.deliveryMapWrap}
+                    metaClassName={styles.deliveryMapMeta}
+                    metaBadgeClassName={styles.mapMetaBadge}
+                    errorClassName={styles.mapError}
+                    zoom={15}
+                    scrollWheelZoom
+                    preferCanvas={true}
+                    style={{ width: "100%", height: "320px", borderRadius: "18px" }}
+                  />
+                ) : (
+                  <strong>Pedido sem coordenadas de entrega válidas.</strong>
+                )}
+              </div>
+            ) : (
+              <strong>Sem localização disponível ainda.</strong>
+            )}
+          </div>
+        ) : null}
 
         <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
           <span className={styles.infoLabel}>Itens</span>
@@ -131,11 +248,8 @@ export default function AdminOrderCard({
             <button
               key={option.value}
               type="button"
-              className={`${styles.actionButton} ${
-                isActive ? styles.actionButtonActive : ""
-              } ${
-                !isAllowed && !isActive ? styles.actionButtonBlocked : ""
-              }`}
+              className={`${styles.actionButton} ${isActive ? styles.actionButtonActive : ""
+                } ${!isAllowed && !isActive ? styles.actionButtonBlocked : ""}`}
               onClick={() => onUpdateStatus(order.id, option.value)}
               disabled={isDisabled}
               aria-pressed={isActive}

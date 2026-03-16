@@ -1,0 +1,31 @@
+.deliveryMapWrap {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.deliveryMapMeta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+    justify-content: center;
+  flex-direction: row;
+  align-items: center;
+}
+
+.mapMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  border: 1px solid #d8e1ee;
+  font-size: 0.95rem;
+}
+
+.mapError {
+  margin: 0 0 12px;
+  color: #c62828;
+  font-size: 0.95rem;
+}

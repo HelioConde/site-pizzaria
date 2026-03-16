@@ -4,6 +4,7 @@ import Button from "../../components/ui/Button/Button";
 import { supabase } from "../../lib/supabase";
 import styles from "./Checkout.module.css";
 import PaymentSection from "./components/Payment/PaymentSection";
+import DeliveryLocationPicker from "../../components/maps/DeliveryLocationPicker";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 const GUEST_TEST_EMAIL = "compra@sem.cadastro.com";
@@ -133,6 +134,32 @@ function mapAddressToForm(address, base = {}) {
   };
 }
 
+function buildFullAddress(activeDelivery) {
+  const parts = [
+    activeDelivery.address,
+    activeDelivery.number,
+    activeDelivery.district,
+    activeDelivery.city,
+    activeDelivery.state,
+    "Brasil",
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+
+  return parts.join(", ");
+}
+
+function hasEnoughAddressForMap(activeDelivery) {
+  return (
+    normalizeDigits(activeDelivery.cep).length === 8 &&
+    activeDelivery.address.trim() &&
+    activeDelivery.district.trim() &&
+    activeDelivery.city.trim() &&
+    activeDelivery.state.trim().length === 2 &&
+    activeDelivery.number.trim()
+  );
+}
+
 function validateDeliveryData({
   mode,
   isLoggedIn,
@@ -142,6 +169,11 @@ function validateDeliveryData({
   activeDelivery,
   total,
   paymentMethods,
+  deliveryLat,
+  deliveryLng,
+  requireMapConfirmation = false,
+  requirePayment = true,
+  mapConfirmationMessage = "Confirme o ponto exato da entrega no mapa antes de confirmar o pedido.",
 }) {
   if (mode === null) {
     return "Escolha como deseja continuar.";
@@ -193,26 +225,39 @@ function validateDeliveryData({
     }
   }
 
-  if (!activeDelivery.paymentMethod) {
-    return "Selecione a forma de pagamento.";
+  if (requireMapConfirmation && hasEnoughAddressForMap(activeDelivery)) {
+    if (
+      deliveryLat == null ||
+      deliveryLng == null ||
+      Number.isNaN(Number(deliveryLat)) ||
+      Number.isNaN(Number(deliveryLng))
+    ) {
+      return mapConfirmationMessage;
+    }
   }
 
-  if (
-    activeDelivery.paymentMethod === paymentMethods.CASH &&
-    activeDelivery.needsChange
-  ) {
-    if (!activeDelivery.changeFor.trim()) {
-      return "Informe o valor para troco.";
+  if (requirePayment) {
+    if (!activeDelivery.paymentMethod) {
+      return "Selecione a forma de pagamento.";
     }
 
-    const changeValue = parseMoneyValue(activeDelivery.changeFor);
+    if (
+      activeDelivery.paymentMethod === paymentMethods.CASH &&
+      activeDelivery.needsChange
+    ) {
+      if (!activeDelivery.changeFor.trim()) {
+        return "Informe o valor para troco.";
+      }
 
-    if (changeValue <= 0) {
-      return "Informe um valor de troco válido.";
-    }
+      const changeValue = parseMoneyValue(activeDelivery.changeFor);
 
-    if (changeValue < total) {
-      return "O valor do troco deve ser maior que o total do pedido.";
+      if (changeValue <= 0) {
+        return "Informe um valor de troco válido.";
+      }
+
+      if (changeValue < total) {
+        return "O valor do troco deve ser maior que o total do pedido.";
+      }
     }
   }
 
@@ -223,7 +268,7 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const [cartItems, setCartItems] = useState([]);
-  const [mode, setMode] = useState(null); // null | guest | account
+  const [mode, setMode] = useState(null);
   const [deliveryForm, setDeliveryForm] = useState(initialDeliveryForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -235,6 +280,10 @@ export default function Checkout() {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDeletingAddress, setIsDeletingAddress] = useState(false);
 
+  const [deliveryLat, setDeliveryLat] = useState(null);
+  const [deliveryLng, setDeliveryLng] = useState(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
   const [cepLoading, setCepLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -245,6 +294,87 @@ export default function Checkout() {
 
   const deliveryFee = cartItems.length > 0 ? 6.9 : 0;
   const total = subtotal + deliveryFee;
+
+  const activeDelivery = deliveryForm;
+  const canShowMap = hasEnoughAddressForMap(activeDelivery);
+
+  useEffect(() => {
+    if (deliveryLat && deliveryLng) return;
+
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        setDeliveryLat(lat);
+        setDeliveryLng(lng);
+      },
+      (error) => {
+        console.log("GPS não disponível ou negado", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+      }
+    );
+  }, []);
+
+  async function geocodeAddress(address, cep = "") {
+    if (!address.trim()) return;
+
+    setIsGeocoding(true);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(
+          address
+        )}`
+      );
+
+      const data = await response.json();
+
+      if (Array.isArray(data) && data.length > 0) {
+        setDeliveryLat(Number(data[0].lat));
+        setDeliveryLng(Number(data[0].lon));
+        setMessage("");
+        return;
+      }
+
+      const cepDigits = normalizeDigits(cep);
+
+      if (cepDigits.length === 8) {
+        const cepResponse = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&postalcode=${cepDigits}&country=Brazil`
+        );
+
+        const cepData = await cepResponse.json();
+
+        if (Array.isArray(cepData) && cepData.length > 0) {
+          setDeliveryLat(Number(cepData[0].lat));
+          setDeliveryLng(Number(cepData[0].lon));
+          setMessage(
+            "Não foi possível localizar o endereço exato automaticamente. Ajuste o ponto no mapa."
+          );
+          return;
+        }
+      }
+
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+      setMessage(
+        "Não foi possível localizar o endereço exato automaticamente. Marque o ponto manualmente no mapa."
+      );
+    } catch (error) {
+      console.error("Erro ao localizar endereço:", error);
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+      setMessage("Não foi possível localizar o endereço no mapa.");
+    } finally {
+      setIsGeocoding(false);
+    }
+  }
 
   async function loadAddresses(userId, metadata = {}) {
     try {
@@ -274,9 +404,22 @@ export default function Checkout() {
           needsChange: prev.needsChange || false,
           changeFor: prev.changeFor || "",
         }));
+
+        setDeliveryLat(
+          defaultAddress?.latitude != null
+            ? Number(defaultAddress.latitude)
+            : null
+        );
+        setDeliveryLng(
+          defaultAddress?.longitude != null
+            ? Number(defaultAddress.longitude)
+            : null
+        );
       } else {
         setSelectedAddressId(null);
         setShowNewAddressForm(true);
+        setDeliveryLat(null);
+        setDeliveryLng(null);
 
         setDeliveryForm((prev) => ({
           ...prev,
@@ -338,9 +481,47 @@ export default function Checkout() {
     loadCheckoutData();
   }, []);
 
+  useEffect(() => {
+    if (!canShowMap) {
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+      return;
+    }
+
+    if (
+      !showNewAddressForm &&
+      selectedAddressId &&
+      deliveryLat != null &&
+      deliveryLng != null &&
+      !Number.isNaN(Number(deliveryLat)) &&
+      !Number.isNaN(Number(deliveryLng))
+    ) {
+      return;
+    }
+
+    const address = buildFullAddress(activeDelivery);
+    const timeout = setTimeout(() => {
+      geocodeAddress(address, activeDelivery.cep);
+    }, 700);
+
+    return () => clearTimeout(timeout);
+  }, [
+    canShowMap,
+    activeDelivery.cep,
+    activeDelivery.address,
+    activeDelivery.district,
+    activeDelivery.city,
+    activeDelivery.state,
+    activeDelivery.number,
+    showNewAddressForm,
+    selectedAddressId,
+  ]);
+
   function handleContinueAsGuest() {
     setMode("guest");
     setMessage("");
+    setDeliveryLat(null);
+    setDeliveryLng(null);
     setDeliveryForm((prev) => ({
       ...initialDeliveryForm,
       paymentMethod: prev.paymentMethod || "",
@@ -379,6 +560,13 @@ export default function Checkout() {
       return nextForm;
     });
 
+    if (
+      ["cep", "address", "district", "city", "state", "number"].includes(name)
+    ) {
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+    }
+
     if (name === "cep") {
       const numbers = normalizeDigits(value);
       if (numbers.length === 8) {
@@ -412,6 +600,9 @@ export default function Checkout() {
         city: data.localidade || "",
         state: formatState(data.uf || ""),
       }));
+
+      setDeliveryLat(null);
+      setDeliveryLng(null);
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       setMessage("Não foi possível buscar o CEP.");
@@ -433,10 +624,16 @@ export default function Checkout() {
       ...prev,
       ...mapUserMetadataToForm(metadata),
       ...mapAddressToForm(address),
-      paymentMethod: prev.paymentMethod || "",
-      needsChange: prev.needsChange || false,
-      changeFor: prev.changeFor || "",
     }));
+
+    // ⭐ reaproveitar coordenadas salvas
+    if (address.latitude && address.longitude) {
+      setDeliveryLat(Number(address.latitude));
+      setDeliveryLng(Number(address.longitude));
+    } else {
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+    }
   }
 
   async function handleStartNewAddress() {
@@ -445,6 +642,8 @@ export default function Checkout() {
     setShowNewAddressForm(true);
     setSelectedAddressId(null);
     setMessage("");
+    setDeliveryLat(null);
+    setDeliveryLng(null);
 
     setDeliveryForm((prev) => ({
       ...initialDeliveryForm,
@@ -454,7 +653,6 @@ export default function Checkout() {
       changeFor: prev.changeFor || "",
     }));
   }
-
   async function handleSaveNewAddress() {
     if (!user) return;
 
@@ -467,6 +665,10 @@ export default function Checkout() {
       activeDelivery: deliveryForm,
       total,
       paymentMethods: PAYMENT_METHOD,
+      deliveryLat,
+      deliveryLng,
+      requireMapConfirmation: false,
+      requirePayment: false,
     });
 
     if (validationError) {
@@ -491,6 +693,8 @@ export default function Checkout() {
         number: deliveryForm.number,
         complement: deliveryForm.complement || null,
         reference: deliveryForm.reference || null,
+        latitude: deliveryLat,
+        longitude: deliveryLng,
         is_default: shouldBeDefault,
       });
 
@@ -563,8 +767,8 @@ export default function Checkout() {
 
     const notes =
       activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
-      activeDelivery.needsChange &&
-      activeDelivery.changeFor
+        activeDelivery.needsChange &&
+        activeDelivery.changeFor
         ? `Troco para: ${activeDelivery.changeFor}`
         : null;
 
@@ -593,6 +797,8 @@ export default function Checkout() {
         delivery_number: activeDelivery.number || null,
         delivery_complement: activeDelivery.complement || null,
         delivery_reference: activeDelivery.reference || null,
+        delivery_lat: deliveryLat,
+        delivery_lng: deliveryLng,
         notes,
       })
       .select()
@@ -635,6 +841,34 @@ export default function Checkout() {
       return;
     }
 
+    const selectedAddress = savedAddresses.find(
+      (addr) => String(addr.id) === String(selectedAddressId)
+    );
+
+    const shouldUpdateAddressCoords =
+      selectedAddress &&
+      deliveryLat != null &&
+      deliveryLng != null &&
+      (
+        Number(selectedAddress.latitude) !== Number(deliveryLat) ||
+        Number(selectedAddress.longitude) !== Number(deliveryLng)
+      );
+
+    if (mode === "account" && selectedAddressId && shouldUpdateAddressCoords) {
+      const { error: addressUpdateError } = await supabase
+        .from("addresses")
+        .update({
+          latitude: deliveryLat,
+          longitude: deliveryLng,
+        })
+        .eq("id", selectedAddressId)
+        .eq("user_id", user.id);
+
+      if (addressUpdateError) {
+        throw addressUpdateError;
+      }
+    }
+
     const activeDelivery = getActiveDeliveryData();
 
     const validationError = validateDeliveryData({
@@ -646,6 +880,12 @@ export default function Checkout() {
       activeDelivery,
       total,
       paymentMethods: PAYMENT_METHOD,
+      deliveryLat,
+      deliveryLng,
+      requireMapConfirmation: true,
+      requirePayment: true,
+      mapConfirmationMessage:
+        "Confirme o ponto exato da entrega no mapa antes de confirmar o pedido.",
     });
 
     if (validationError) {
@@ -657,6 +897,29 @@ export default function Checkout() {
     setMessage("");
 
     try {
+      // atualiza latitude/longitude do endereço salvo usado no checkout
+      if (
+        mode === "account" &&
+        selectedAddressId &&
+        deliveryLat != null &&
+        deliveryLng != null &&
+        !Number.isNaN(Number(deliveryLat)) &&
+        !Number.isNaN(Number(deliveryLng))
+      ) {
+        const { error: addressUpdateError } = await supabase
+          .from("addresses")
+          .update({
+            latitude: deliveryLat,
+            longitude: deliveryLng,
+          })
+          .eq("id", selectedAddressId)
+          .eq("user_id", user.id);
+
+        if (addressUpdateError) {
+          throw addressUpdateError;
+        }
+      }
+
       const orderPayload = {
         total,
         subtotal,
@@ -675,6 +938,8 @@ export default function Checkout() {
           number: activeDelivery.number,
           complement: activeDelivery.complement,
           reference: activeDelivery.reference,
+          lat: deliveryLat,
+          lng: deliveryLng,
         },
       };
 
@@ -702,13 +967,15 @@ export default function Checkout() {
                 email: orderPayload.customer.email,
               },
               description: "Pedido Base Studio Pizzas",
-              successUrl: `${window.location.origin}${normalizedBasePath}payment-success?order_id=${order.id}`,
+              successUrl: `${window.location.origin}${normalizedBasePath}payment-success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
               cancelUrl: `${window.location.origin}${normalizedBasePath}checkout`,
               metadata: {
                 order_id: order.id,
                 customer_name: orderPayload.customer.name,
                 customer_phone: orderPayload.customer.phone,
                 delivery_address: `${orderPayload.delivery.address}, ${orderPayload.delivery.number}`,
+                delivery_lat: String(orderPayload.delivery.lat ?? ""),
+                delivery_lng: String(orderPayload.delivery.lng ?? ""),
               },
             },
           }
@@ -760,8 +1027,6 @@ export default function Checkout() {
       setIsSubmitting(false);
     }
   }
-
-  const activeDelivery = getActiveDeliveryData();
 
   return (
     <main className={styles.page}>
@@ -815,253 +1080,256 @@ export default function Checkout() {
 
             {mode === "account" ? (
               <section className={styles.card}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <h2 className={styles.sectionTitle}>Dados da conta</h2>
-                    <p className={styles.sectionDesc}>
-                      Você está logado como <strong>{user?.email}</strong>.
-                    </p>
+                <div className={styles.newAddressBlock}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <h2 className={styles.sectionTitle}>Dados da conta</h2>
+                      <p className={styles.sectionDesc}>
+                        Você está logado como <strong>{user?.email}</strong>.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.changeModeBtn}
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        setUser(null);
+                        setIsLoggedIn(false);
+                        setMode(null);
+                        setSavedAddresses([]);
+                        setSelectedAddressId(null);
+                        setShowNewAddressForm(false);
+                        setDeliveryLat(null);
+                        setDeliveryLng(null);
+                        setDeliveryForm(initialDeliveryForm);
+                      }}
+                    >
+                      Sair
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    className={styles.changeModeBtn}
-                    onClick={async () => {
-                      await supabase.auth.signOut();
-                      setUser(null);
-                      setIsLoggedIn(false);
-                      setMode(null);
-                      setSavedAddresses([]);
-                      setSelectedAddressId(null);
-                      setShowNewAddressForm(false);
-                      setDeliveryForm(initialDeliveryForm);
-                    }}
-                  >
-                    Sair
-                  </button>
-                </div>
+                  {savedAddresses.length > 0 ? (
+                    <>
+                      <div className={styles.sectionHeader}>
+                        <div>
+                          <h2 className={styles.sectionTitle}>Seus endereços</h2>
+                          <p className={styles.sectionDesc}>
+                            Escolha um endereço salvo ou adicione um novo.
+                          </p>
+                        </div>
 
-                {savedAddresses.length > 0 ? (
-                  <>
-                    <div className={styles.sectionHeader}>
-                      <div>
-                        <h2 className={styles.sectionTitle}>Seus endereços</h2>
-                        <p className={styles.sectionDesc}>
-                          Escolha um endereço salvo ou adicione um novo.
-                        </p>
+                        <button
+                          type="button"
+                          className={styles.changeModeBtn}
+                          onClick={handleStartNewAddress}
+                        >
+                          Adicionar novo endereço
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        className={styles.changeModeBtn}
-                        onClick={handleStartNewAddress}
-                      >
-                        Adicionar novo endereço
-                      </button>
-                    </div>
-
-                    <div className={styles.addressList}>
-                      {savedAddresses.map((addr, index) => (
-                        <div
-                          key={addr.id}
-                          className={`${styles.addressCard} ${
-                            selectedAddressId === addr.id
+                      <div className={styles.addressList}>
+                        {savedAddresses.map((addr, index) => (
+                          <div
+                            key={addr.id}
+                            className={`${styles.addressCard} ${selectedAddressId === addr.id
                               ? styles.addressCardActive
                               : ""
-                          }`}
-                        >
-                          <p className={styles.addressCardTitle}>
-                            <strong>
-                              {addr.label?.trim() || `Endereço ${index + 1}`}
-                            </strong>
-                            {addr.is_default ? " • Principal" : ""}
-                          </p>
-
-                          <p className={styles.addressCardLine}>
-                            {addr.address}, {addr.number}
-                          </p>
-
-                          {addr.complement ? (
-                            <p className={styles.addressCardLine}>
-                              Complemento: {addr.complement}
+                              }`}
+                          >
+                            <p className={styles.addressCardTitle}>
+                              <strong>
+                                {addr.label?.trim() || `Endereço ${index + 1}`}
+                              </strong>
+                              {addr.is_default ? " • Principal" : ""}
                             </p>
-                          ) : null}
 
-                          {addr.reference ? (
                             <p className={styles.addressCardLine}>
-                              Referência: {addr.reference}
+                              {addr.address}, {addr.number}
                             </p>
-                          ) : null}
 
-                          <p className={styles.addressCardLine}>
-                            {addr.district ? `${addr.district} • ` : ""}
-                            {addr.city}
-                            {addr.state ? ` - ${addr.state}` : ""}
-                          </p>
+                            {addr.complement ? (
+                              <p className={styles.addressCardLine}>
+                                Complemento: {addr.complement}
+                              </p>
+                            ) : null}
 
-                          <div className={styles.addressActions}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSelectAddress(addr)}
-                            >
-                              Usar este
-                            </Button>
+                            {addr.reference ? (
+                              <p className={styles.addressCardLine}>
+                                Referência: {addr.reference}
+                              </p>
+                            ) : null}
 
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteAddress(addr.id)}
-                              disabled={isDeletingAddress}
-                            >
-                              Excluir
-                            </Button>
+                            <p className={styles.addressCardLine}>
+                              {addr.district ? `${addr.district} • ` : ""}
+                              {addr.city}
+                              {addr.state ? ` - ${addr.state}` : ""}
+                            </p>
+
+                            <div className={styles.addressActions}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSelectAddress(addr)}
+                              >
+                                Usar este
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteAddress(addr.id)}
+                                disabled={isDeletingAddress}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-
-                {showNewAddressForm || savedAddresses.length === 0 ? (
-                  <>
-                    <div className={styles.sectionHeader}>
-                      <div>
-                        <h2 className={styles.sectionTitle}>Novo endereço</h2>
-                        <p className={styles.sectionDesc}>
-                          Preencha os dados e salve este endereço na sua conta.
-                        </p>
+                        ))}
                       </div>
-                    </div>
+                    </>
+                  ) : null}
 
-                    <div className={styles.formGrid}>
-                      <label className={styles.field}>
-                        <span>Nome</span>
-                        <input
-                          type="text"
-                          name="name"
-                          value={deliveryForm.name}
-                          onChange={handleDeliveryChange}
-                          placeholder="Seu nome"
-                        />
-                      </label>
+                  {showNewAddressForm || savedAddresses.length === 0 ? (
+                    <>
+                      <div className={styles.sectionHeader}>
+                        <div>
+                          <h2 className={styles.sectionTitle}>Novo endereço</h2>
+                          <p className={styles.sectionDesc}>
+                            Preencha os dados e salve este endereço na sua conta.
+                          </p>
+                        </div>
+                      </div>
 
-                      <label className={styles.field}>
-                        <span>Telefone</span>
-                        <input
-                          type="tel"
-                          name="phone"
-                          value={deliveryForm.phone}
-                          onChange={handleDeliveryChange}
-                          placeholder="(61) 99999-9999"
-                        />
-                      </label>
+                      <div className={styles.formGrid}>
+                        <label className={styles.field}>
+                          <span>Nome</span>
+                          <input
+                            type="text"
+                            name="name"
+                            value={deliveryForm.name}
+                            onChange={handleDeliveryChange}
+                            placeholder="Seu nome"
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>CEP</span>
-                        <input
-                          type="text"
-                          name="cep"
-                          value={deliveryForm.cep}
-                          onChange={handleDeliveryChange}
-                          placeholder="00000-000"
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>Telefone</span>
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={deliveryForm.phone}
+                            onChange={handleDeliveryChange}
+                            placeholder="(61) 99999-9999"
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>Bairro</span>
-                        <input
-                          type="text"
-                          name="district"
-                          value={deliveryForm.district}
-                          onChange={handleDeliveryChange}
-                          placeholder="Seu bairro"
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>CEP</span>
+                          <input
+                            type="text"
+                            name="cep"
+                            value={deliveryForm.cep}
+                            onChange={handleDeliveryChange}
+                            placeholder="00000-000"
+                          />
+                        </label>
 
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Endereço</span>
-                        <input
-                          type="text"
-                          name="address"
-                          value={deliveryForm.address}
-                          onChange={handleDeliveryChange}
-                          placeholder="Rua, avenida..."
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>Bairro</span>
+                          <input
+                            type="text"
+                            name="district"
+                            value={deliveryForm.district}
+                            onChange={handleDeliveryChange}
+                            placeholder="Seu bairro"
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>Cidade</span>
-                        <input
-                          type="text"
-                          name="city"
-                          value={deliveryForm.city}
-                          onChange={handleDeliveryChange}
-                          placeholder="Cidade"
-                        />
-                      </label>
+                        <label className={`${styles.field} ${styles.fieldFull}`}>
+                          <span>Endereço</span>
+                          <input
+                            type="text"
+                            name="address"
+                            value={deliveryForm.address}
+                            onChange={handleDeliveryChange}
+                            placeholder="Rua, avenida..."
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>Estado</span>
-                        <input
-                          type="text"
-                          name="state"
-                          value={deliveryForm.state}
-                          onChange={handleDeliveryChange}
-                          placeholder="UF"
-                          maxLength={2}
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>Cidade</span>
+                          <input
+                            type="text"
+                            name="city"
+                            value={deliveryForm.city}
+                            onChange={handleDeliveryChange}
+                            placeholder="Cidade"
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>Número</span>
-                        <input
-                          type="text"
-                          name="number"
-                          value={deliveryForm.number}
-                          onChange={handleDeliveryChange}
-                          placeholder="123"
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>Estado</span>
+                          <input
+                            type="text"
+                            name="state"
+                            value={deliveryForm.state}
+                            onChange={handleDeliveryChange}
+                            placeholder="UF"
+                            maxLength={2}
+                          />
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>Complemento</span>
-                        <input
-                          type="text"
-                          name="complement"
-                          value={deliveryForm.complement}
-                          onChange={handleDeliveryChange}
-                          placeholder="Casa, apto, bloco..."
-                        />
-                      </label>
+                        <label className={styles.field}>
+                          <span>Número</span>
+                          <input
+                            type="text"
+                            name="number"
+                            value={deliveryForm.number}
+                            onChange={handleDeliveryChange}
+                            placeholder="123"
+                          />
+                        </label>
 
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Referência</span>
-                        <input
-                          type="text"
-                          name="reference"
-                          value={deliveryForm.reference}
-                          onChange={handleDeliveryChange}
-                          placeholder="Próximo ao mercado, portão azul..."
-                        />
-                      </label>
-                    </div>
+                        <label className={styles.field}>
+                          <span>Complemento</span>
+                          <input
+                            type="text"
+                            name="complement"
+                            value={deliveryForm.complement}
+                            onChange={handleDeliveryChange}
+                            placeholder="Casa, apto, bloco..."
+                          />
+                        </label>
 
-                    <div className={styles.formActions}>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        onClick={handleSaveNewAddress}
-                        disabled={isSavingAddress}
-                      >
-                        {isSavingAddress ? "Salvando..." : "Salvar endereço"}
-                      </Button>
-                    </div>
-                  </>
-                ) : null}
+                        <label className={`${styles.field} ${styles.fieldFull}`}>
+                          <span>Referência</span>
+                          <input
+                            type="text"
+                            name="reference"
+                            value={deliveryForm.reference}
+                            onChange={handleDeliveryChange}
+                            placeholder="Próximo ao mercado, portão azul..."
+                          />
+                        </label>
+                      </div>
+
+                      <div className={styles.formActions}>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="md"
+                          onClick={handleSaveNewAddress}
+                          disabled={isSavingAddress}
+                        >
+                          {isSavingAddress ? "Salvando..." : "Salvar endereço"}
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </section>
             ) : null}
 
@@ -1078,7 +1346,11 @@ export default function Checkout() {
                   <button
                     type="button"
                     className={styles.changeModeBtn}
-                    onClick={() => setMode(null)}
+                    onClick={() => {
+                      setMode(null);
+                      setDeliveryLat(null);
+                      setDeliveryLng(null);
+                    }}
                   >
                     Alterar opção
                   </button>
@@ -1199,12 +1471,12 @@ export default function Checkout() {
               </section>
             ) : null}
 
-            {message ? (
-              <p className={styles.checkoutMessage}>
-                {cepLoading ? "Buscando CEP..." : message}
-              </p>
-            ) : cepLoading ? (
+            {cepLoading ? (
               <p className={styles.checkoutMessage}>Buscando CEP...</p>
+            ) : isGeocoding ? (
+              <p className={styles.checkoutMessage}>
+                Localizando endereço no mapa...
+              </p>
             ) : null}
           </div>
 
@@ -1270,7 +1542,8 @@ export default function Checkout() {
 
                     <p className={styles.summaryDeliveryText}>
                       {activeDelivery.address
-                        ? `${activeDelivery.address}, ${activeDelivery.number || "s/n"}`
+                        ? `${activeDelivery.address}, ${activeDelivery.number || "s/n"
+                        }`
                         : "Endereço não informado"}
                     </p>
 
@@ -1293,6 +1566,39 @@ export default function Checkout() {
                       {activeDelivery.city}
                       {activeDelivery.state ? ` - ${activeDelivery.state}` : ""}
                     </p>
+
+                    {canShowMap ? (
+                      <div className={styles.mapConfirmSection}>
+                        <h3 className={styles.summaryDeliveryTitle}>
+                          Confirme o local da entrega
+                        </h3>
+
+                        <p className={styles.summaryDeliveryText}>
+                          Clique no mapa ou arraste o marcador para ajustar o ponto exato da entrega.
+                        </p>
+
+                        {message ? (
+                          <p className={styles.checkoutMessage}>
+                            {message}
+                          </p>
+                        ) : null}
+
+                        <DeliveryLocationPicker
+                          latitude={deliveryLat ?? -15.8794}
+                          longitude={deliveryLng ?? -48.0844}
+                          onChange={(lat, lng) => {
+                            setDeliveryLat(lat);
+                            setDeliveryLng(lng);
+                            setMessage("");
+                          }}
+                        />
+                        {deliveryLat != null && deliveryLng != null ? (
+                          <p className={styles.mapConfirmed}>
+                            Local da entrega confirmado.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <PaymentSection
                       paymentMethod={activeDelivery.paymentMethod}
