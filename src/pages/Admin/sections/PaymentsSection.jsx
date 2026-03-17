@@ -25,6 +25,10 @@ function formatDate(value) {
   }).format(date);
 }
 
+function normalizePaymentStatus(status) {
+  return String(status || "").trim().toLowerCase();
+}
+
 function getPaymentMethodLabel(method) {
   const normalized = String(method || "").trim().toLowerCase();
 
@@ -41,7 +45,7 @@ function getPaymentMethodLabel(method) {
 }
 
 function getPaymentStatusLabel(status) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = normalizePaymentStatus(status);
 
   switch (normalized) {
     case "paid":
@@ -58,7 +62,7 @@ function getPaymentStatusLabel(status) {
 }
 
 function getPaymentStatusClass(status, styles) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = normalizePaymentStatus(status);
 
   switch (normalized) {
     case "paid":
@@ -69,6 +73,48 @@ function getPaymentStatusClass(status, styles) {
       return `${styles.paymentBadge} ${styles.paymentDelivery}`;
     default:
       return `${styles.paymentBadge} ${styles.paymentPending}`;
+  }
+}
+
+function getOrderStatusLabel(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "pending":
+      return "Aguardando";
+    case "preparing":
+      return "Em preparo";
+    case "waiting_courier":
+      return "Aguardando motoboy";
+    case "delivery":
+      return "Saiu para entrega";
+    case "delivered":
+      return "Entregue";
+    case "cancelled":
+      return "Cancelado";
+    default:
+      return "Não informado";
+  }
+}
+
+function getOrderStatusClass(status, styles) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "pending":
+      return `${styles.statusBadge} ${styles.statusBadgePending}`;
+    case "preparing":
+      return `${styles.statusBadge} ${styles.statusBadgePreparing}`;
+    case "waiting_courier":
+      return `${styles.statusBadge} ${styles.statusBadgeWaitingCourier}`;
+    case "delivery":
+      return `${styles.statusBadge} ${styles.statusBadgeDelivery}`;
+    case "delivered":
+      return `${styles.statusBadge} ${styles.statusBadgeDelivered}`;
+    case "cancelled":
+      return `${styles.statusBadge} ${styles.statusBadgeCanceled}`;
+    default:
+      return `${styles.statusBadge} ${styles.statusBadgeDefault}`;
   }
 }
 
@@ -136,8 +182,7 @@ export default function PaymentsSection() {
 
     if (filter !== "all") {
       result = result.filter(
-        (payment) =>
-          String(payment.payment_status || "").trim().toLowerCase() === filter
+        (payment) => normalizePaymentStatus(payment.payment_status) === filter
       );
     }
 
@@ -146,15 +191,20 @@ export default function PaymentsSection() {
     if (!term) return result;
 
     return result.filter((payment) => {
+      const id = String(payment.id || "").toLowerCase();
       const name = String(payment.customer_name || "").toLowerCase();
       const phone = String(payment.customer_phone || "").toLowerCase();
       const method = getPaymentMethodLabel(payment.payment_method).toLowerCase();
+      const paymentStatus = getPaymentStatusLabel(payment.payment_status).toLowerCase();
+      const orderStatus = getOrderStatusLabel(payment.order_status).toLowerCase();
 
       return (
+        id.includes(term) ||
         name.includes(term) ||
         phone.includes(term) ||
         method.includes(term) ||
-        String(payment.id).toLowerCase().includes(term)
+        paymentStatus.includes(term) ||
+        orderStatus.includes(term)
       );
     });
   }, [payments, filter, search]);
@@ -163,24 +213,23 @@ export default function PaymentsSection() {
     return {
       total: payments.length,
       paid: payments.filter(
-        (payment) =>
-          String(payment.payment_status || "").trim().toLowerCase() === "paid"
+        (payment) => normalizePaymentStatus(payment.payment_status) === "paid"
       ).length,
       pending: payments.filter(
+        (payment) => normalizePaymentStatus(payment.payment_status) === "pending"
+      ).length,
+      deliveryPayment: payments.filter(
         (payment) =>
-          String(payment.payment_status || "").trim().toLowerCase() === "pending"
+          normalizePaymentStatus(payment.payment_status) === "delivery_payment"
       ).length,
       cancelled: payments.filter(
-        (payment) =>
-          String(payment.payment_status || "").trim().toLowerCase() === "cancelled"
+        (payment) => normalizePaymentStatus(payment.payment_status) === "cancelled"
       ).length,
       totalRevenue: payments
-        .filter(
-          (payment) =>
-            String(payment.payment_status || "").trim().toLowerCase() === "paid" ||
-            String(payment.payment_status || "").trim().toLowerCase() ===
-              "delivery_payment"
-        )
+        .filter((payment) => {
+          const status = normalizePaymentStatus(payment.payment_status);
+          return status === "paid" || status === "delivery_payment";
+        })
         .reduce((acc, payment) => acc + Number(payment.total || 0), 0),
     };
   }, [payments]);
@@ -232,9 +281,8 @@ export default function PaymentsSection() {
             <div className={styles.filterGroup}>
               <button
                 type="button"
-                className={`${styles.filterButton} ${
-                  filter === "all" ? styles.filterButtonActive : ""
-                }`}
+                className={`${styles.filterButton} ${filter === "all" ? styles.filterButtonActive : ""
+                  }`}
                 onClick={() => setFilter("all")}
               >
                 Todos
@@ -242,9 +290,8 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${
-                  filter === "paid" ? styles.filterButtonActive : ""
-                }`}
+                className={`${styles.filterButton} ${filter === "paid" ? styles.filterButtonActive : ""
+                  }`}
                 onClick={() => setFilter("paid")}
               >
                 Pagos
@@ -252,9 +299,8 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${
-                  filter === "pending" ? styles.filterButtonActive : ""
-                }`}
+                className={`${styles.filterButton} ${filter === "pending" ? styles.filterButtonActive : ""
+                  }`}
                 onClick={() => setFilter("pending")}
               >
                 Pendentes
@@ -262,9 +308,8 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${
-                  filter === "delivery_payment" ? styles.filterButtonActive : ""
-                }`}
+                className={`${styles.filterButton} ${filter === "delivery_payment" ? styles.filterButtonActive : ""
+                  }`}
                 onClick={() => setFilter("delivery_payment")}
               >
                 Na entrega
@@ -272,9 +317,8 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${
-                  filter === "cancelled" ? styles.filterButtonActive : ""
-                }`}
+                className={`${styles.filterButton} ${filter === "cancelled" ? styles.filterButtonActive : ""
+                  }`}
                 onClick={() => setFilter("cancelled")}
               >
                 Cancelados
@@ -346,14 +390,18 @@ export default function PaymentsSection() {
                       <span className={styles.paymentInfoLabel}>Data</span>
                       <strong>{formatDate(payment.created_at)}</strong>
                     </div>
-
                     <div
                       className={`${styles.paymentInfoBlock} ${styles.paymentInfoBlockWide}`}
                     >
                       <span className={styles.paymentInfoLabel}>
                         Status do pedido
                       </span>
-                      <strong>{payment.order_status || "Não informado"}</strong>
+
+                      <div className={styles.paymentStatusWrap}>
+                        <span className={getOrderStatusClass(payment.order_status, styles)}>
+                          {getOrderStatusLabel(payment.order_status)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </article>

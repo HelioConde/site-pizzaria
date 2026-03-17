@@ -23,6 +23,7 @@ const NOTIFICATION_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-order.mp3`
 const GPS_MIN_SEND_INTERVAL = 5000;
 
 export default function Motoboy() {
+  
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
@@ -162,6 +163,7 @@ export default function Motoboy() {
 
   const stopGpsTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
+      console.log("🛑 Parando watch GPS:", watchIdRef.current);
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
@@ -173,52 +175,79 @@ export default function Motoboy() {
     });
   }, []);
 
-  const sendLocation = useCallback(
-    async (orderId, latitude, longitude) => {
-      try {
-        const now = Date.now();
-        const { lat, lng, sentAt } = lastSentLocationRef.current;
+  async function debugGeolocationPermission() {
+    if (!navigator.permissions) {
+      console.log("⚠️ Permissions API não suportada.");
+      return;
+    }
 
-        const samePosition = lat === latitude && lng === longitude;
-        const tooSoon = now - sentAt < GPS_MIN_SEND_INTERVAL;
+    try {
+      const result = await navigator.permissions.query({ name: "geolocation" });
+      console.log("🔐 Permissão de geolocalização:", result.state);
 
-        if (samePosition && tooSoon) {
-          return;
-        }
+      result.onchange = () => {
+        console.log("🔄 Permissão mudou para:", result.state);
+      };
+    } catch (error) {
+      console.error("Erro ao consultar permissão:", error);
+    }
+  }
 
-        if (tooSoon) {
-          return;
-        }
 
-        const { error } = await supabase
-          .from("order_delivery_tracking")
-          .insert({
-            order_id: orderId,
-            courier_id: userInfo.id,
-            latitude,
-            longitude,
-          });
-
-        if (error) throw error;
-
-        lastSentLocationRef.current = {
-          lat: latitude,
-          lng: longitude,
-          sentAt: now,
-        };
-
-        setLastGpsAt(new Date().toISOString());
-        setGpsError("");
-      } catch (error) {
-        console.error("Erro ao enviar localização:", error);
-        setGpsError("Não foi possível atualizar a localização.");
-      }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      console.log("GPS OK", position.coords);
     },
-    [userInfo.id]
+    (error) => {
+      console.error("GPS ERRO", error);
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 20000,
+      maximumAge: 10000,
+    }
   );
+  useEffect(() => {
+    debugGeolocationPermission();
+  }, []);
+
+  
+const sendLocation = useCallback(
+  async (orderId, latitude, longitude) => {
+    console.log("📤 Tentando enviar localização ao Supabase...", {
+      orderId,
+      latitude,
+      longitude,
+    });
+
+    try {
+      const { error } = await supabase
+        .from("order_delivery_tracking")
+        .insert({
+          order_id: orderId,
+          courier_id: userInfo.id,
+          latitude,
+          longitude,
+        });
+
+      if (error) throw error;
+
+      console.log("✅ Localização enviada ao Supabase com sucesso");
+    } catch (error) {
+      console.error("❌ Erro no Supabase ao enviar localização:", error);
+    }
+  },
+  [userInfo.id]
+);
 
   const startGpsTracking = useCallback(
-    (orderId) => {
+    async (orderId) => {
+      console.log("📡 Tentando iniciar GPS...", {
+        orderId,
+        hasGeolocation: "geolocation" in navigator,
+        isSecureContext: window.isSecureContext,
+      });
+
       if (!navigator.geolocation) {
         setGpsError("Geolocalização não é suportada neste dispositivo.");
         return;
@@ -230,56 +259,122 @@ export default function Motoboy() {
       }
 
       if (watchIdRef.current !== null) {
+        console.log("🛑 Limpando watch anterior:", watchIdRef.current);
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
 
       setGpsError("");
 
+      const logPosition = async (position, source = "watch") => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        console.log(`✅ GPS obtido via ${source}`, {
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+          altitude: position.coords.altitude,
+          speed: position.coords.speed,
+          heading: position.coords.heading,
+          timestamp: position.timestamp,
+        });
+
+        setCurrentCourierPosition({
+          latitude,
+          longitude,
+        });
+
+        setGpsActive(true);
+        await sendLocation(orderId, latitude, longitude);
+      };
+
+      const handleError = (error, source = "watch") => {
+        console.error(`❌ Erro ao obter GPS via ${source}:`, error);
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setGpsError("Permissão de localização negada.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGpsError("Localização indisponível no momento.");
+            break;
+          case error.TIMEOUT:
+            setGpsError("Tempo esgotado ao obter localização.");
+            break;
+          default:
+            setGpsError("Não foi possível iniciar o GPS.");
+        }
+
+        setGpsActive(false);
+      };
+
+      try {
+        console.log("⏳ Tentando posição inicial...");
+        await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              await logPosition(position, "getCurrentPosition");
+              resolve(position);
+            },
+            (error) => {
+              reject(error);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 20000,
+              maximumAge: 0,
+            }
+          );
+        });
+      } catch (firstError) {
+        console.warn("⚠️ Falha na posição inicial com alta precisão:", firstError);
+
+        try {
+          console.log("🔁 Tentando fallback com precisão normal...");
+          await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                await logPosition(position, "fallback");
+                resolve(position);
+              },
+              (error) => {
+                reject(error);
+              },
+              {
+                enableHighAccuracy: false,
+                timeout: 20000,
+                maximumAge: 10000,
+              }
+            );
+          });
+        } catch (fallbackError) {
+          handleError(fallbackError, "fallback");
+          return;
+        }
+      }
+
+      console.log("📡 Iniciando watchPosition contínuo...");
+
       const watchId = navigator.geolocation.watchPosition(
         async (position) => {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-
-          setCurrentCourierPosition({
-            latitude,
-            longitude,
-          });
-
-          setGpsActive(true);
-          await sendLocation(orderId, latitude, longitude);
+          await logPosition(position, "watchPosition");
         },
         (error) => {
-          console.error("Erro ao obter GPS:", error);
-
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              setGpsError("Permissão de localização negada.");
-              break;
-            case error.POSITION_UNAVAILABLE:
-              setGpsError("Localização indisponível no momento.");
-              break;
-            case error.TIMEOUT:
-              setGpsError("Tempo esgotado ao obter localização.");
-              break;
-            default:
-              setGpsError("Não foi possível iniciar o GPS.");
-          }
-
-          setGpsActive(false);
+          handleError(error, "watchPosition");
         },
         {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 10000,
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 10000,
         }
       );
 
       watchIdRef.current = watchId;
+      console.log("✅ watchPosition iniciado com ID:", watchId);
     },
     [sendLocation]
   );
-
   const mapOrdersWithItems = useCallback(async (ordersData) => {
     const safeOrders = (ordersData ?? []).map((order) => ({
       ...order,

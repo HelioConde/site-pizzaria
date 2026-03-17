@@ -47,6 +47,11 @@ export default function OrdersSection({
             </article>
 
             <article className={styles.statCard}>
+              <span>Aguardando motoboy</span>
+              <strong>{stats.waitingCourier}</strong>
+            </article>
+
+            <article className={styles.statCard}>
               <span>Saiu para entrega</span>
               <strong>{stats.outForDelivery}</strong>
             </article>
@@ -67,11 +72,13 @@ export default function OrdersSection({
             </article>
           </div>
 
-          <AdminFilters
-            filters={FILTER_OPTIONS}
-            statusFilter={statusFilter}
-            onChangeFilter={setStatusFilter}
-          />
+          <div className={styles.toolbar}>
+            <AdminFilters
+              filters={FILTER_OPTIONS}
+              statusFilter={statusFilter}
+              onChangeFilter={setStatusFilter}
+            />
+          </div>
 
           <section className={styles.ordersSection}>
             {loading ? (

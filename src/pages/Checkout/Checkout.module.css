@@ -7,203 +7,31 @@
   padding: 24px 24px 0;
 }
 
+.hero {
+  padding: 28px 24px 32px;
+}
+
+.content {
+  padding: 0 24px 64px;
+}
+
 .container,
 .containerGrid {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-
-.sectionHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.sectionDesc {
-  margin: 8px 0 0;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.changeModeBtn {
-  border: 1px solid #fecaca;
-  background: #fff5f5;
-  color: #ef4444;
-  border-radius: 999px;
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.changeModeBtn:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-}
-
-.addressList {
+.containerGrid {
   display: grid;
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
 }
 
-.addressCard {
-  background: #ffffff;
-  border: 1px solid #dbe3ef;
-  border-radius: 24px;
-  padding: 22px 22px 18px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.addressCard:hover {
-  border-color: #fca5a5;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
-}
-
-.addressCardActive {
-  border-color: #ff5a52;
-  box-shadow: 0 0 0 3px rgba(255, 90, 82, 0.08);
-}
-
-.addressCardTitle {
-  margin: 0 0 12px;
-  font-size: 1.05rem;
-  color: #0f172a;
-}
-
-.addressCardLine {
-  margin: 0 0 8px;
-  color: #475569;
-  line-height: 1.5;
-}
-
-.addressActions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 16px;
-  margin-top: 12px;
-  padding: 22px;
-  border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  background: #f8fafc;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field span {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.field input {
-  width: 100%;
-  height: 52px;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
-  background: #ffffff;
-  padding: 0 16px;
-  font-size: 1rem;
-  color: #0f172a;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-
-.field input::placeholder {
-  color: #94a3b8;
-}
-
-.field input:focus {
-  border-color: #ff5a52;
-  box-shadow: 0 0 0 4px rgba(255, 90, 82, 0.12);
-  background: #fffefe;
-}
-
-.fieldFull {
-  grid-column: 1 / -1;
-}
-
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 18px;
-}
-
-.checkoutMessage {
-  margin-top: 16px;
-  color: #dc2626;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.mapConfirmSection {
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.mapConfirmSection :global(.leaflet-container) {
-  margin-top: 12px;
-  border: 1px solid #dbe3ef;
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-.newAddressBlock {
-  margin-top: 8px;
-}
-
-@media (max-width: 860px) {
-  .sectionHeader {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .changeModeBtn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .formGrid {
-    grid-template-columns: 1fr;
-    padding: 18px;
-  }
-
-  .fieldFull {
-    grid-column: auto;
-  }
-
-  .formActions {
-    justify-content: stretch;
-  }
-
-  .formActions>* {
-    width: 100%;
-  }
+.left,
+.right {
+  min-width: 0;
 }
 
 .backBtn {
@@ -212,34 +40,12 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: 999px;
-  background: #fff;
+  background: #ffffff;
   color: #0f172a;
   border: 1px solid #e2e8f0;
   text-decoration: none;
-  font-weight: 600;
-  transition: 0.2s ease;
-}
-
-.mapConfirmSection {
-  margin-top: 24px;
-}
-
-.mapConfirmSection h3 {
-  margin-bottom: 6px;
-}
-
-.mapConfirmSection p {
-  color: #64748b;
-  margin-bottom: 12px;
-}
-
-.mapConfirmSection {
-  margin-top: 20px;
-}
-
-.mapConfirmSection :global(.leaflet-container) {
-  margin-top: 12px;
-  border: 1px solid #dbe3ef;
+  font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 .backBtn:hover {
@@ -248,17 +54,14 @@
   border-color: #fecdd3;
 }
 
-.hero {
-  padding: 28px 24px 32px;
-}
-
 .kicker {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(239, 68, 68, 0.1);
   color: #b91c1c;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
 }
 
@@ -276,52 +79,132 @@
   line-height: 1.7;
 }
 
-.content {
-  padding: 0 24px 64px;
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  flex-wrap: wrap;
 }
 
-.containerGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 24px;
-  align-items: start;
+.stepItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.stepItemActive {
+  color: #0f172a;
+}
+
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  font-size: 0.85rem;
+}
+
+.stepItemActive .stepDot {
+  background: #fff1f1;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
+.stepLine {
+  width: 28px;
+  height: 1px;
+  background: #dbe3ef;
 }
 
 .card,
+.summaryCard,
+.helpCard {
+  background: #ffffff;
+  border: 1px solid #dde5f0;
+  border-radius: 28px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+}
+
+.card {
+  padding: 28px;
+}
+
 .summaryCard {
-  background: #fff;
+  padding: 24px;
+  position: sticky;
+  top: 24px;
+}
+
+.helpCard {
+  padding: 20px 22px;
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
-.sectionHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: start;
-  margin-bottom: 16px;
-}
-
-.sectionTitle {
-  margin: 0 0 8px;
+.helpTitle {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
   color: #0f172a;
-  font-size: 1.2rem;
 }
 
-.sectionDesc {
-  margin: 0;
+.helpText {
+  margin: 0 0 8px;
   color: #64748b;
   line-height: 1.6;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.sectionDesc {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
 .changeModeBtn {
-  border: none;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff5f5;
   color: #ef4444;
-  cursor: pointer;
+  font-size: 0.95rem;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.changeModeBtn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .choiceGrid {
@@ -333,14 +216,14 @@
 
 .choiceCard {
   border: 1px solid #e2e8f0;
-  background: #fff;
-  border-radius: 20px;
-  padding: 18px;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 20px;
   text-align: left;
   display: grid;
   gap: 8px;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
   text-decoration: none;
 }
 
@@ -364,226 +247,20 @@
   line-height: 1.5;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+.newAddressBlock {
+  margin-top: 4px;
 }
 
-.field {
-  display: grid;
-  gap: 8px;
-}
-
-.field span {
-  font-weight: 700;
-  color: #334155;
-}
-
-.field input,
-.field select {
-  width: 100%;
-  border: 1px solid #dbe3ef;
-  border-radius: 14px;
-  padding: 12px 14px;
-  font: inherit;
-  color: #0f172a;
-  background: #fff;
-  outline: none;
-}
-
-.field input:focus,
-.field select:focus {
-  border-color: #f87171;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
-}
-
-.fieldFull {
-  grid-column: 1 / -1;
-}
-
-.summaryList {
-  display: grid;
-  gap: 14px;
-}
-
-.summaryItem {
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 12px;
-}
-
-.summaryItemTop {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #0f172a;
-}
-
-.summaryItemNote {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.totalBox {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid #e2e8f0;
-  display: grid;
-  gap: 12px;
-}
-
-.totalRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #334155;
-}
-
-.totalFinal {
-  font-size: 1.08rem;
-  color: #0f172a;
-}
-
-.confirmBtn {
-  width: 100%;
-  margin-top: 18px;
-}
-
-.emptyState {
-  display: grid;
-  gap: 10px;
-  color: #64748b;
-}
-
-.emptyState p {
-  margin: 0;
-}
-
-.emptyLink {
+.formBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff1f1;
   color: #ef4444;
-  text-decoration: none;
+  font-size: 0.85rem;
   font-weight: 700;
-}
-
-.savedAddressBox {
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 18px;
-  background: #fff;
-}
-
-.savedAddressTitle {
-  margin: 0 0 12px;
-  color: #0f172a;
-  font-size: 1rem;
-}
-
-.savedAddressLine {
-  margin: 0 0 8px;
-  color: #475569;
-  line-height: 1.5;
-}
-
-.savedAddressActions {
-  margin-top: 14px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.checkoutMessage {
-  margin-top: 16px;
-  color: #b91c1c;
-  font-weight: 600;
-}
-
-.summaryDelivery {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid #e2e8f0;
-  display: grid;
-  gap: 6px;
-}
-
-.summaryDeliveryTitle {
-  margin: 0 0 6px;
-  color: #0f172a;
-  font-size: 1rem;
-}
-
-.summaryDeliveryText {
-  margin: 0;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.checkboxRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.paymentBox {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid #e2e8f0;
-  display: grid;
-  gap: 10px;
-}
-
-.paymentOption {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  cursor: pointer;
-}
-
-.paymentOption:hover {
-  background: rgba(15, 23, 42, 0.04);
-}
-
-.paymentOptionBox {
-  display: flex;
-  justify-content: space-around;
-}
-
-.paymentOption input {
-  accent-color: #ef4444;
-}
-
-.addressList {
-  display: grid;
-  gap: 14px;
-  margin-top: 12px;
-}
-
-.card {
-  background: #ffffff;
-  border: 1px solid #dde5f0;
-  border-radius: 28px;
-  padding: 28px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 1.9rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
-
-.sectionDesc {
-  margin: 8px 0 0;
-  color: #64748b;
-  line-height: 1.6;
-  font-size: 1rem;
+  margin-bottom: 10px;
 }
 
 .addressList {
@@ -632,34 +309,12 @@
   margin-top: 16px;
 }
 
-.changeModeBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  border: 1px solid #fecaca;
-  background: #fff5f5;
-  color: #ef4444;
-  border-radius: 999px;
-  padding: 0 16px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.changeModeBtn:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-}
-
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px 16px;
   margin-top: 16px;
-  padding: 24px;
+  padding: 18px;
   border: 1px solid #e2e8f0;
   border-radius: 24px;
   background: #f8fafc;
@@ -687,7 +342,8 @@
   font-size: 1rem;
   color: #0f172a;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
 .field input::placeholder {
@@ -707,7 +363,7 @@
 .formActions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .checkoutMessage {
@@ -717,12 +373,83 @@
   line-height: 1.5;
 }
 
-.summaryCard {
-  background: #ffffff;
-  border: 1px solid #dde5f0;
-  border-radius: 28px;
-  padding: 24px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+.summaryHeader {
+  margin-bottom: 18px;
+}
+
+.summaryPills {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.summaryPill,
+.summaryPillSafe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.summaryPill strong {
+  color: #0f172a;
+}
+
+.summaryPillSafe {
+  justify-content: center;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.summaryList {
+  display: grid;
+  gap: 14px;
+}
+
+.summaryItem {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.summaryItemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+}
+
+.summaryItemNote {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.totalBox {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 12px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #334155;
+}
+
+.totalFinal {
+  font-size: 1.08rem;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .summaryDelivery {
@@ -744,24 +471,26 @@
   line-height: 1.5;
 }
 
-.confirmBtn {
-  margin-top: 18px;
-  min-height: 52px;
-  border-radius: 999px;
-  font-size: 1rem;
-  font-weight: 800;
+.mapConfirmSection {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
 }
 
-.formBadge {
-  display: inline-flex;
+.mapToggleActions {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #fff1f1;
-  color: #ef4444;
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-bottom: 10px;
+  justify-content: center;
+}
+
+.mapConfirmSection :global(.leaflet-container) {
+  margin-top: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .mapConfirmed {
@@ -771,7 +500,70 @@
   font-size: 0.9rem;
 }
 
+.confirmBtn {
+  width: 100%;
+  margin-top: 18px;
+  min-height: 52px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.confirmHelp {
+  margin: 12px 0 0;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.emptyState {
+  display: grid;
+  gap: 10px;
+  color: #64748b;
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+.emptyLink {
+  color: #ef4444;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.emptyLink:hover {
+  text-decoration: underline;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+
+@media (max-width: 900px) {
+  .containerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryCard {
+    position: static;
+  }
+}
+
 @media (max-width: 860px) {
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .changeModeBtn {
+    width: 100%;
+  }
+
   .formGrid {
     grid-template-columns: 1fr;
     padding: 18px;
@@ -790,79 +582,6 @@
   }
 }
 
-.addressCard {
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 16px;
-  background: #fff;
-}
-
-.addressCardActive {
-  border-color: #f87171;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
-}
-
-.addressCardTitle {
-  margin: 0 0 8px;
-  color: #0f172a;
-}
-
-.addressCardLine {
-  margin: 0 0 6px;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.addressActions {
-  margin-top: 12px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.formActions {
-  margin-top: 18px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.paymentOption {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.paymentMethodDetails {
-  margin-top: 12px;
-  display: grid;
-  gap: 12px;
-}
-
-.paymentOptionBox {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.paymentOption {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.paymentOption input {
-  accent-color: #ef4444;
-}
-
-@media (max-width: 900px) {
-  .containerGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 640px) {
 
   .topBar,
@@ -872,13 +591,39 @@
     padding-right: 16px;
   }
 
-  .choiceGrid,
-  .formGrid {
+  .choiceGrid {
     grid-template-columns: 1fr;
   }
 
-  .sectionHeader {
+  .card,
+  .summaryCard,
+  .helpCard {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .sectionTitle {
+    font-size: 1.6rem;
+  }
+
+  .stepper {
+    gap: 8px;
+  }
+
+  .stepLine {
+    width: 16px;
+  }
+
+  .summaryPill {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+  }
+
+  .mapToggleActions {
+    justify-content: stretch;
+  }
+
+  .mapToggleActions>* {
+    width: 100%;
   }
 }

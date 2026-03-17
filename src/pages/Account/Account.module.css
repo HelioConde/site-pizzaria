@@ -55,10 +55,10 @@
 
 .card {
   position: relative;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid #e2e8f0;
   border-radius: 28px;
-  padding: 24px;
+  padding: 22px;
   box-shadow:
     0 10px 30px rgba(15, 23, 42, 0.05),
     0 1px 0 rgba(255, 255, 255, 0.65) inset;
@@ -82,7 +82,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .cardHeader h2 {
@@ -95,13 +95,13 @@
 
 .infoList {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .infoItem {
   display: grid;
-  gap: 6px;
-  padding-bottom: 14px;
+  gap: 4px;
+  padding-bottom: 12px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
 }
 
@@ -112,13 +112,13 @@
 
 .infoItem span {
   color: #64748b;
-  font-size: 0.93rem;
+  font-size: 0.92rem;
   font-weight: 500;
 }
 
 .infoItem strong {
   color: #0f172a;
-  font-size: 1.08rem;
+  font-size: 1.05rem;
   line-height: 1.4;
   letter-spacing: -0.01em;
 }
@@ -126,7 +126,7 @@
 .addressBox {
   display: grid;
   gap: 8px;
-  padding: 18px;
+  padding: 16px;
   border: 1px solid #dbe4f0;
   border-radius: 22px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -148,9 +148,11 @@
   gap: 8px;
   padding: 20px;
   border-radius: 22px;
-  background: linear-gradient(180deg,
-      rgba(248, 250, 252, 0.95) 0%,
-      rgba(241, 245, 249, 0.95) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.95) 0%,
+    rgba(241, 245, 249, 0.95) 100%
+  );
   border: 1px dashed #cbd5e1;
 }
 
@@ -182,7 +184,7 @@
 .actionsRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -208,13 +210,13 @@
 
 .addressList {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .addressCard {
   border: 1px solid #e2e8f0;
   border-radius: 22px;
-  padding: 18px;
+  padding: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
@@ -241,7 +243,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .formGrid {
@@ -301,14 +303,14 @@
 
 .ordersCompactList {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .orderRowCard {
   border: 1px solid #e2e8f0;
   border-radius: 24px;
   background: #fff;
-  padding: 18px;
+  padding: 16px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 110px;
   gap: 16px;
@@ -318,7 +320,9 @@
 .orderRowMain {
   display: grid;
   grid-template-columns:
-    minmax(145px, 170px) minmax(210px, 250px) minmax(260px, 1fr);
+    minmax(145px, 170px)
+    minmax(210px, 240px)
+    minmax(240px, 1fr);
   gap: 16px;
   align-items: start;
   min-width: 0;
@@ -344,7 +348,7 @@
 
 .orderTimelineInline {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -356,8 +360,8 @@
 }
 
 .timelineInlineDot {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 2px solid #bfd0e7;
   background: #fff;
@@ -366,7 +370,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   flex-shrink: 0;
 }
 
@@ -394,6 +398,7 @@
 
 .timelineInlineLabelActive {
   color: #0f172a;
+  font-weight: 700;
 }
 
 .timelineInlineCurrent {
@@ -404,8 +409,8 @@
 }
 
 .orderSummaryColumn {
-  border-left: 1px solid #e2e8f0;
-  padding-left: 14px;
+  border-left: 1px solid #e6edf5;
+  padding-left: 16px;
   display: grid;
   gap: 10px;
   min-width: 0;
@@ -420,13 +425,13 @@
 
 .orderInfoMiniLabel {
   color: #64748b;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.2;
 }
 
 .orderInfoMiniValue {
   color: #0f172a;
-  line-height: 1.45;
+  line-height: 1.4;
   min-width: 0;
 }
 
@@ -447,19 +452,14 @@
 }
 
 .avatar {
-  width: 56px;
-  height: 56px;
-
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-
   background: #ef4444;
-
   color: white;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-weight: 700;
   font-size: 20px;
 }
@@ -489,7 +489,7 @@
 .orderItemMiniNote {
   margin: 0;
   color: #64748b;
-  font-size: 0.88rem;
+  font-size: 0.87rem;
   line-height: 1.35;
 }
 
@@ -525,7 +525,7 @@
 
 .orderRowTotal {
   color: #0f172a;
-  font-size: 1.05rem;
+  font-size: 1.12rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -668,5 +668,11 @@
   .orderRowSide {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 18px;
   }
 }

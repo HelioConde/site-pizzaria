@@ -51,7 +51,6 @@ export default function Admin() {
   const knownOrderIdsRef = useRef(new Set());
   const pageTitleRef = useRef(document.title);
   const titleBlinkIntervalRef = useRef(null);
-  
 
   const activeSection = useMemo(() => {
     const rawSection = String(searchParams.get("section") || "")
@@ -218,7 +217,7 @@ export default function Admin() {
         audioUnlockedRef.current = true;
         setAudioEnabled(true);
         setShowEnableSoundButton(false);
-      } catch (error) {
+      } catch {
         audioUnlockedRef.current = false;
         setAudioEnabled(false);
         setShowEnableSoundButton(true);

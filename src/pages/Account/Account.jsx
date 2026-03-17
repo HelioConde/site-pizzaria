@@ -11,19 +11,6 @@ import AddressForm from "./components/AddressForm";
 import OrdersRecentList from "./components/OrdersRecentList";
 import QuickActions from "./components/QuickActions";
 
-const PAYMENT_METHOD = {
-  CASH: "dinheiro",
-  CARD_ON_DELIVERY: "cartao_entrega",
-  ONLINE: "pagamento_online",
-};
-
-const PAYMENT_STATUS = {
-  PENDING: "pending",
-  PAID: "paid",
-  DELIVERY_PAYMENT: "delivery_payment",
-  CANCELLED: "cancelled",
-};
-
 const ORDER_STATUS = {
   PENDING: "pending",
   PREPARING: "preparing",
@@ -50,8 +37,17 @@ function formatPhone(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
 
   if (!digits) return "Não informado";
+
   if (digits.length <= 2) return digits;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
@@ -116,7 +112,11 @@ function normalizeOrderDisplayStatus(order = {}) {
     return ORDER_STATUS.PREPARING;
   }
 
-  if (["delivery", "out_for_delivery", "saiu_para_entrega"].includes(rawOrderStatus)) {
+  if (
+    ["delivery", "out_for_delivery", "saiu_para_entrega"].includes(
+      rawOrderStatus
+    )
+  ) {
     return ORDER_STATUS.DELIVERY;
   }
 
@@ -188,9 +188,7 @@ export default function Account() {
 
       if (ordersError) throw ordersError;
 
-      const safeOrders = (ordersData ?? []).filter(
-        (order) => order.user_id === userId && !order.is_test_order
-      );
+      const safeOrders = (ordersData ?? []).filter((order) => !order.is_test_order);
 
       if (!safeOrders.length) {
         setOrders([]);
