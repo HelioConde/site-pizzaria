@@ -107,7 +107,9 @@ export default function AdminOrderChat({ orderId }) {
           scrollToBottom();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`CHAT ADMIN ${orderId} realtime status:`, status);
+      });
 
     return () => {
       active = false;
@@ -131,17 +133,28 @@ export default function AdminOrderChat({ orderId }) {
         currentUser.email?.split("@")[0] ||
         "Administrador";
 
-      const { error } = await supabase.from("order_messages").insert({
-        order_id: orderId,
-        sender_user_id: currentUser.id,
-        sender_name: senderName,
-        sender_role: "admin",
-        message: trimmed,
-      });
+      const { data, error } = await supabase
+        .from("order_messages")
+        .insert({
+          order_id: orderId,
+          sender_user_id: currentUser.id,
+          sender_name: senderName,
+          sender_role: "admin",
+          message: trimmed,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
+      setMessages((prev) => {
+        const alreadyExists = prev.some((item) => item.id === data.id);
+        if (alreadyExists) return prev;
+        return [...prev, data];
+      });
+
       setMessage("");
+      scrollToBottom();
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       setChatError("Não foi possível enviar a mensagem.");

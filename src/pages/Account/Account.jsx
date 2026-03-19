@@ -10,6 +10,7 @@ import AddressList from "./components/AddressList";
 import AddressForm from "./components/AddressForm";
 import OrdersRecentList from "./components/OrdersRecentList";
 import QuickActions from "./components/QuickActions";
+import { unlockChatSound } from "../../utils/chatSound";
 
 const ORDER_STATUS = {
   PENDING: "pending",
@@ -37,7 +38,6 @@ function formatPhone(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
 
   if (!digits) return "Não informado";
-
   if (digits.length <= 2) return digits;
 
   if (digits.length <= 6) {
@@ -152,6 +152,22 @@ export default function Account() {
   const [ordersLoading, setOrdersLoading] = useState(true);
 
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const handleUnlockChatSound = () => {
+      unlockChatSound();
+    };
+
+    window.addEventListener("pointerdown", handleUnlockChatSound, { once: true });
+    window.addEventListener("keydown", handleUnlockChatSound, { once: true });
+    window.addEventListener("touchstart", handleUnlockChatSound, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", handleUnlockChatSound);
+      window.removeEventListener("keydown", handleUnlockChatSound);
+      window.removeEventListener("touchstart", handleUnlockChatSound);
+    };
+  }, []);
 
   async function loadAddresses(userId) {
     setAddressesLoading(true);

@@ -354,6 +354,703 @@
     flex-wrap: wrap;
 }
 
+.orderCardHighlighted {
+    border-color: #fca5a5;
+    box-shadow:
+        0 0 0 4px rgba(239, 68, 68, 0.12),
+        0 18px 40px rgba(15, 23, 42, 0.08);
+    animation: adminOrderPulse 1.8s ease;
+}
+
+@keyframes adminOrderPulse {
+    0% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-2px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.chatOpenButton {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid #fecaca;
+    background: #fff5f5;
+    color: #b91c1c;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chatOpenButton:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+}
+
+.chatOpenButtonUnread {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.chatOpenUnreadBadge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.chatInlineHint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.chatInlineHintText {
+    display: grid;
+    gap: 4px;
+}
+
+.chatInlineHintButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    border-radius: 14px;
+    background: #ef4444;
+    color: #fff;
+    padding: 12px 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chatInlineHintButton:hover {
+    background: #dc2626;
+}
+
+.adminFloatingChatsDock {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1400;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    max-width: calc(100vw - 32px);
+    overflow-x: auto;
+    padding-top: 12px;
+}
+
+.adminFloatingChat {
+    width: 360px;
+    max-width: 360px;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 20px;
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    transition: 0.2s ease;
+}
+
+.adminFloatingChatUnread {
+    box-shadow:
+        0 0 0 4px rgba(239, 68, 68, 0.14),
+        0 22px 45px rgba(15, 23, 42, 0.18);
+}
+
+.adminFloatingChatHeader {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.adminFloatingChatHeaderUnread {
+    background: linear-gradient(180deg, #fff1f2 0%, #fff5f5 100%);
+}
+
+.adminFloatingChatTitleButton {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.adminFloatingChatTitleWrap {
+    display: grid;
+    gap: 2px;
+}
+
+.adminFloatingChatTitleWrap strong {
+    color: #0f172a;
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+.adminFloatingChatTitleWrap span {
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.adminFloatingChatHeaderActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adminFloatingChatUnreadBadge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.adminFloatingChatIconButton {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dbe3ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.adminFloatingChatIconButton:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.adminFloatingChatMessages {
+    max-height: 320px;
+    min-height: 210px;
+    overflow-y: auto;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.adminFloatingChatForm {
+    display: grid;
+    gap: 10px;
+    padding: 0 14px 14px;
+}
+
+.orderCardHighlighted {
+    border-color: #fca5a5;
+    box-shadow:
+        0 0 0 4px rgba(239, 68, 68, 0.12),
+        0 18px 40px rgba(15, 23, 42, 0.08);
+    animation: adminOrderPulse 1.8s ease;
+}
+
+@keyframes adminOrderPulse {
+    0% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-2px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.chatOpenButton {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid #fecaca;
+    background: #fff5f5;
+    color: #b91c1c;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chatOpenButton:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+}
+
+.chatOpenButtonUnread {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.chatOpenUnreadBadge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+    animation: badgePop 0.25s ease;
+}
+
+@keyframes badgePop {
+    0% {
+        transform: scale(0.6);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.chatInlineHint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.chatInlineHintText {
+    display: grid;
+    gap: 4px;
+}
+
+.chatInlineHintButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    border-radius: 14px;
+    background: #ef4444;
+    color: #fff;
+    padding: 12px 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chatInlineHintButton:hover {
+    background: #dc2626;
+}
+
+.adminFloatingChatsDock {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1400;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    max-width: calc(100vw - 32px);
+    overflow-x: auto;
+    padding-top: 12px;
+}
+
+.adminFloatingChat {
+    width: 360px;
+    max-width: 360px;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 20px;
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    transition: 0.2s ease;
+}
+
+.adminFloatingChatUnread {
+    animation: chatPulse 1.2s infinite;
+    box-shadow:
+        0 0 0 4px rgba(239, 68, 68, 0.14),
+        0 22px 45px rgba(15, 23, 42, 0.18);
+}
+
+@keyframes chatPulse {
+    0% {
+        box-shadow:
+            0 0 0 0 rgba(239, 68, 68, 0.45),
+            0 22px 45px rgba(15, 23, 42, 0.18);
+    }
+
+    70% {
+        box-shadow:
+            0 0 0 12px rgba(239, 68, 68, 0),
+            0 22px 45px rgba(15, 23, 42, 0.18);
+    }
+
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(239, 68, 68, 0),
+            0 22px 45px rgba(15, 23, 42, 0.18);
+    }
+}
+
+.adminFloatingChatHeader {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.adminFloatingChatHeaderUnread {
+    background: linear-gradient(180deg, #fee2e2 0%, #fff1f2 100%);
+    animation: headerBlink 1s infinite alternate;
+}
+
+@keyframes headerBlink {
+    from {
+        filter: brightness(1);
+    }
+
+    to {
+        filter: brightness(1.08);
+    }
+}
+
+.adminFloatingChatTitleButton {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.adminFloatingChatTitleWrap {
+    display: grid;
+    gap: 2px;
+}
+
+.adminFloatingChatTitleWrap strong {
+    color: #0f172a;
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+.adminFloatingChatTitleWrap span {
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.adminFloatingChatHeaderActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adminFloatingChatUnreadBadge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    animation: badgePop 0.25s ease;
+}
+
+.adminFloatingChatIconButton {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dbe3ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.adminFloatingChatIconButton:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.adminFloatingChatMessages {
+    max-height: 320px;
+    min-height: 210px;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.adminFloatingChatForm {
+    display: grid;
+    gap: 10px;
+    padding: 0 14px 14px;
+}
+
+/* Separação correta esquerda/direita */
+.adminFloatingChatBubble {
+    max-width: 85%;
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+}
+
+.adminFloatingChatBubbleCustomer {
+    align-self: flex-start;
+    justify-self: flex-start;
+    background: #f8fafc;
+    border-color: #dbe3ef;
+}
+
+.adminFloatingChatBubbleAdmin {
+    align-self: flex-end;
+    justify-self: flex-end;
+    background: #fff1f2;
+    border-color: #fecdd3;
+}
+
+.adminFloatingChatBubbleMeta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.adminFloatingChatBubbleMeta strong {
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.adminFloatingChatBubbleMeta span {
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.adminFloatingChatBubbleText {
+    margin: 0;
+    color: #0f172a;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.adminFloatingChatsDock {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1400;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    max-width: calc(100vw - 32px);
+}
+
+.adminFloatingChat {
+    width: 360px;
+    max-width: 360px;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 20px;
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    transition: 0.2s ease;
+}
+
+.adminFloatingChatMinimized {
+    width: 280px;
+}
+
+.adminHiddenChatItemText strong {
+    font-size: 0.92rem;
+    line-height: 1.2;
+}
+
+.adminHiddenChatItemText span {
+    font-size: 0.82rem;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.adminFloatingChatsDock {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1400;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+}
+
+
+@media (max-width: 720px) {
+  .adminFloatingChatsDock {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+}
+
+@media (max-width: 980px) {
+    .adminFloatingChatsDock {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        gap: 10px;
+    }
+
+    .adminFloatingChat {
+        width: 320px;
+        max-width: 320px;
+    }
+
+    .adminFloatingChatMinimized {
+        width: 250px;
+    }
+}
+
+@media (max-width: 720px) {
+    .adminFloatingChatsDock {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .adminFloatingChat,
+    .adminFloatingChatMinimized {
+        width: 100%;
+        max-width: none;
+    }
+
+}
+
+@media (max-width: 980px) {
+    .chatInlineHint {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .adminFloatingChatsDock {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        gap: 10px;
+    }
+
+    .adminFloatingChat {
+        width: 320px;
+        max-width: 320px;
+    }
+}
+
+@media (max-width: 720px) {
+    .adminFloatingChatsDock {
+        flex-direction: column;
+        align-items: stretch;
+        overflow-x: visible;
+    }
+
+    .adminFloatingChat {
+        width: 100%;
+        max-width: none;
+    }
+
+    .adminFloatingChatBubble {
+        max-width: 92%;
+    }
+}
+
+@media (max-width: 980px) {
+    .chatInlineHint {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .adminFloatingChatsDock {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        gap: 10px;
+    }
+
+    .adminFloatingChat {
+        width: 320px;
+        max-width: 320px;
+    }
+}
+
+@media (max-width: 720px) {
+    .adminFloatingChatsDock {
+        flex-direction: column;
+        align-items: stretch;
+        overflow-x: visible;
+    }
+
+    .adminFloatingChat {
+        width: 100%;
+        max-width: none;
+    }
+}
+
 @media (max-width: 768px) {
     .settingsGrid {
         grid-template-columns: 1fr;

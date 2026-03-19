@@ -1,59 +1,75 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+
+function normalizeRole(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
 export default function useAuthRole() {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [userRole, setUserRole] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const requestIdRef = useRef(0);
 
-    async function loadSessionAndRole(currentSession = null) {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSessionAndRole(currentSession = undefined) {
+      const requestId = ++requestIdRef.current;
+
       try {
+        if (!isMounted) return;
         setIsLoading(true);
 
         let resolvedSession = currentSession;
 
-        if (!resolvedSession) {
+        if (typeof resolvedSession === "undefined") {
           const {
-            data: { session: sessionData },
+            data,
+            error: sessionError,
           } = await supabase.auth.getSession();
 
-          resolvedSession = sessionData;
+          if (sessionError) {
+            throw sessionError;
+          }
+
+          resolvedSession = data?.session ?? null;
         }
 
-        if (!active) return;
+        if (!isMounted || requestId !== requestIdRef.current) return;
 
-        setSession(resolvedSession);
+        setSession(resolvedSession ?? null);
 
-        if (!resolvedSession?.user?.id) {
+        const userId = resolvedSession?.user?.id;
+
+        if (!userId) {
           setUserRole("");
           return;
         }
 
-        const { data, error } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
-          .eq("id", resolvedSession.user.id)
+          .eq("id", userId)
           .maybeSingle();
 
-        if (error) {
-          throw error;
+        if (profileError) {
+          throw profileError;
         }
 
-        if (!active) return;
+        if (!isMounted || requestId !== requestIdRef.current) return;
 
-        setUserRole(String(data?.role || "").trim().toLowerCase());
+        setUserRole(normalizeRole(profile?.role));
       } catch (error) {
         console.error("Erro ao carregar sessão e role:", error);
 
-        if (!active) return;
+        if (!isMounted || requestId !== requestIdRef.current) return;
 
         setSession(null);
         setUserRole("");
       } finally {
-        if (active) {
+        if (isMounted && requestId === requestIdRef.current) {
           setIsLoading(false);
         }
       }
@@ -64,11 +80,11 @@ export default function useAuthRole() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      loadSessionAndRole(newSession);
+      loadSessionAndRole(newSession ?? null);
     });
 
     return () => {
-      active = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -76,7 +92,7 @@ export default function useAuthRole() {
   return {
     isLoading,
     session,
-    isAuthenticated: !!session,
+    isAuthenticated: !!session?.user,
     userRole,
   };
 }

@@ -13,6 +13,7 @@ export default function CategoryFilters({
           activeCategory === "all" ? styles.filterActive : ""
         }`}
         onClick={() => onChangeCategory("all")}
+        aria-pressed={activeCategory === "all"}
       >
         Todas
       </button>
@@ -25,6 +26,7 @@ export default function CategoryFilters({
             activeCategory === category.id ? styles.filterActive : ""
           }`}
           onClick={() => onChangeCategory(category.id)}
+          aria-pressed={activeCategory === category.id}
         >
           {category.name}
         </button>

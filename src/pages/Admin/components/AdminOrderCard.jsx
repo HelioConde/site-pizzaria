@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import styles from "../Admin.module.css";
 import DeliveryRouteMap from "../../../components/maps/DeliveryRouteMap";
-import AdminOrderChat from "./AdminOrderChat";
 import {
   ORDER_STATUS,
   ORDER_STATUS_OPTIONS,
@@ -30,6 +29,11 @@ export default function AdminOrderCard({
   order,
   updatingOrderId,
   onUpdateStatus,
+  onOpenChat,
+  unreadCount = 0,
+  isHighlighted = false,
+  registerOrderRef,
+  focusRequestToken = 0,
 }) {
   const groupedItems = useMemo(
     () => groupOrderItems(order.order_items || []),
@@ -107,8 +111,18 @@ export default function AdminOrderCard({
     };
   }, [order.id]);
 
+  useEffect(() => {
+    if (focusRequestToken) {
+      setShowDetails(true);
+    }
+  }, [focusRequestToken]);
+
   return (
-    <article className={styles.orderCard}>
+    <article
+      ref={(node) => registerOrderRef?.(order.id, node)}
+      className={`${styles.orderCard} ${isHighlighted ? styles.orderCardHighlighted : ""
+        }`}
+    >
       <div className={styles.orderHeader}>
         <div className={styles.orderHeaderMain}>
           <h2 className={styles.orderTitle}>
@@ -127,9 +141,26 @@ export default function AdminOrderCard({
             {getPaymentMethodLabel(order.payment_method)}
           </span>
 
-          <span className={`${styles.statusBadge} ${statusClass}`}>
-            {getOrderStatusLabel(order.normalized_status)}
+          <span
+            className={`${styles.paymentBadge} ${isPaid ? styles.paymentPaid : styles.paymentPending
+              }`}
+          >
+            {getPaymentStatusLabel(order)}
           </span>
+          
+          <button
+            type="button"
+            className={`${styles.chatOpenButton} ${unreadCount > 0 ? styles.chatOpenButtonUnread : ""
+              }`}
+            onClick={() => onOpenChat?.(order)}
+            title="Abrir chat flutuante"
+          >
+            <span>💬 Chat</span>
+
+            {unreadCount > 0 ? (
+              <span className={styles.chatOpenUnreadBadge}>{unreadCount}</span>
+            ) : null}
+          </button>
 
           <div className={styles.priceToggleWrap}>
             <span className={styles.badgeStrong}>{formatPrice(order.total)}</span>
@@ -192,7 +223,27 @@ export default function AdminOrderCard({
             </div>
 
             <div className={`${styles.infoBlock} ${styles.infoBlockWide}`}>
-              <AdminOrderChat orderId={order.id} />
+              <div className={styles.chatInlineHint}>
+                <div className={styles.chatInlineHintText}>
+                  <span className={styles.infoLabel}>Atendimento</span>
+                  <strong>
+                    O chat deste pedido abre em janela flutuante.
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.chatInlineHintButton}
+                  onClick={() => onOpenChat?.(order)}
+                >
+                  Abrir chat
+                  {unreadCount > 0 ? (
+                    <span className={styles.chatOpenUnreadBadge}>
+                      {unreadCount}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
             </div>
           </>
         ) : null}

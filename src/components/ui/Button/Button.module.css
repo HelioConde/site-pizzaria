@@ -1,37 +1,117 @@
-.btn{
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+
   border-radius: 999px;
   border: 1px solid transparent;
+
   text-decoration: none;
   font-weight: 800;
+  line-height: 1;
+
   cursor: pointer;
-  transition: transform .15s ease, filter .15s ease, background .15s ease;
+
+  transition:
+    transform 0.15s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+
+  outline: none;
 }
-.btn:hover{ transform: translateY(-1px); }
 
-.s_md{ padding: 10px 16px; font-size: 14px; }
-.s_sm{ padding: 8px 12px; font-size: 13px; }
+/* ========================
+   HOVER / ACTIVE GLOBAL
+======================== */
+.btn:hover:not(.disabled) {
+  transform: translateY(-1px);
+}
 
-.v_primary{
+.btn:active:not(.disabled) {
+  transform: scale(0.96);
+}
+
+/* ========================
+   FOCUS (ACESSIBILIDADE)
+======================== */
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+}
+
+/* ========================
+   DISABLED
+======================== */
+.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ========================
+   SIZES
+======================== */
+.s_md {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.s_sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* ========================
+   PRIMARY
+======================== */
+.v_primary {
   background: var(--primary);
   color: #fff;
-  border-color: rgba(239,68,68,.5);
+  border-color: rgba(239, 68, 68, 0.5);
 }
-.v_primary:hover{ filter: brightness(.98); }
 
-.v_ghost{
+.v_primary:hover:not(.disabled) {
+  filter: brightness(0.98);
+}
+
+.v_primary:active:not(.disabled) {
+  filter: brightness(0.95);
+}
+
+/* ========================
+   GHOST
+======================== */
+.v_ghost {
   background: transparent;
   color: var(--text);
-  border-color: rgba(15,23,42,.52);
+  border-color: rgba(15, 23, 42, 0.52);
 }
-.v_ghost:hover{ background: rgba(15,23,42,.04); }
 
-.v_ghostOnRed{
+.v_ghost:hover:not(.disabled) {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.v_ghost:active:not(.disabled) {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+/* ========================
+   GHOST ON RED
+======================== */
+.v_ghostOnRed {
   background: #fff;
   color: #b91c1c;
-  border-color: rgba(255,255,255,.55);
+  border-color: rgba(255, 255, 255, 0.55);
 }
-.v_ghostOnRed:hover{ filter: brightness(.98); }
+
+.v_ghostOnRed:hover:not(.disabled) {
+  filter: brightness(0.98);
+}
+
+.v_ghostOnRed:active:not(.disabled) {
+  filter: brightness(0.94);
+}

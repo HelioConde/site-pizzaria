@@ -25,6 +25,8 @@ export default function CartDrawer({
         className={styles.drawer}
         onClick={(e) => e.stopPropagation()}
         aria-label="Carrinho de compras"
+        role="dialog"
+        aria-modal="true"
       >
         <div className={styles.drawerHead}>
           <div>

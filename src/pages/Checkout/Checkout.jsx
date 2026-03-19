@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button/Button";
 import { supabase } from "../../lib/supabase";
 import styles from "./Checkout.module.css";
-import PaymentSection from "./components/Payment/PaymentSection";
 import DeliveryLocationPicker from "../../components/maps/DeliveryLocationPicker";
+import CheckoutPaymentBlock from "./components/CheckoutPaymentBlock";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 const GUEST_TEST_EMAIL = "compra@sem.cadastro.com";
@@ -36,7 +36,7 @@ function formatPrice(value) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-  }).format(value);
+  }).format(Number(value) || 0);
 }
 
 const initialDeliveryForm = {
@@ -57,6 +57,10 @@ const initialDeliveryForm = {
 
 function normalizeDigits(value) {
   return String(value || "").replace(/\D/g, "");
+}
+
+function normalizeSpaces(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
 }
 
 function formatCep(value) {
@@ -97,9 +101,33 @@ function formatChangeFor(value) {
   return decimalPart ? `${integerPart},${decimalPart}` : integerPart;
 }
 
+function formatAddressNumber(value) {
+  return String(value || "")
+    .replace(/[^0-9a-zA-Z/\-\s]/g, "")
+    .slice(0, 12);
+}
+
 function parseMoneyValue(value) {
   if (!value) return 0;
   return Number(String(value).replace(/\./g, "").replace(",", "."));
+}
+
+function sanitizeCartItem(item) {
+  if (!item || typeof item !== "object") return null;
+  if (!item.name) return null;
+
+  return {
+    id: item.id ?? null,
+    productId: item.productId ?? item.id ?? null,
+    name: String(item.name || "Produto"),
+    price: Number(item.price || 0),
+    image: item.image || null,
+    quantity: Math.max(1, Number(item.quantity || 1)),
+    notes: String(item.notes || "").trim(),
+    removedIngredients: Array.isArray(item.removedIngredients)
+      ? item.removedIngredients.filter(Boolean)
+      : [],
+  };
 }
 
 function mapUserMetadataToForm(metadata = {}) {
@@ -152,11 +180,11 @@ function buildFullAddress(activeDelivery) {
 function hasEnoughAddressForMap(activeDelivery) {
   return (
     normalizeDigits(activeDelivery.cep).length === 8 &&
-    activeDelivery.address.trim() &&
-    activeDelivery.district.trim() &&
-    activeDelivery.city.trim() &&
-    activeDelivery.state.trim().length === 2 &&
-    activeDelivery.number.trim()
+    normalizeSpaces(activeDelivery.address) &&
+    normalizeSpaces(activeDelivery.district) &&
+    normalizeSpaces(activeDelivery.city) &&
+    String(activeDelivery.state || "").trim().length === 2 &&
+    normalizeSpaces(activeDelivery.number)
   );
 }
 
@@ -179,7 +207,7 @@ function validateDeliveryData({
     return "Escolha como deseja continuar.";
   }
 
-  if (!activeDelivery.name.trim()) {
+  if (!normalizeSpaces(activeDelivery.name)) {
     return "Preencha o nome.";
   }
 
@@ -204,23 +232,23 @@ function validateDeliveryData({
       return "Preencha um CEP válido.";
     }
 
-    if (!activeDelivery.address.trim()) {
+    if (!normalizeSpaces(activeDelivery.address)) {
       return "Preencha o endereço.";
     }
 
-    if (!activeDelivery.district.trim()) {
+    if (!normalizeSpaces(activeDelivery.district)) {
       return "Preencha o bairro.";
     }
 
-    if (!activeDelivery.city.trim()) {
+    if (!normalizeSpaces(activeDelivery.city)) {
       return "Preencha a cidade.";
     }
 
-    if (activeDelivery.state.trim().length !== 2) {
+    if (String(activeDelivery.state || "").trim().length !== 2) {
       return "Preencha o estado com 2 letras.";
     }
 
-    if (!activeDelivery.number.trim()) {
+    if (!normalizeSpaces(activeDelivery.number)) {
       return "Preencha o número do endereço.";
     }
   }
@@ -245,7 +273,7 @@ function validateDeliveryData({
       activeDelivery.paymentMethod === paymentMethods.CASH &&
       activeDelivery.needsChange
     ) {
-      if (!activeDelivery.changeFor.trim()) {
+      if (!String(activeDelivery.changeFor || "").trim()) {
         return "Informe o valor para troco.";
       }
 
@@ -294,7 +322,12 @@ export default function Checkout() {
   const geocodeAbortRef = useRef(null);
 
   const subtotal = useMemo(
-    () => cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
+    () =>
+      cartItems.reduce(
+        (acc, item) =>
+          acc + Number(item.price || 0) * Number(item.quantity || 0),
+        0
+      ),
     [cartItems]
   );
 
@@ -311,19 +344,35 @@ export default function Checkout() {
   const hasAddressReadyForMap = hasEnoughAddressForMap(activeDelivery);
   const canShowMap = hasAddressReadyForMap && !skipMapSelection;
 
-  const summaryNameText = activeDelivery.name?.trim()
+  const summaryNameText = normalizeSpaces(activeDelivery.name)
     ? activeDelivery.name
     : "Informe o endereço para continuar";
 
-  const summaryAddressText = activeDelivery.address?.trim()
+  const summaryAddressText = normalizeSpaces(activeDelivery.address)
     ? `${activeDelivery.address}, ${activeDelivery.number || "s/n"}`
     : "Preencha o endereço para calcular a entrega";
 
   const summaryRegionText =
     activeDelivery.district || activeDelivery.city || activeDelivery.state
-      ? `${activeDelivery.district ? `${activeDelivery.district} • ` : ""}${activeDelivery.city || ""
-      }${activeDelivery.state ? ` - ${activeDelivery.state}` : ""}`
+      ? `${activeDelivery.district ? `${activeDelivery.district} • ` : ""}${
+          activeDelivery.city || ""
+        }${activeDelivery.state ? ` - ${activeDelivery.state}` : ""}`
       : "";
+
+  const confirmValidationError = validateDeliveryData({
+    mode,
+    isLoggedIn,
+    savedAddresses,
+    selectedAddressId,
+    showNewAddressForm,
+    activeDelivery,
+    total,
+    paymentMethods: PAYMENT_METHOD,
+    deliveryLat,
+    deliveryLng,
+    requireMapConfirmation: false,
+    requirePayment: true,
+  });
 
   useEffect(() => {
     if (hasInitializedGpsRef.current) return;
@@ -348,6 +397,15 @@ export default function Checkout() {
         maximumAge: 60000,
       }
     );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (geocodeAbortRef.current) {
+        geocodeAbortRef.current.abort();
+        geocodeAbortRef.current = null;
+      }
+    };
   }, []);
 
   async function geocodeAddress(address, cep = "") {
@@ -404,7 +462,9 @@ export default function Checkout() {
           setDeliveryLat(Number(cepData[0].lat));
           setDeliveryLng(Number(cepData[0].lon));
           setHasConfirmedMapLocation(false);
-          setMessage("Não localizamos automaticamente.");
+          setMessage(
+            "Não localizamos automaticamente o endereço exato. Ajuste o ponto no mapa, se desejar."
+          );
           return;
         }
       }
@@ -412,7 +472,9 @@ export default function Checkout() {
       setDeliveryLat(null);
       setDeliveryLng(null);
       setHasConfirmedMapLocation(false);
-      setMessage("Não localizamos automaticamente.");
+      setMessage(
+        "Não localizamos automaticamente o endereço exato. Você pode continuar sem mapa."
+      );
     } catch (error) {
       if (error.name === "AbortError") {
         return;
@@ -422,7 +484,7 @@ export default function Checkout() {
       setDeliveryLat(null);
       setDeliveryLng(null);
       setHasConfirmedMapLocation(false);
-      setMessage("Não localizamos automaticamente.");
+      setMessage("Não foi possível localizar o endereço automaticamente.");
     } finally {
       if (geocodeAbortRef.current === controller) {
         geocodeAbortRef.current = null;
@@ -464,9 +526,7 @@ export default function Checkout() {
           defaultAddress?.latitude != null && defaultAddress?.longitude != null;
 
         setDeliveryLat(hasSavedCoords ? Number(defaultAddress.latitude) : null);
-        setDeliveryLng(
-          hasSavedCoords ? Number(defaultAddress.longitude) : null
-        );
+        setDeliveryLng(hasSavedCoords ? Number(defaultAddress.longitude) : null);
         setHasConfirmedMapLocation(hasSavedCoords);
         setSkipMapSelection(false);
 
@@ -510,7 +570,7 @@ export default function Checkout() {
         if (savedCart) {
           const parsedCart = JSON.parse(savedCart);
           if (Array.isArray(parsedCart)) {
-            setCartItems(parsedCart);
+            setCartItems(parsedCart.map(sanitizeCartItem).filter(Boolean));
           }
         }
 
@@ -543,6 +603,7 @@ export default function Checkout() {
         }
       } catch (error) {
         console.error("Erro ao carregar checkout:", error);
+        setMessage("Não foi possível carregar os dados do checkout.");
       }
     }
 
@@ -575,11 +636,11 @@ export default function Checkout() {
 
     const addressKey = [
       normalizeDigits(activeDelivery.cep),
-      activeDelivery.address.trim(),
-      activeDelivery.district.trim(),
-      activeDelivery.city.trim(),
-      activeDelivery.state.trim(),
-      activeDelivery.number.trim(),
+      normalizeSpaces(activeDelivery.address),
+      normalizeSpaces(activeDelivery.district),
+      normalizeSpaces(activeDelivery.city),
+      String(activeDelivery.state || "").trim(),
+      normalizeSpaces(activeDelivery.number),
     ].join("|");
 
     if (!addressKey || addressKey === lastGeocodeKeyRef.current) {
@@ -634,6 +695,7 @@ export default function Checkout() {
         if (name === "cep") nextValue = formatCep(value);
         if (name === "state") nextValue = formatState(value);
         if (name === "changeFor") nextValue = formatChangeFor(value);
+        if (name === "number") nextValue = formatAddressNumber(value);
       }
 
       const nextForm = {
@@ -680,6 +742,11 @@ export default function Checkout() {
 
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+
+      if (!response.ok) {
+        throw new Error("Falha ao consultar o CEP.");
+      }
+
       const data = await response.json();
 
       if (data.erro) {
@@ -791,7 +858,7 @@ export default function Checkout() {
     });
 
     if (validationError) {
-      alert(validationError);
+      setMessage(validationError);
       return;
     }
 
@@ -805,13 +872,13 @@ export default function Checkout() {
         user_id: user.id,
         label: "",
         cep: normalizeDigits(deliveryForm.cep) || null,
-        address: deliveryForm.address,
-        district: deliveryForm.district || null,
-        city: deliveryForm.city || null,
+        address: normalizeSpaces(deliveryForm.address),
+        district: normalizeSpaces(deliveryForm.district) || null,
+        city: normalizeSpaces(deliveryForm.city) || null,
         state: deliveryForm.state || null,
-        number: deliveryForm.number,
-        complement: deliveryForm.complement || null,
-        reference: deliveryForm.reference || null,
+        number: normalizeSpaces(deliveryForm.number),
+        complement: normalizeSpaces(deliveryForm.complement) || null,
+        reference: normalizeSpaces(deliveryForm.reference) || null,
         latitude: hasConfirmedMapLocation ? deliveryLat : null,
         longitude: hasConfirmedMapLocation ? deliveryLng : null,
         is_default: shouldBeDefault,
@@ -820,10 +887,10 @@ export default function Checkout() {
       if (error) throw error;
 
       await loadAddresses(user.id, user.user_metadata ?? {});
-      alert("Endereço salvo com sucesso.");
+      setMessage("Endereço salvo com sucesso.");
     } catch (error) {
       console.error("Erro ao salvar endereço:", error);
-      alert("Não foi possível salvar o endereço.");
+      setMessage("Não foi possível salvar o endereço.");
     } finally {
       setIsSavingAddress(false);
     }
@@ -862,10 +929,10 @@ export default function Checkout() {
         }
       }
 
-      alert("Endereço excluído com sucesso.");
+      setMessage("Endereço excluído com sucesso.");
     } catch (error) {
       console.error("Erro ao excluir endereço:", error);
-      alert("Não foi possível excluir o endereço.");
+      setMessage("Não foi possível excluir o endereço.");
     } finally {
       setIsDeletingAddress(false);
     }
@@ -886,8 +953,8 @@ export default function Checkout() {
 
     const notes =
       activeDelivery.paymentMethod === PAYMENT_METHOD.CASH &&
-        activeDelivery.needsChange &&
-        activeDelivery.changeFor
+      activeDelivery.needsChange &&
+      activeDelivery.changeFor
         ? `Troco para: ${activeDelivery.changeFor}`
         : null;
 
@@ -902,17 +969,17 @@ export default function Checkout() {
         subtotal,
         delivery_fee: deliveryFee,
         total,
-        customer_name: activeDelivery.name,
+        customer_name: normalizeSpaces(activeDelivery.name),
         customer_email: customerEmail,
         customer_phone: normalizeDigits(activeDelivery.phone),
         delivery_cep: normalizeDigits(activeDelivery.cep) || null,
-        delivery_address: activeDelivery.address || null,
-        delivery_district: activeDelivery.district || null,
-        delivery_city: activeDelivery.city || null,
+        delivery_address: normalizeSpaces(activeDelivery.address) || null,
+        delivery_district: normalizeSpaces(activeDelivery.district) || null,
+        delivery_city: normalizeSpaces(activeDelivery.city) || null,
         delivery_state: activeDelivery.state || null,
-        delivery_number: activeDelivery.number || null,
-        delivery_complement: activeDelivery.complement || null,
-        delivery_reference: activeDelivery.reference || null,
+        delivery_number: normalizeSpaces(activeDelivery.number) || null,
+        delivery_complement: normalizeSpaces(activeDelivery.complement) || null,
+        delivery_reference: normalizeSpaces(activeDelivery.reference) || null,
         delivery_lat: hasConfirmedMapLocation ? deliveryLat : null,
         delivery_lng: hasConfirmedMapLocation ? deliveryLng : null,
         notes,
@@ -953,7 +1020,7 @@ export default function Checkout() {
 
   async function handleConfirmOrder() {
     if (cartItems.length === 0) {
-      alert("Seu carrinho está vazio.");
+      setMessage("Seu carrinho está vazio.");
       return;
     }
 
@@ -961,35 +1028,6 @@ export default function Checkout() {
     setMessage("");
 
     try {
-      const selectedAddress = savedAddresses.find(
-        (addr) => String(addr.id) === String(selectedAddressId)
-      );
-
-      const shouldUpdateAddressCoords =
-        selectedAddress &&
-        hasConfirmedMapLocation &&
-        deliveryLat != null &&
-        deliveryLng != null &&
-        !Number.isNaN(Number(deliveryLat)) &&
-        !Number.isNaN(Number(deliveryLng)) &&
-        (Number(selectedAddress.latitude) !== Number(deliveryLat) ||
-          Number(selectedAddress.longitude) !== Number(deliveryLng));
-
-      if (mode === "account" && selectedAddressId && shouldUpdateAddressCoords) {
-        const { error: addressUpdateError } = await supabase
-          .from("addresses")
-          .update({
-            latitude: deliveryLat,
-            longitude: deliveryLng,
-          })
-          .eq("id", selectedAddressId)
-          .eq("user_id", user.id);
-
-        if (addressUpdateError) {
-          throw addressUpdateError;
-        }
-      }
-
       const activeDelivery = getActiveDeliveryData();
 
       const validationError = validateDeliveryData({
@@ -1008,55 +1046,109 @@ export default function Checkout() {
       });
 
       if (validationError) {
-        alert(validationError);
-        setIsSubmitting(false);
+        setMessage(validationError);
         return;
       }
 
-      if (activeDelivery.paymentMethod === PAYMENT_METHOD.ONLINE) {
-        const order = await createOrderInSupabase({
-          paymentMethod: PAYMENT_METHOD.ONLINE,
-          paymentStatus: PAYMENT_STATUS.PENDING,
-          orderStatus: ORDER_STATUS.PENDING,
-          activeDelivery,
-        });
+      const selectedAddress = savedAddresses.find(
+        (addr) => String(addr.id) === String(selectedAddressId)
+      );
 
+      const shouldUpdateAddressCoords =
+        selectedAddress &&
+        hasConfirmedMapLocation &&
+        deliveryLat != null &&
+        deliveryLng != null &&
+        !Number.isNaN(Number(deliveryLat)) &&
+        !Number.isNaN(Number(deliveryLng)) &&
+        (Number(selectedAddress.latitude) !== Number(deliveryLat) ||
+          Number(selectedAddress.longitude) !== Number(deliveryLng));
+
+      if (
+        mode === "account" &&
+        selectedAddressId &&
+        shouldUpdateAddressCoords &&
+        user?.id
+      ) {
+        const { error: addressUpdateError } = await supabase
+          .from("addresses")
+          .update({
+            latitude: deliveryLat,
+            longitude: deliveryLng,
+          })
+          .eq("id", selectedAddressId)
+          .eq("user_id", user.id);
+
+        if (addressUpdateError) {
+          throw addressUpdateError;
+        }
+      }
+
+      if (activeDelivery.paymentMethod === PAYMENT_METHOD.ONLINE) {
         const basePath = import.meta.env.BASE_URL || "/";
         const normalizedBasePath = basePath.endsWith("/")
           ? basePath
           : `${basePath}/`;
 
+        const checkoutToken = `checkout_${Date.now()}_${Math.random()
+          .toString(36)
+          .slice(2, 10)}`;
+
+        const payload = {
+          mode,
+          cartItems: cartItems.map((item) => ({
+            id: item.id ?? null,
+            productId: item.productId ?? item.id ?? null,
+            name: item.name,
+            quantity: Number(item.quantity) || 1,
+            price: Number(item.price) || 0,
+            notes: item.notes || null,
+            removedIngredients:
+              item.removedIngredients?.length > 0
+                ? item.removedIngredients
+                : null,
+          })),
+          subtotal,
+          deliveryFee,
+          total,
+          customer: {
+            name: normalizeSpaces(activeDelivery.name),
+            email: user?.email ?? GUEST_TEST_EMAIL,
+            phone: normalizeDigits(activeDelivery.phone),
+          },
+          delivery: {
+            cep: normalizeDigits(activeDelivery.cep) || null,
+            address: normalizeSpaces(activeDelivery.address) || null,
+            district: normalizeSpaces(activeDelivery.district) || null,
+            city: normalizeSpaces(activeDelivery.city) || null,
+            state: activeDelivery.state || null,
+            number: normalizeSpaces(activeDelivery.number) || null,
+            complement: normalizeSpaces(activeDelivery.complement) || null,
+            reference: normalizeSpaces(activeDelivery.reference) || null,
+            lat: hasConfirmedMapLocation ? deliveryLat : null,
+            lng: hasConfirmedMapLocation ? deliveryLng : null,
+          },
+        };
+
+        localStorage.setItem(
+          `base-studio-pizzas-checkout-${checkoutToken}`,
+          JSON.stringify(payload)
+        );
+
         const { data, error } = await supabase.functions.invoke(
           "create-checkout-session",
           {
             body: {
-              amount: total,
-              orderId: order.id,
-              customer: {
-                name: activeDelivery.name,
-                email:
-                  user?.email ?? (mode === "guest" ? GUEST_TEST_EMAIL : null),
-              },
-              description: "Pedido Base Studio Pizzas",
-              successUrl: `${window.location.origin}${normalizedBasePath}payment-success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
+              ...payload,
+              checkoutToken,
+             successUrl: `${window.location.origin}${normalizedBasePath}payment-online-check?session_id={CHECKOUT_SESSION_ID}&checkout_token=${checkoutToken}`,
               cancelUrl: `${window.location.origin}${normalizedBasePath}checkout`,
-              metadata: {
-                order_id: order.id,
-                customer_name: activeDelivery.name,
-                customer_phone: normalizeDigits(activeDelivery.phone),
-                delivery_address: `${activeDelivery.address}, ${activeDelivery.number}`,
-                delivery_lat: String(
-                  hasConfirmedMapLocation ? deliveryLat ?? "" : ""
-                ),
-                delivery_lng: String(
-                  hasConfirmedMapLocation ? deliveryLng ?? "" : ""
-                ),
-              },
             },
           }
         );
 
         if (error) throw error;
+
         if (!data?.url) {
           throw new Error("A sessão de pagamento não retornou uma URL.");
         }
@@ -1091,10 +1183,10 @@ export default function Checkout() {
         return;
       }
 
-      alert("Forma de pagamento inválida.");
+      setMessage("Forma de pagamento inválida.");
     } catch (error) {
       console.error("Erro ao confirmar pedido:", error);
-      alert(error.message || "Não foi possível confirmar o pedido.");
+      setMessage(error.message || "Não foi possível confirmar o pedido.");
     } finally {
       setIsSubmitting(false);
     }
@@ -1111,6 +1203,11 @@ export default function Checkout() {
             value={deliveryForm.cep}
             onChange={handleDeliveryChange}
             placeholder="00000-000"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
           />
         </label>
 
@@ -1122,6 +1219,7 @@ export default function Checkout() {
             value={deliveryForm.district}
             onChange={handleDeliveryChange}
             placeholder="Seu bairro"
+            autoComplete="address-level3"
           />
         </label>
 
@@ -1133,6 +1231,7 @@ export default function Checkout() {
             value={deliveryForm.address}
             onChange={handleDeliveryChange}
             placeholder="Rua, avenida..."
+            autoComplete="address-line1"
           />
         </label>
 
@@ -1143,7 +1242,12 @@ export default function Checkout() {
             name="number"
             value={deliveryForm.number}
             onChange={handleDeliveryChange}
-            placeholder="123"
+            placeholder="Ex: 123, 123A ou S/N"
+            inputMode="text"
+            autoComplete="address-line2"
+            spellCheck={false}
+            autoCapitalize="characters"
+            autoCorrect="off"
           />
         </label>
 
@@ -1155,6 +1259,7 @@ export default function Checkout() {
             value={deliveryForm.complement}
             onChange={handleDeliveryChange}
             placeholder="Casa, apto, bloco..."
+            autoComplete="off"
           />
         </label>
 
@@ -1166,6 +1271,7 @@ export default function Checkout() {
             value={deliveryForm.city}
             onChange={handleDeliveryChange}
             placeholder="Cidade"
+            autoComplete="address-level2"
           />
         </label>
 
@@ -1178,6 +1284,11 @@ export default function Checkout() {
             onChange={handleDeliveryChange}
             placeholder="UF"
             maxLength={2}
+            inputMode="text"
+            autoComplete="address-level1"
+            spellCheck={false}
+            autoCapitalize="characters"
+            autoCorrect="off"
           />
         </label>
 
@@ -1189,6 +1300,7 @@ export default function Checkout() {
             value={deliveryForm.reference}
             onChange={handleDeliveryChange}
             placeholder="Próximo ao mercado, portão azul..."
+            autoComplete="off"
           />
         </label>
 
@@ -1200,6 +1312,7 @@ export default function Checkout() {
             value={deliveryForm.name}
             onChange={handleDeliveryChange}
             placeholder="Seu nome"
+            autoComplete="name"
           />
         </label>
 
@@ -1211,6 +1324,11 @@ export default function Checkout() {
             value={deliveryForm.phone}
             onChange={handleDeliveryChange}
             placeholder="(61) 99999-9999"
+            inputMode="tel"
+            autoComplete="tel"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
           />
         </label>
       </div>
@@ -1231,7 +1349,9 @@ export default function Checkout() {
         <div className={styles.container}>
           <span className={styles.kicker}>Checkout</span>
           <h1 className={styles.title}>Finalizar pedido</h1>
-          <p className={styles.subtitle}>Revise os dados e confirme seu pedido.</p>
+          <p className={styles.subtitle}>
+            Revise os dados e confirme seu pedido.
+          </p>
 
           <div className={styles.stepper}>
             <div className={`${styles.stepItem} ${styles.stepItemActive}`}>
@@ -1266,7 +1386,9 @@ export default function Checkout() {
                   <Link to="/auth" className={styles.choiceCard}>
                     <span className={styles.choiceIcon}>👤</span>
                     <strong>Entrar na conta</strong>
-                    <span>Use sua conta para salvar dados e acompanhar pedidos.</span>
+                    <span>
+                      Use sua conta para salvar dados e acompanhar pedidos.
+                    </span>
                   </Link>
 
                   <button
@@ -1309,6 +1431,7 @@ export default function Checkout() {
                         setHasConfirmedMapLocation(false);
                         setSkipMapSelection(false);
                         setDeliveryForm(initialDeliveryForm);
+                        setMessage("");
                         lastGeocodeKeyRef.current = "";
                       }}
                     >
@@ -1339,10 +1462,11 @@ export default function Checkout() {
                         {savedAddresses.map((addr, index) => (
                           <div
                             key={addr.id}
-                            className={`${styles.addressCard} ${selectedAddressId === addr.id
+                            className={`${styles.addressCard} ${
+                              selectedAddressId === addr.id
                                 ? styles.addressCardActive
                                 : ""
-                              }`}
+                            }`}
                           >
                             <p className={styles.addressCardTitle}>
                               <strong>
@@ -1398,7 +1522,6 @@ export default function Checkout() {
                       </div>
                     </>
                   ) : null}
-
                 </div>
               </section>
             ) : null}
@@ -1422,6 +1545,7 @@ export default function Checkout() {
                       setDeliveryLng(null);
                       setHasConfirmedMapLocation(false);
                       setSkipMapSelection(false);
+                      setMessage("");
                       lastGeocodeKeyRef.current = "";
                     }}
                   >
@@ -1433,15 +1557,8 @@ export default function Checkout() {
               </section>
             ) : null}
 
-            {cepLoading ? (
-              <p className={styles.checkoutMessage}>Buscando CEP...</p>
-            ) : isGeocoding && canShowMap ? (
-              <p className={styles.checkoutMessage}>
-                Localizando endereço no mapa...
-              </p>
-            ) : null}
-
-            {mode === "account" && (showNewAddressForm || savedAddresses.length === 0) ? (
+            {mode === "account" &&
+            (showNewAddressForm || savedAddresses.length === 0) ? (
               <section className={styles.card}>
                 <div>
                   <span className={styles.formBadge}>Novo endereço</span>
@@ -1467,11 +1584,25 @@ export default function Checkout() {
               </section>
             ) : null}
 
+            {cepLoading ? (
+              <p className={styles.checkoutMessage}>Buscando CEP...</p>
+            ) : isGeocoding && canShowMap ? (
+              <p className={styles.checkoutMessage}>
+                Localizando endereço no mapa...
+              </p>
+            ) : null}
+
+            {message ? (
+              <p className={styles.checkoutMessage} role="alert">
+                {message}
+              </p>
+            ) : null}
+
             <section className={styles.helpCard}>
               <h3 className={styles.helpTitle}>Precisa de ajuda?</h3>
               <p className={styles.helpText}>
-                Revise os dados com calma. Seu carrinho continua salvo mesmo se você
-                voltar ao cardápio.
+                Revise os dados com calma. Seu carrinho continua salvo mesmo se
+                você voltar ao cardápio.
               </p>
               <p className={styles.helpText}>
                 O pedido só é concluído depois da confirmação de pagamento ou da
@@ -1491,7 +1622,9 @@ export default function Checkout() {
                     <strong>{estimatedDelivery}</strong>
                   </div>
 
-                  <div className={styles.summaryPillSafe}>🔒 Checkout seguro</div>
+                  <div className={styles.summaryPillSafe}>
+                    🔒 Checkout seguro
+                  </div>
                 </div>
               </div>
 
@@ -1505,8 +1638,11 @@ export default function Checkout() {
               ) : (
                 <>
                   <div className={styles.summaryList}>
-                    {cartItems.map((item) => (
-                      <div key={item.id} className={styles.summaryItem}>
+                    {cartItems.map((item, index) => (
+                      <div
+                        key={`${item.id ?? item.productId ?? item.name}-${index}`}
+                        className={styles.summaryItem}
+                      >
                         <div className={styles.summaryItemTop}>
                           <strong>
                             {item.quantity}x {item.name}
@@ -1547,8 +1683,12 @@ export default function Checkout() {
                   <div className={styles.summaryDelivery}>
                     <h3 className={styles.summaryDeliveryTitle}>Entrega</h3>
 
-                    <p className={styles.summaryDeliveryText}>{summaryNameText}</p>
-                    <p className={styles.summaryDeliveryText}>{summaryAddressText}</p>
+                    <p className={styles.summaryDeliveryText}>
+                      {summaryNameText}
+                    </p>
+                    <p className={styles.summaryDeliveryText}>
+                      {summaryAddressText}
+                    </p>
 
                     {activeDelivery.complement ? (
                       <p className={styles.summaryDeliveryText}>
@@ -1568,105 +1708,28 @@ export default function Checkout() {
                       </p>
                     ) : null}
 
-                    {hasAddressReadyForMap ? (
-                      <div className={styles.mapConfirmSection}>
-                        <h3 className={styles.summaryDeliveryTitle}>
-                          Localização no mapa (opcional)
-                        </h3>
-
-                        <p className={styles.summaryDeliveryText}>
-                          📍 Ative para acompanhar o pedido em tempo real.
-                        </p>
-
-                        <div className={styles.mapToggleActions}>
-                          {!skipMapSelection ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSkipMapSelection(true);
-                                setDeliveryLat(null);
-                                setDeliveryLng(null);
-                                setHasConfirmedMapLocation(false);
-                                setMessage("");
-                                setIsGeocoding(false);
-                              }}
-                            >
-                              Não usar mapa
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSkipMapSelection(false);
-                                setMessage("");
-                                lastGeocodeKeyRef.current = "";
-                              }}
-                            >
-                              Usar mapa
-                            </Button>
-                          )}
-                        </div>
-
-                        {!skipMapSelection ? (
-                          <>
-                            {message ? (
-                              <p className={styles.checkoutMessage}>
-                                ⚠️ Não localizamos automaticamente.
-                              </p>
-                            ) : null}
-
-                            <DeliveryLocationPicker
-                              latitude={deliveryLat ?? -15.8794}
-                              longitude={deliveryLng ?? -48.0844}
-                              onChange={(lat, lng) => {
-                                setDeliveryLat(lat);
-                                setDeliveryLng(lng);
-                                setHasConfirmedMapLocation(true);
-                                setMessage("");
-                              }}
-                            />
-
-                            {hasConfirmedMapLocation ? (
-                              <p className={styles.mapConfirmed}>
-                                ✔ Local confirmado
-                              </p>
-                            ) : null}
-                          </>
-                        ) : (
-                          <p className={styles.summaryDeliveryText}>
-                            Pedido sem rastreamento em tempo real.
-                          </p>
-                        )}
-                      </div>
-                    ) : null}
-
-                    <PaymentSection
-                      paymentMethod={activeDelivery.paymentMethod}
-                      needsChange={activeDelivery.needsChange}
-                      changeFor={activeDelivery.changeFor}
-                      onChange={handleDeliveryChange}
-                      paymentMethods={PAYMENT_METHOD}
+                    <CheckoutPaymentBlock
+                      hasAddressReadyForMap={hasAddressReadyForMap}
+                      skipMapSelection={skipMapSelection}
+                      setSkipMapSelection={setSkipMapSelection}
+                      setDeliveryLat={setDeliveryLat}
+                      setDeliveryLng={setDeliveryLng}
+                      setHasConfirmedMapLocation={setHasConfirmedMapLocation}
+                      setMessage={setMessage}
+                      setIsGeocoding={setIsGeocoding}
+                      lastGeocodeKeyRef={lastGeocodeKeyRef}
+                      deliveryLat={deliveryLat}
+                      deliveryLng={deliveryLng}
+                      DeliveryLocationPicker={DeliveryLocationPicker}
+                      hasConfirmedMapLocation={hasConfirmedMapLocation}
+                      activeDelivery={activeDelivery}
+                      handleDeliveryChange={handleDeliveryChange}
+                      PAYMENT_METHOD={PAYMENT_METHOD}
+                      isSubmitting={isSubmitting}
+                      handleConfirmOrder={handleConfirmOrder}
+                      confirmValidationError={confirmValidationError}
                     />
                   </div>
-
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    onClick={handleConfirmOrder}
-                    disabled={isSubmitting}
-                    className={styles.confirmBtn}
-                  >
-                    {isSubmitting ? "Confirmando..." : "Confirmar pedido"}
-                  </Button>
-
-                  <p className={styles.confirmHelp}>
-                    O pedido só será processado após a confirmação desta etapa.
-                  </p>
                 </>
               )}
             </section>

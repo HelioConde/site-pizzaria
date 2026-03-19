@@ -11,6 +11,7 @@ import ProductModal from "./components/ProductModal";
 import CartDrawer from "./components/CartDrawer";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
+const MAX_NOTES_LENGTH = 220;
 
 function formatPrice(value) {
   if (value == null) return null;
@@ -64,6 +65,24 @@ function isCustomizableProduct(product) {
   );
 }
 
+function sanitizeCartItem(item) {
+  if (!item || typeof item !== "object") return null;
+  if (!item.id || !item.name) return null;
+
+  return {
+    id: String(item.id),
+    productId: item.productId || null,
+    name: String(item.name || "Produto"),
+    price: Number(item.price || 0),
+    image: item.image || null,
+    quantity: Math.max(1, Number(item.quantity || 1)),
+    notes: String(item.notes || "").trim(),
+    removedIngredients: Array.isArray(item.removedIngredients)
+      ? item.removedIngredients.filter(Boolean)
+      : [],
+  };
+}
+
 function getInitialCartItems() {
   try {
     if (typeof window === "undefined") return [];
@@ -72,11 +91,21 @@ function getInitialCartItems() {
     if (!savedCart) return [];
 
     const parsedCart = JSON.parse(savedCart);
-    return Array.isArray(parsedCart) ? parsedCart : [];
+    if (!Array.isArray(parsedCart)) return [];
+
+    return parsedCart.map(sanitizeCartItem).filter(Boolean);
   } catch (error) {
     console.error("Erro ao carregar carrinho do localStorage:", error);
     return [];
   }
+}
+
+function generateCartItemId(productId) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return `${productId}-${crypto.randomUUID()}`;
+  }
+
+  return `${productId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export default function Menu() {
@@ -278,12 +307,12 @@ export default function Menu() {
         ].filter(Boolean)
       : [];
 
-    const trimmedNotes = notes.trim();
+    const trimmedNotes = notes.trim().slice(0, MAX_NOTES_LENGTH);
 
     setCartItems((prev) => [
       ...prev,
       {
-        id: `${selectedProduct.id}-${Date.now()}`,
+        id: generateCartItemId(selectedProduct.id),
         productId: selectedProduct.id,
         name: selectedProduct.name,
         price: Number(selectedProduct.price || 0),
@@ -377,9 +406,15 @@ export default function Menu() {
 
   useEffect(() => {
     function handleEsc(event) {
-      if (event.key === "Escape") {
-        if (productModalOpen) handleCloseProductModal();
-        if (cartOpen) setCartOpen(false);
+      if (event.key !== "Escape") return;
+
+      if (productModalOpen) {
+        handleCloseProductModal();
+        return;
+      }
+
+      if (cartOpen) {
+        setCartOpen(false);
       }
     }
 
@@ -398,7 +433,11 @@ export default function Menu() {
   useEffect(() => {
     const openProductId = location.state?.openProductId;
 
-    if (!openProductId) return;
+    if (!openProductId) {
+      didPreselectRef.current = false;
+      return;
+    }
+
     if (didPreselectRef.current) return;
     if (!productsFromDb.length) return;
 
@@ -561,6 +600,7 @@ export default function Menu() {
         onClose={handleCloseProductModal}
         onConfirm={handleConfirmProduct}
         formatPrice={formatPrice}
+        maxNotesLength={MAX_NOTES_LENGTH}
       />
 
       <CartDrawer

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import styles from "./Carousel.module.css";
 import Button from "../Button/Button";
-import { Link } from "react-router-dom";
 
 export default function Carousel({
   slides,
@@ -9,122 +9,265 @@ export default function Carousel({
   interval = 6500,
   ariaLabel = "Destaques",
 }) {
-  const safeSlides = useMemo(() => (slides ?? []).filter(Boolean), [slides]);
+  const safeSlides = useMemo(() => {
+    return Array.isArray(slides) ? slides.filter(Boolean) : [];
+  }, [slides]);
+
   const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
   const timerRef = useRef(null);
   const startX = useRef(null);
+  const carouselId = useId();
 
   const max = safeSlides.length;
+  const safeInterval = Number(interval) > 0 ? Number(interval) : 6500;
 
-  const goTo = (i) => {
+  function clearTimer() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function goTo(nextIndex) {
     if (!max) return;
-    setIndex((i + max) % max);
-  };
 
-  const next = () => goTo(index + 1);
-  const prev = () => goTo(index - 1);
+    setIndex(((nextIndex % max) + max) % max);
+  }
+
+  function next() {
+    setIndex((current) => {
+      if (!max) return 0;
+      return (current + 1) % max;
+    });
+  }
+
+  function prev() {
+    setIndex((current) => {
+      if (!max) return 0;
+      return (current - 1 + max) % max;
+    });
+  }
 
   useEffect(() => {
-    // se trocar o array de slides (ex: JSON mudou), garante índice válido
-    if (index >= max && max > 0) setIndex(0);
+    if (index >= max && max > 0) {
+      setIndex(0);
+    }
+
+    if (max === 0 && index !== 0) {
+      setIndex(0);
+    }
   }, [max, index]);
 
   useEffect(() => {
-    if (!autoPlay || max <= 1) return;
+    if (!autoPlay || isPaused || max <= 1) {
+      clearTimer();
+      return;
+    }
+
     timerRef.current = setInterval(() => {
-      setIndex((v) => (v + 1) % max);
-    }, interval);
-    return () => clearInterval(timerRef.current);
-  }, [autoPlay, interval, max]);
+      setIndex((current) => (current + 1) % max);
+    }, safeInterval);
 
-  const onTouchStart = (e) => {
-    startX.current = e.touches?.[0]?.clientX ?? null;
-  };
+    return () => {
+      clearTimer();
+    };
+  }, [autoPlay, isPaused, max, safeInterval]);
 
-  const onTouchEnd = (e) => {
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        setIsPaused(true);
+      } else {
+        setIsPaused(false);
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  function onTouchStart(event) {
+    startX.current = event.touches?.[0]?.clientX ?? null;
+  }
+
+  function onTouchEnd(event) {
     if (startX.current == null) return;
-    const endX = e.changedTouches?.[0]?.clientX ?? null;
-    if (endX == null) return;
+
+    const endX = event.changedTouches?.[0]?.clientX ?? null;
+
+    if (endX == null) {
+      startX.current = null;
+      return;
+    }
 
     const diff = endX - startX.current;
     const threshold = 42;
 
-    if (diff > threshold) prev();
-    if (diff < -threshold) next();
+    if (diff > threshold) {
+      prev();
+    } else if (diff < -threshold) {
+      next();
+    }
+
     startX.current = null;
-  };
+  }
+
+  function onKeyDown(event) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      prev();
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      next();
+    }
+  }
 
   if (max === 0) return null;
 
   return (
-    <section className={styles.wrap} aria-label={ariaLabel} id="inicio">
+    <section
+      className={styles.wrap}
+      aria-label={ariaLabel}
+      aria-roledescription="carousel"
+      id="inicio"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={() => setIsPaused(false)}
+    >
       <div
         className={styles.viewport}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        onKeyDown={onKeyDown}
+        tabIndex={0}
       >
         <div
           className={styles.track}
           style={{ transform: `translateX(-${index * 100}%)` }}
         >
-          {safeSlides.map((s, i) => (
-            <article className={styles.slide} key={s.id ?? i}>
-              <div className={styles.grid}>
-                <div className={styles.left}>
-                  <div className={styles.badge}>
-                    <span className={styles.badgeIcon} aria-hidden="true">✦</span>
-                    {s.badge}
+          {safeSlides.map((slide, slideIndex) => {
+            const isActive = slideIndex === index;
+            const titleParts = Array.isArray(slide.titleParts)
+              ? slide.titleParts
+              : [slide.title || "", "", ""];
+
+            const primaryHref = slide?.primaryCta?.href || "/menu";
+            const primaryLabel = slide?.primaryCta?.label || "Fazer pedido";
+            const secondaryHref = slide?.secondaryCta?.href || "#destaques";
+            const secondaryLabel = slide?.secondaryCta?.label || "Saiba mais";
+
+            return (
+              <article
+                className={styles.slide}
+                key={slide.id ?? `${carouselId}-${slideIndex}`}
+                id={`${carouselId}-slide-${slideIndex}`}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`Slide ${slideIndex + 1} de ${max}`}
+                aria-hidden={!isActive}
+              >
+                <div className={styles.grid}>
+                  <div className={styles.left}>
+                    {slide?.badge ? (
+                      <div className={styles.badge}>
+                        <span className={styles.badgeIcon} aria-hidden="true">
+                          ✦
+                        </span>
+                        {slide.badge}
+                      </div>
+                    ) : null}
+
+                    <h1 className={styles.title}>
+                      {titleParts?.[0] || ""}
+                      <span className={styles.accent}>
+                        {titleParts?.[1] || ""}
+                      </span>
+                      {titleParts?.[2] || ""}
+                    </h1>
+
+                    {slide?.description ? (
+                      <p className={styles.desc}>{slide.description}</p>
+                    ) : null}
+
+                    <div className={styles.ctaRow}>
+                      <Button
+                        as={Link}
+                        to={primaryHref}
+                        variant="primary"
+                        size="md"
+                      >
+                        {primaryLabel} <span aria-hidden="true">→</span>
+                      </Button>
+
+                      <Button as="a" href={secondaryHref} variant="ghost">
+                        {secondaryLabel}
+                      </Button>
+                    </div>
+
+                    {slide?.footnote ? (
+                      <p className={styles.footnote}>{slide.footnote}</p>
+                    ) : null}
                   </div>
 
-                  <h1 className={styles.title}>
-                    {s.titleParts?.[0]}
-                    <span className={styles.accent}>{s.titleParts?.[1]}</span>
-                    {s.titleParts?.[2]}
-                  </h1>
-
-                  <p className={styles.desc}>{s.description}</p>
-
-                  <div className={styles.ctaRow}>
-                    <Button as={Link} to={s.primaryCta.href} variant="primary" size="md">
-                      {s.primaryCta?.label} <span aria-hidden="true">→</span>
-                    </Button>
-
-                    <Button as="a" href={s.secondaryCta.href} variant="ghost">
-                      {s.secondaryCta?.label}
-                    </Button>
+                  <div className={styles.right}>
+                    <MockCard />
                   </div>
-
-                  <p className={styles.footnote}>{s.footnote}</p>
                 </div>
-
-                <div className={styles.right}>
-                  <MockCard />
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </div>
 
       <div className={styles.controls}>
-        <button className={styles.navBtn} type="button" onClick={prev} aria-label="Anterior">
+        <button
+          className={styles.navBtn}
+          type="button"
+          onClick={prev}
+          aria-label="Slide anterior"
+          disabled={max <= 1}
+        >
           ‹
         </button>
 
         <div className={styles.dots} role="tablist" aria-label="Selecionar slide">
-          {safeSlides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`${styles.dot} ${i === index ? styles.dotActive : ""}`}
-              onClick={() => goTo(i)}
-              aria-label={`Ir para o slide ${i + 1}`}
-              aria-current={i === index ? "true" : "false"}
-            />
-          ))}
+          {safeSlides.map((_, slideIndex) => {
+            const isActive = slideIndex === index;
+
+            return (
+              <button
+                key={`${carouselId}-dot-${slideIndex}`}
+                id={`${carouselId}-tab-${slideIndex}`}
+                type="button"
+                role="tab"
+                className={`${styles.dot} ${
+                  isActive ? styles.dotActive : ""
+                }`}
+                onClick={() => goTo(slideIndex)}
+                aria-label={`Ir para o slide ${slideIndex + 1}`}
+                aria-selected={isActive}
+                aria-controls={`${carouselId}-slide-${slideIndex}`}
+                tabIndex={isActive ? 0 : -1}
+              />
+            );
+          })}
         </div>
 
-        <button className={styles.navBtn} type="button" onClick={next} aria-label="Próximo">
+        <button
+          className={styles.navBtn}
+          type="button"
+          onClick={next}
+          aria-label="Próximo slide"
+          disabled={max <= 1}
+        >
           ›
         </button>
       </div>
@@ -134,7 +277,7 @@ export default function Carousel({
 
 function MockCard() {
   return (
-    <div className={styles.mock}>
+    <div className={styles.mock} aria-hidden="true">
       <div className={styles.mockTop}>
         <span className={styles.dotWin} />
         <span className={styles.dotWin} />

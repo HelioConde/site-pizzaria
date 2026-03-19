@@ -1,28 +1,78 @@
 import { useEffect, useMemo, useState } from "react";
-import styles from "./Footer.module.css";
 import { Instagram, Github, Linkedin, MessageCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import styles from "./Footer.module.css";
 
 function normalizeHours(value) {
   if (!value) return [];
 
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        (item.label || item.value)
+    );
+  }
 
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
+
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item) =>
+            item &&
+            typeof item === "object" &&
+            (item.label || item.value)
+        )
+      : [];
   } catch {
     return [];
   }
 }
 
-export default function Footer({ footer }) {
-  console.log("FOOTER props.footer:", footer);
+function normalizeUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
 
+  if (!trimmed) return "";
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("mailto:") ||
+    trimmed.startsWith("tel:")
+  ) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function normalizeWhatsApp(value) {
+  if (!value || typeof value !== "string") return "";
+  return value.replace(/\D/g, "");
+}
+
+function getIcon(name) {
+  switch (String(name || "").toLowerCase()) {
+    case "instagram":
+      return <Instagram size={18} />;
+    case "github":
+      return <Github size={18} />;
+    case "linkedin":
+      return <Linkedin size={18} />;
+    case "whatsapp":
+      return <MessageCircle size={18} />;
+    default:
+      return null;
+  }
+}
+
+export default function Footer({ footer }) {
   const [storeSettings, setStoreSettings] = useState(null);
 
   useEffect(() => {
-    let active = true;
+    let isMounted = true;
 
     async function loadStoreSettings() {
       try {
@@ -32,15 +82,15 @@ export default function Footer({ footer }) {
           .limit(1)
           .maybeSingle();
 
-        console.log("FOOTER store_settings response:", data);
-
         if (error) throw error;
 
-        if (active) {
-          setStoreSettings(data ?? null);
-        }
+        if (!isMounted) return;
+        setStoreSettings(data ?? null);
       } catch (error) {
         console.error("Erro ao carregar store_settings no footer:", error);
+
+        if (!isMounted) return;
+        setStoreSettings(null);
       }
     }
 
@@ -55,121 +105,129 @@ export default function Footer({ footer }) {
           schema: "public",
           table: "store_settings",
         },
-        loadStoreSettings
+        () => {
+          loadStoreSettings();
+        }
       )
       .subscribe();
 
     return () => {
-      active = false;
+      isMounted = false;
       supabase.removeChannel(channel);
     };
   }, []);
 
-  console.log("FOOTER state.storeSettings:", storeSettings);
-
   const mergedStore = useMemo(() => {
-    const merged = {
+    const normalizedHours = normalizeHours(storeSettings?.hours);
+    const whatsapp = normalizeWhatsApp(storeSettings?.whatsapp);
+    const instagram = normalizeUrl(storeSettings?.instagram);
+    const mapsOpenUrl = normalizeUrl(storeSettings?.maps_open_url);
+
+    return {
       name: storeSettings?.store_name || "Base Studio Pizzas",
-      tagline: storeSettings?.tagline || "Sua pizzaria digital com experiência moderna.",
+      tagline:
+        storeSettings?.tagline ||
+        "Sua pizzaria digital com experiência moderna.",
       phone: storeSettings?.phone || "(61) 99999-9999",
-      whatsapp: storeSettings?.whatsapp || "5561999999999",
+      whatsapp,
       email: storeSettings?.email || "contato@basestudiopizzas.com",
       city: storeSettings?.city || "Brasília - DF",
       address: storeSettings?.address || "Brasília - DF",
-      instagram: storeSettings?.instagram || "",
       maps: {
         embedUrl: storeSettings?.maps_embed_url || "",
-        openUrl: storeSettings?.maps_open_url || "",
+        openUrl: mapsOpenUrl,
       },
-      hours: normalizeHours(storeSettings?.hours).length
-        ? normalizeHours(storeSettings?.hours)
+      hours: normalizedHours.length
+        ? normalizedHours
         : [
             { label: "Seg–Sex", value: "18h às 23h" },
             { label: "Sáb", value: "18h às 00h" },
             { label: "Dom", value: "17h às 23h" },
           ],
       socials: [
-        storeSettings?.instagram
-          ? { name: "Instagram", url: storeSettings.instagram }
+        instagram
+          ? { name: "Instagram", url: instagram }
           : null,
-        storeSettings?.whatsapp
-          ? { name: "WhatsApp", url: `https://wa.me/${storeSettings.whatsapp}` }
+        whatsapp
+          ? { name: "WhatsApp", url: `https://wa.me/${whatsapp}` }
           : null,
       ].filter(Boolean),
     };
-
-    console.log("FOOTER mergedStore:", merged);
-
-    return merged;
   }, [storeSettings]);
 
   if (!footer) {
-    console.log("FOOTER NÃO RENDERIZADO: footer da Home está vazio");
     return null;
   }
 
   const year = new Date().getFullYear();
-
-  function getIcon(name) {
-    switch (String(name || "").toLowerCase()) {
-      case "instagram":
-        return <Instagram size={18} />;
-      case "github":
-        return <Github size={18} />;
-      case "linkedin":
-        return <Linkedin size={18} />;
-      case "whatsapp":
-        return <MessageCircle size={18} />;
-      default:
-        return null;
-    }
-  }
+  const creditsAuthor =
+    footer?.credits?.author?.trim?.() || "Hélio Conde";
+  const creditsNote =
+    footer?.credits?.note?.trim?.() || "Projeto de portfólio.";
 
   return (
     <footer className={styles.wrap} aria-label="Rodapé">
       <div className={styles.container}>
         <div className={styles.grid}>
-          <div>
+          <div className={styles.column}>
             <h4 className={styles.brand}>{mergedStore.name}</h4>
             <p className={styles.desc}>{mergedStore.tagline}</p>
 
             <ul className={styles.contact}>
               <li>📞 {mergedStore.phone || "Não informado"}</li>
               <li>✉️ {mergedStore.email || "Não informado"}</li>
-              <li>📍 {mergedStore.city || mergedStore.address || "Não informado"}</li>
+              <li>
+                📍 {mergedStore.city || mergedStore.address || "Não informado"}
+              </li>
             </ul>
           </div>
 
-          <div>
+          <div className={styles.column}>
             <h5 className={styles.colTitle}>Redes</h5>
 
-            <div className={styles.socials}>
-              {(mergedStore.socials ?? []).map((social) => (
-                <a
-                  key={`${social.name}-${social.url}`}
-                  className={styles.social}
-                  href={social.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={social.name}
-                  title={social.name}
-                >
-                  {getIcon(social.name)}
-                </a>
-              ))}
-            </div>
+            {(mergedStore.socials ?? []).length ? (
+              <div className={styles.socials}>
+                {mergedStore.socials.map((social) => (
+                  <a
+                    key={`${social.name}-${social.url}`}
+                    className={styles.social}
+                    href={social.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={social.name}
+                    title={social.name}
+                  >
+                    {getIcon(social.name)}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyText}>Nenhuma rede disponível.</p>
+            )}
           </div>
 
-          <div>
+          <div className={styles.column}>
             <h5 className={styles.colTitle}>Horários</h5>
 
             <ul className={styles.hours}>
-              {(mergedStore.hours ?? []).map((hour) => (
-                <li key={hour.label}>
-                  <span className={styles.hourLabel}>{hour.label}</span>
-                  <span className={styles.hourValue}>{hour.value}</span>
-                </li>
-              ))}
+              {(mergedStore.hours ?? []).map((hour, index) => {
+                const label =
+                  typeof hour?.label === "string" && hour.label.trim()
+                    ? hour.label.trim()
+                    : `Horário ${index + 1}`;
+
+                const value =
+                  typeof hour?.value === "string" && hour.value.trim()
+                    ? hour.value.trim()
+                    : "Não informado";
+
+                return (
+                  <li key={`${label}-${index}`}>
+                    <span className={styles.hourLabel}>{label}</span>
+                    <span className={styles.hourValue}>{value}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -177,7 +235,7 @@ export default function Footer({ footer }) {
         {mergedStore.maps?.embedUrl ? (
           <div className={styles.map}>
             <iframe
-              title="Mapa"
+              title="Mapa da loja"
               src={mergedStore.maps.embedUrl}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -199,11 +257,8 @@ export default function Footer({ footer }) {
         ) : null}
 
         <div className={styles.copy}>
-          © {year} {mergedStore.name} — Desenvolvido por{" "}
-          {footer?.credits?.author || "Hélio Conde"} ·{" "}
-          <span className={styles.copyMuted}>
-            {footer?.credits?.note || "Projeto de portfólio."}
-          </span>
+          © {year} {mergedStore.name} — Desenvolvido por {creditsAuthor} ·{" "}
+          <span className={styles.copyMuted}>{creditsNote}</span>
         </div>
       </div>
     </footer>

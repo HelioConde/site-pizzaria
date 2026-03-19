@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import styles from "../Account.module.css";
 import Button from "../../../components/ui/Button/Button";
 import DeliveryRouteMap from "../../../components/maps/DeliveryRouteMap";
+import AccountOrderChat from "./AccountOrderChat";
+import { startTitleBlink, stopTitleBlink } from "../../../utils/titleNotifier";
 
 const PAYMENT_METHOD = {
   CASH: "dinheiro",
@@ -279,12 +281,54 @@ function hasValidCoordinates(lat, lng) {
   );
 }
 
+function canOpenChat(order) {
+  const stage = normalizeOrderStage(order);
+  return ![ORDER_STATUS.CANCELLED].includes(stage);
+}
+
 export default function OrdersRecentList({ orders = [], loading = false }) {
   const [trackingByOrderId, setTrackingByOrderId] = useState({});
+  const [activeChatOrderId, setActiveChatOrderId] = useState(null);
+  const [unreadByOrderId, setUnreadByOrderId] = useState({});
+  const [highlightedOrderIds, setHighlightedOrderIds] = useState({});
+
+  const knownMessageIdsRef = useRef(new Set());
+  const highlightTimeoutsRef = useRef({});
+
+  const activeChatOrder = useMemo(() => {
+    if (!activeChatOrderId) return null;
+    return orders.find((order) => order.id === activeChatOrderId) || null;
+  }, [activeChatOrderId, orders]);
 
   const deliveryOrders = useMemo(() => {
-    return orders.filter((order) => normalizeOrderStage(order) === ORDER_STATUS.DELIVERY);
+    return orders.filter(
+      (order) => normalizeOrderStage(order) === ORDER_STATUS.DELIVERY
+    );
   }, [orders]);
+
+  const watchedOrderIdsKey = useMemo(() => {
+    return orders.map((order) => order.id).join("|");
+  }, [orders]);
+
+  const pulseOrder = useCallback((orderId) => {
+    setHighlightedOrderIds((prev) => ({
+      ...prev,
+      [orderId]: true,
+    }));
+
+    if (highlightTimeoutsRef.current[orderId]) {
+      clearTimeout(highlightTimeoutsRef.current[orderId]);
+    }
+
+    highlightTimeoutsRef.current[orderId] = setTimeout(() => {
+      setHighlightedOrderIds((prev) => ({
+        ...prev,
+        [orderId]: false,
+      }));
+
+      delete highlightTimeoutsRef.current[orderId];
+    }, 2600);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -352,203 +396,379 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
     };
   }, [deliveryOrders]);
 
+  useEffect(() => {
+    if (!orders.length) return;
+
+    let active = true;
+    const channels = [];
+
+    async function loadKnownMessages() {
+      const orderIds = orders.map((order) => order.id);
+
+      const { data, error } = await supabase
+        .from("order_messages")
+        .select("id")
+        .in("order_id", orderIds);
+
+      if (!active) return;
+      if (error) {
+        console.error("Erro ao carregar mensagens conhecidas do cliente:", error);
+        return;
+      }
+
+      knownMessageIdsRef.current = new Set((data || []).map((item) => item.id));
+    }
+
+    loadKnownMessages();
+
+    orders.forEach((order) => {
+      const channel = supabase
+        .channel(`account-chat-open-watch-${order.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "order_messages",
+            filter: `order_id=eq.${order.id}`,
+          },
+          (payload) => {
+            if (!active) return;
+
+            const newMessage = payload.new;
+            const isIncomingFromStore = newMessage.sender_role !== "customer";
+
+            if (!isIncomingFromStore) return;
+
+            if (knownMessageIdsRef.current.has(newMessage.id)) return;
+            knownMessageIdsRef.current.add(newMessage.id);
+
+            setUnreadByOrderId((prev) => ({
+              ...prev,
+              [order.id]: (prev[order.id] || 0) + 1,
+            }));
+
+            setActiveChatOrderId(order.id);
+            pulseOrder(order.id);
+            startTitleBlink(
+              `💬 Nova mensagem - Pedido ${String(order.id).slice(0, 4)}`
+            );
+          }
+        )
+        .subscribe((status) => {
+          console.log(`ACCOUNT CHAT WATCH ${order.id}:`, status);
+        });
+
+      channels.push(channel);
+    });
+
+    return () => {
+      active = false;
+      channels.forEach((channel) => {
+        supabase.removeChannel(channel);
+      });
+    };
+  }, [watchedOrderIdsKey, orders, pulseOrder]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      stopTitleBlink();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        stopTitleBlink();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("click", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("click", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(highlightTimeoutsRef.current).forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
+    };
+  }, []);
+
+  const handleIncomingMessage = useCallback((orderId) => {
+    setActiveChatOrderId(orderId);
+    pulseOrder(orderId);
+  }, [pulseOrder]);
+
+  const handleOpenChat = useCallback((orderId) => {
+    setUnreadByOrderId((prev) => ({
+      ...prev,
+      [orderId]: 0,
+    }));
+
+    setActiveChatOrderId(orderId);
+    setHighlightedOrderIds((prev) => ({
+      ...prev,
+      [orderId]: false,
+    }));
+    stopTitleBlink();
+  }, []);
+
+  const handleCloseChat = useCallback(() => {
+    setActiveChatOrderId(null);
+  }, []);
+
   return (
-    <article className={`${styles.card} ${styles.cardWide}`}>
-      <div className={styles.cardHeader}>
-        <h2>Pedidos recentes</h2>
-      </div>
-
-      {loading ? (
-        <div className={styles.emptyState}>
-          <p>Carregando pedidos...</p>
+    <>
+      <article className={`${styles.card} ${styles.cardWide}`}>
+        <div className={styles.cardHeader}>
+          <h2>Pedidos recentes</h2>
         </div>
-      ) : !orders.length ? (
-        <div className={styles.emptyOrders}>
-          <div className={styles.emptyIcon}>🍕</div>
-          <p>Nenhum pedido encontrado</p>
-          <span>Quando você fizer um pedido logado, ele aparecerá aqui.</span>
-          <Button as={Link} to="/menu" variant="primary">
-            Fazer primeiro pedido
-          </Button>
-        </div>
-      ) : (
-        <div className={styles.ordersCompactList}>
-          {orders.map((order) => {
-            const timeline = getTimeline(order);
-            const orderStage = normalizeOrderStage(order);
-            const firstItem = order.order_items?.[0];
-            const hasMoreItems = (order.order_items?.length ?? 0) > 1;
 
-            const latestTracking = trackingByOrderId[order.id] || null;
+        {loading ? (
+          <div className={styles.emptyState}>
+            <p>Carregando pedidos...</p>
+          </div>
+        ) : !orders.length ? (
+          <div className={styles.emptyOrders}>
+            <div className={styles.emptyIcon}>🍕</div>
+            <p>Nenhum pedido encontrado</p>
+            <span>Quando você fizer um pedido logado, ele aparecerá aqui.</span>
+            <Button as={Link} to="/menu" variant="primary">
+              Fazer primeiro pedido
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.ordersCompactList}>
+            {orders.map((order) => {
+              const timeline = getTimeline(order);
+              const orderStage = normalizeOrderStage(order);
+              const firstItem = order.order_items?.[0];
+              const hasMoreItems = (order.order_items?.length ?? 0) > 1;
 
-            const courierLatitude =
-              latestTracking?.latitude ?? order.courier_lat ?? null;
-            const courierLongitude =
-              latestTracking?.longitude ?? order.courier_lng ?? null;
+              const latestTracking = trackingByOrderId[order.id] || null;
 
-            const hasCourierCoordinates = hasValidCoordinates(
-              courierLatitude,
-              courierLongitude
-            );
+              const courierLatitude =
+                latestTracking?.latitude ?? order.courier_lat ?? null;
+              const courierLongitude =
+                latestTracking?.longitude ?? order.courier_lng ?? null;
 
-            const hasCustomerCoordinates = hasValidCoordinates(
-              order.delivery_lat,
-              order.delivery_lng
-            );
+              const hasCourierCoordinates = hasValidCoordinates(
+                courierLatitude,
+                courierLongitude
+              );
 
-            const shouldShowTrackingMap =
-              orderStage === ORDER_STATUS.DELIVERY &&
-              hasCourierCoordinates &&
-              hasCustomerCoordinates;
+              const hasCustomerCoordinates = hasValidCoordinates(
+                order.delivery_lat,
+                order.delivery_lng
+              );
 
-            return (
-              <div key={order.id} className={styles.orderRowCard}>
-                <div className={styles.orderRowMain}>
-                  <div className={styles.orderIdentity}>
-                    <strong className={styles.orderRowNumber}>
-                      Pedido #{String(order.id).slice(0, 8)}
-                    </strong>
+              const shouldShowTrackingMap =
+                orderStage === ORDER_STATUS.DELIVERY &&
+                hasCourierCoordinates &&
+                hasCustomerCoordinates;
 
-                    <span className={styles.orderRowDate}>
-                      {formatDate(order.created_at)}
-                    </span>
-                  </div>
+              const showChatButton = canOpenChat(order);
+              const unreadCount = unreadByOrderId[order.id] || 0;
+              const hasUnread = unreadCount > 0;
+              const isActiveChat = activeChatOrderId === order.id;
+              const isHighlighted = highlightedOrderIds[order.id] === true;
 
-                  <div className={styles.orderTimelineInline}>
-                    {timeline.map((step) => (
-                      <div key={step.key} className={styles.timelineInlineStep}>
-                        <div
-                          className={`${styles.timelineInlineDot} ${step.active ? styles.timelineInlineDotActive : ""
-                            } ${step.current ? styles.timelineInlineDotCurrent : ""
+              return (
+                <div
+                  key={order.id}
+                  className={`${styles.orderRowCard} ${
+                    isHighlighted ? styles.orderRowCardHighlighted : ""
+                  }`}
+                >
+                  <div className={styles.orderRowMain}>
+                    <div className={styles.orderIdentity}>
+                      <strong className={styles.orderRowNumber}>
+                        Pedido #{String(order.id).slice(0, 8)}
+                      </strong>
+
+                      <span className={styles.orderRowDate}>
+                        {formatDate(order.created_at)}
+                      </span>
+                    </div>
+
+                    <div className={styles.orderTimelineInline}>
+                      {timeline.map((step) => (
+                        <div key={step.key} className={styles.timelineInlineStep}>
+                          <div
+                            className={`${styles.timelineInlineDot} ${
+                              step.active ? styles.timelineInlineDotActive : ""
+                            } ${
+                              step.current ? styles.timelineInlineDotCurrent : ""
                             }`}
-                        >
-                          {step.active ? "✓" : ""}
-                        </div>
-
-                        <div className={styles.timelineInlineText}>
-                          <strong
-                            className={`${styles.timelineInlineLabel} ${step.active
-                                ? styles.timelineInlineLabelActive
-                                : ""
-                              }`}
                           >
-                            {step.label}
-                          </strong>
-
-                          {step.current ? (
-                            <span className={styles.timelineInlineCurrent}>
-                              Etapa atual do seu pedido
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className={styles.orderSummaryColumn}>
-                    <div className={styles.orderInfoMini}>
-                      <span className={styles.orderInfoMiniLabel}>
-                        Pagamento
-                      </span>
-                      <strong className={styles.orderInfoMiniValue}>
-                        {getPaymentStatusLabel(order)}
-                      </strong>
-                    </div>
-
-                    <div className={styles.orderInfoMini}>
-                      <span className={styles.orderInfoMiniLabel}>Entrega</span>
-                      <strong className={styles.orderInfoMiniValue}>
-                        {order.delivery_address
-                          ? `${order.delivery_address}, ${order.delivery_number || "s/n"
-                          }`
-                          : "Endereço não informado"}
-                      </strong>
-                    </div>
-
-                    <div className={styles.orderItemsMini}>
-                      <span className={styles.orderInfoMiniLabel}>
-                        Itens do pedido
-                      </span>
-
-                      {firstItem ? (
-                        <>
-                          <div className={styles.orderItemMiniTop}>
-                            <span>
-                              {firstItem.quantity}x {firstItem.name}
-                            </span>
-
-                            <strong>
-                              {formatPrice(
-                                Number(firstItem.unit_price) *
-                                firstItem.quantity
-                              )}
-                            </strong>
+                            {step.active ? "✓" : ""}
                           </div>
 
-                          {parseRemovedIngredients(
-                            firstItem.removed_ingredients
-                          ).length > 0 ? (
-                            <p className={styles.orderItemMiniNote}>
-                              {getRemovedIngredientsLabel(
-                                firstItem.removed_ingredients
-                              )}
-                            </p>
-                          ) : null}
+                          <div className={styles.timelineInlineText}>
+                            <strong
+                              className={`${styles.timelineInlineLabel} ${
+                                step.active
+                                  ? styles.timelineInlineLabelActive
+                                  : ""
+                              }`}
+                            >
+                              {step.label}
+                            </strong>
 
-                          {hasMoreItems ? (
-                            <span className={styles.orderItemMiniMore}>
-                              +{order.order_items.length - 1} item(ns)
-                            </span>
-                          ) : null}
-                        </>
-                      ) : (
+                            {step.current ? (
+                              <span className={styles.timelineInlineCurrent}>
+                                Etapa atual do seu pedido
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={styles.orderSummaryColumn}>
+                      <div className={styles.orderInfoMini}>
+                        <span className={styles.orderInfoMiniLabel}>
+                          Pagamento
+                        </span>
                         <strong className={styles.orderInfoMiniValue}>
-                          Nenhum item
+                          {getPaymentStatusLabel(order)}
                         </strong>
-                      )}
+                      </div>
+
+                      <div className={styles.orderInfoMini}>
+                        <span className={styles.orderInfoMiniLabel}>Entrega</span>
+                        <strong className={styles.orderInfoMiniValue}>
+                          {order.delivery_address
+                            ? `${order.delivery_address}, ${
+                                order.delivery_number || "s/n"
+                              }`
+                            : "Endereço não informado"}
+                        </strong>
+                      </div>
+
+                      <div className={styles.orderItemsMini}>
+                        <span className={styles.orderInfoMiniLabel}>
+                          Itens do pedido
+                        </span>
+
+                        {firstItem ? (
+                          <>
+                            <div className={styles.orderItemMiniTop}>
+                              <span>
+                                {firstItem.quantity}x {firstItem.name}
+                              </span>
+
+                              <strong>
+                                {formatPrice(
+                                  Number(firstItem.unit_price) *
+                                    firstItem.quantity
+                                )}
+                              </strong>
+                            </div>
+
+                            {parseRemovedIngredients(
+                              firstItem.removed_ingredients
+                            ).length > 0 ? (
+                              <p className={styles.orderItemMiniNote}>
+                                {getRemovedIngredientsLabel(
+                                  firstItem.removed_ingredients
+                                )}
+                              </p>
+                            ) : null}
+
+                            {hasMoreItems ? (
+                              <span className={styles.orderItemMiniMore}>
+                                +{order.order_items.length - 1} item(ns)
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <strong className={styles.orderInfoMiniValue}>
+                            Nenhum item
+                          </strong>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className={styles.orderRowSide}>
-                  <span className={styles.orderMethodPill}>
-                    {getPaymentLabel(order.payment_method)}
-                  </span>
+                  <div className={styles.orderRowSide}>
+                    <span className={styles.orderMethodPill}>
+                      {getPaymentLabel(order.payment_method)}
+                    </span>
 
-                  <strong className={styles.orderRowTotal}>
-                    {formatPrice(order.total)}
-                  </strong>
-                </div>
+                    <strong className={styles.orderRowTotal}>
+                      {formatPrice(order.total)}
+                    </strong>
 
-                {shouldShowTrackingMap ? (
-                  <div className={styles.orderTrackingMapSection}>
-                    <div className={styles.orderTrackingMapHeader}>
-                      <strong>Acompanhe seu pedido</strong>
-                      <span>
-                        O motoboy está a caminho do seu endereço.
-                      </span>
-                    </div>
+                    {showChatButton ? (
+                      <button
+                        type="button"
+                        className={`${styles.orderChatToggleButton} ${
+                          hasUnread ? styles.orderChatToggleButtonUnread : ""
+                        } ${
+                          isActiveChat ? styles.orderChatToggleButtonActive : ""
+                        }`}
+                        onClick={() => handleOpenChat(order.id)}
+                      >
+                        <span>{isActiveChat ? "Chat aberto" : "Abrir chat"}</span>
 
-                    <DeliveryRouteMap
-                      courierLatitude={courierLatitude}
-                      courierLongitude={courierLongitude}
-                      customerLatitude={order.delivery_lat}
-                      customerLongitude={order.delivery_lng}
-                      courierLabel="Seu entregador"
-                      customerLabel="Seu endereço"
-                      height={280}
-                      className={styles.deliveryMapWrap}
-                      metaClassName={styles.deliveryMapMeta}
-                      metaBadgeClassName={styles.mapMetaBadge}
-                      errorClassName={styles.mapError}
-                    />
+                        {hasUnread ? (
+                          <span className={styles.orderChatUnreadBadge}>
+                            {unreadCount}
+                          </span>
+                        ) : null}
+                      </button>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            );
-          })}
+
+                  {shouldShowTrackingMap ? (
+                    <div className={styles.orderTrackingMapSection}>
+                      <div className={styles.orderTrackingMapHeader}>
+                        <strong>Acompanhe seu pedido</strong>
+                        <span>
+                          O motoboy está a caminho do seu endereço.
+                        </span>
+                      </div>
+
+                      <DeliveryRouteMap
+                        courierLatitude={courierLatitude}
+                        courierLongitude={courierLongitude}
+                        customerLatitude={order.delivery_lat}
+                        customerLongitude={order.delivery_lng}
+                        courierLabel="Seu entregador"
+                        customerLabel="Seu endereço"
+                        height={280}
+                        className={styles.deliveryMapWrap}
+                        metaClassName={styles.deliveryMapMeta}
+                        metaBadgeClassName={styles.mapMetaBadge}
+                        errorClassName={styles.mapError}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </article>
+
+      {activeChatOrder ? (
+        <div className={styles.floatingChatWrap}>
+          <AccountOrderChat
+            orderId={activeChatOrder.id}
+            orderLabel={`Pedido #${String(activeChatOrder.id).slice(0, 8)}`}
+            onClose={handleCloseChat}
+            onIncomingMessage={() => handleIncomingMessage(activeChatOrder.id)}
+            onMarkAsRead={() => handleOpenChat(activeChatOrder.id)}
+          />
         </div>
-      )}
-    </article>
+      ) : null}
+    </>
   );
 }

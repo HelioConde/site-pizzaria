@@ -1,56 +1,117 @@
-.wrap{
+.wrap {
   padding: 24px 0;
 }
 
-.container{
+.container {
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 18px;
 }
 
-.head{ margin-bottom: 18px; }
-.title{ margin: 0; font-size: 34px; letter-spacing: -0.8px; }
-.subtitle{ margin: 6px 0 0; color: var(--muted); }
+.head {
+  margin-bottom: 18px;
+}
 
-.grid{
+.title {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: -0.8px;
+  color: var(--text);
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
-.card{
+.card {
   background: var(--surface);
-  border: 1px solid rgba(15, 23, 42, .10);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 18px;
   box-shadow: var(--shadow);
   padding: 18px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.icon{
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.1);
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.card:active {
+  transform: scale(0.99);
+}
+
+.icon {
   width: 44px;
   height: 44px;
+  margin-bottom: 10px;
   border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(239, 68, 68, .10);
-  border: 1px solid rgba(239, 68, 68, .14);
-  margin-bottom: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.14);
+  transition:
+    transform 0.18s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.cardTitle{
+.card:hover .icon {
+  transform: translateY(-1px) scale(1.04);
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.cardTitle {
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 900;
+  color: var(--text);
 }
 
-.cardDesc{
+.cardDesc {
   margin: 0;
-  color: rgba(71,85,105,.95);
+  color: rgba(71, 85, 105, 0.95);
   line-height: 1.55;
   font-size: 14px;
+  overflow-wrap: break-word;
 }
 
-@media (max-width: 980px){
-  .grid{ grid-template-columns: 1fr; }
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 20px 0;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
 }

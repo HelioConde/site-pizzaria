@@ -148,11 +148,9 @@
   gap: 8px;
   padding: 20px;
   border-radius: 22px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.95) 0%,
-    rgba(241, 245, 249, 0.95) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(248, 250, 252, 0.95) 0%,
+      rgba(241, 245, 249, 0.95) 100%);
   border: 1px dashed #cbd5e1;
 }
 
@@ -320,9 +318,7 @@
 .orderRowMain {
   display: grid;
   grid-template-columns:
-    minmax(145px, 170px)
-    minmax(210px, 240px)
-    minmax(240px, 1fr);
+    minmax(145px, 170px) minmax(210px, 240px) minmax(240px, 1fr);
   gap: 16px;
   align-items: start;
   min-width: 0;
@@ -530,6 +526,201 @@
   white-space: nowrap;
 }
 
+.orderChatToggleButton {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.orderChatToggleButton:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.orderChatSection {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.orderChatCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.orderChatHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.orderChatHeaderText {
+  display: grid;
+  gap: 4px;
+}
+
+.orderChatHeaderText strong {
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.orderChatHeaderText span {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.orderChatMessages {
+  max-height: 320px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  padding: 4px;
+}
+
+.orderChatEmptyState {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.orderChatEmptyState p {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.orderChatEmptyState span {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.orderChatBubble {
+  max-width: min(100%, 520px);
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+}
+
+.orderChatBubbleCustomer {
+  justify-self: end;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.orderChatBubbleStore {
+  justify-self: start;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.orderChatBubbleMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.orderChatBubbleMeta strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.orderChatBubbleMeta span {
+  color: #64748b;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.orderChatBubbleText {
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.orderChatForm {
+  display: grid;
+  gap: 12px;
+}
+
+.orderChatInput {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.orderChatInput:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.orderChatActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.orderChatFeedback {
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.orderChatError {
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.orderChatSendButton {
+  border: 0;
+  border-radius: 14px;
+  background: #ef4444;
+  color: #fff;
+  padding: 11px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.orderChatSendButton:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.orderChatSendButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .orderTrackingMapSection {
   width: 100%;
   margin-top: 18px;
@@ -539,6 +730,7 @@
   justify-content: center;
   flex-direction: column;
   align-items: center;
+  grid-column: 1 / -1;
 }
 
 .orderTrackingMapHeader {
@@ -580,6 +772,348 @@
   color: #dc2626;
   margin-bottom: 12px;
   font-size: 0.92rem;
+}
+
+.orderChatToggleButton {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.orderChatToggleButton:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.orderChatToggleButtonUnread {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.orderChatUnreadDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.floatingChatWrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 390px;
+  max-width: calc(100vw - 24px);
+  z-index: 1400;
+}
+
+.floatingChatCard {
+  display: grid;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 22px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.floatingChatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
+  border-bottom: 1px solid #eef2f7;
+}
+
+.floatingChatHeaderText {
+  display: grid;
+  gap: 2px;
+}
+
+.floatingChatHeaderText strong {
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.floatingChatHeaderText span {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.floatingChatCloseButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.floatingChatCloseButton:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.floatingChatMessages {
+  max-height: 360px;
+  min-height: 220px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+
+.floatingChatForm {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.orderChatToggleButtonActive {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.orderChatToggleButtonUnread {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.orderChatUnreadDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.orderRowCardHighlighted {
+  border-color: #fca5a5;
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.12),
+    0 18px 40px rgba(15, 23, 42, 0.08);
+  animation: accountOrderPulse 1.8s ease;
+}
+
+@keyframes accountOrderPulse {
+  0% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-2px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.orderChatToggleButton {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.orderChatToggleButton:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.orderChatToggleButtonActive {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.orderChatToggleButtonUnread {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.orderChatUnreadBadge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.floatingChatWrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 390px;
+  max-width: calc(100vw - 24px);
+  z-index: 1400;
+}
+
+.floatingChatCard {
+  display: grid;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 22px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.floatingChatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
+  border-bottom: 1px solid #eef2f7;
+}
+
+.floatingChatHeaderText {
+  display: grid;
+  gap: 2px;
+}
+
+.floatingChatHeaderText strong {
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.floatingChatHeaderText span {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.floatingChatCloseButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.floatingChatCloseButton:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.floatingChatMessages {
+  max-height: 360px;
+  min-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+
+.floatingChatForm {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.orderChatBubble {
+  max-width: 85%;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+}
+
+.orderChatBubbleCustomer {
+  align-self: flex-end;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.orderChatBubbleStore {
+  align-self: flex-start;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+@media (max-width: 760px) {
+  .floatingChatWrap {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    max-width: none;
+  }
+
+  .floatingChatMessages {
+    max-height: 300px;
+    min-height: 180px;
+  }
+
+  .orderChatActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .orderChatSendButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .orderChatBubble {
+    max-width: 92%;
+  }
+}
+
+@media (max-width: 760px) {
+  .floatingChatWrap {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    max-width: none;
+  }
+
+  .floatingChatMessages {
+    max-height: 300px;
+    min-height: 180px;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -652,6 +1186,15 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .orderChatActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .orderChatSendButton {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -674,5 +1217,9 @@
     width: 46px;
     height: 46px;
     font-size: 18px;
+  }
+
+  .orderChatBubble {
+    max-width: 100%;
   }
 }

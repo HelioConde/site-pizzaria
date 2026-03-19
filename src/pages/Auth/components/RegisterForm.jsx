@@ -1,5 +1,10 @@
-import styles from "../Auth.module.css";
+import { useMemo, useState } from "react";
 import Button from "../../../components/ui/Button/Button";
+import styles from "../Auth.module.css";
+import {
+  getPasswordChecklist,
+  getPasswordStrength,
+} from "../auth.utils";
 
 export default function RegisterForm({
   form,
@@ -11,6 +16,33 @@ export default function RegisterForm({
   onBlur,
   onSubmit,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(form.password),
+    [form.password]
+  );
+
+  const passwordChecklist = useMemo(
+    () => getPasswordChecklist(form.password),
+    [form.password]
+  );
+
+  const strengthClass =
+    passwordStrength.level === "strong"
+      ? styles.passwordStrengthValueStrong
+      : passwordStrength.level === "medium"
+        ? styles.passwordStrengthValueMedium
+        : styles.passwordStrengthValueWeak;
+
+  const barClass =
+    passwordStrength.level === "strong"
+      ? styles.passwordBarStrong
+      : passwordStrength.level === "medium"
+        ? styles.passwordBarMedium
+        : styles.passwordBarWeak;
+
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
       <div className={styles.formGrid}>
@@ -43,6 +75,10 @@ export default function RegisterForm({
             onBlur={onBlur}
             placeholder="(61) 99999-9999"
             autoComplete="tel"
+            inputMode="tel"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
             required
             aria-invalid={touched.phone && !!errors.phone}
           />
@@ -61,6 +97,10 @@ export default function RegisterForm({
             onBlur={onBlur}
             placeholder="00000-000"
             autoComplete="postal-code"
+            inputMode="numeric"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
             aria-invalid={touched.cep && !!errors.cep}
           />
           {touched.cep && errors.cep ? (
@@ -131,6 +171,10 @@ export default function RegisterForm({
             onBlur={onBlur}
             placeholder="DF"
             autoComplete="address-level1"
+            inputMode="text"
+            spellCheck={false}
+            autoCapitalize="characters"
+            autoCorrect="off"
             required
             maxLength={2}
             aria-invalid={touched.state && !!errors.state}
@@ -148,7 +192,8 @@ export default function RegisterForm({
             value={form.number}
             onChange={onChange}
             onBlur={onBlur}
-            placeholder="123"
+            placeholder="Ex: 123, 123A ou S/N"
+            inputMode="text"
             autoComplete="address-line2"
             required
             aria-invalid={touched.number && !!errors.number}
@@ -190,34 +235,133 @@ export default function RegisterForm({
             value={form.email}
             onChange={onChange}
             onBlur={onBlur}
-            placeholder="exemplo@gmail.com"
+            placeholder="seuemail@provedor.com"
             autoComplete="email"
+            inputMode="email"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
             required
             aria-invalid={touched.email && !!errors.email}
           />
           {touched.email && errors.email ? (
             <small className={styles.errorText}>{errors.email}</small>
-          ) : null}
+          ) : (
+            <small className={styles.helperText}>
+              Use um e-mail real. Evite endereços genéricos ou temporários.
+            </small>
+          )}
         </label>
 
-        <label className={styles.field}>
-          <span>Senha</span>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={onChange}
-            onBlur={onBlur}
-            placeholder="Mínimo 6 caracteres"
-            autoComplete="new-password"
-            required
-            minLength={6}
-            aria-invalid={touched.password && !!errors.password}
-          />
-          {touched.password && errors.password ? (
-            <small className={styles.errorText}>{errors.password}</small>
-          ) : null}
-        </label>
+        <div className={styles.passwordBox}>
+          <label className={styles.field}>
+            <span>Senha</span>
+            <div className={`${styles.inputWrap} ${styles.hasToggle}`}>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={onChange}
+                onBlur={onBlur}
+                placeholder="Crie uma senha forte"
+                autoComplete="new-password"
+                spellCheck={false}
+                autoCapitalize="none"
+                autoCorrect="off"
+                required
+                minLength={8}
+                aria-invalid={touched.password && !!errors.password}
+              />
+              <button
+                type="button"
+                className={styles.togglePasswordBtn}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+
+
+            {touched.password && errors.password ? (
+              <small className={styles.errorText}>{errors.password}</small>
+            ) : (
+              <small className={styles.helperText}>
+                Combine letras maiúsculas, minúsculas, números e símbolos.
+              </small>
+            )}
+          </label>
+
+          <div className={styles.passwordStrength}>
+            <div className={styles.passwordStrengthTop}>
+              <span className={styles.passwordStrengthLabel}>
+                Força da senha
+              </span>
+              <span className={`${styles.passwordStrengthValue} ${strengthClass}`}>
+                {passwordStrength.label}
+              </span>
+            </div>
+
+            <div className={styles.passwordBar}>
+              <div className={`${styles.passwordBarFill} ${barClass}`} />
+            </div>
+
+            <ul className={styles.passwordTips}>
+              {passwordChecklist.map((item) => (
+                <li
+                  key={item.key}
+                  className={`${styles.passwordTip} ${item.valid
+                    ? styles.passwordTipValid
+                    : styles.passwordTipInvalid
+                    }`}
+                >
+                  {item.valid ? "✓" : "•"} {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <label className={styles.field}>
+            <span>Confirmar senha</span>
+            <div className={`${styles.inputWrap} ${styles.hasToggle}`}>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={onChange}
+                onBlur={onBlur}
+                placeholder="Digite a senha novamente"
+                autoComplete="new-password"
+                spellCheck={false}
+                autoCapitalize="none"
+                autoCorrect="off"
+                required
+                minLength={8}
+                aria-invalid={touched.confirmPassword && !!errors.confirmPassword}
+              />
+              <button
+                type="button"
+                className={styles.togglePasswordBtn}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={
+                  showConfirmPassword
+                    ? "Ocultar confirmação de senha"
+                    : "Mostrar confirmação de senha"
+                }
+              >
+                {showConfirmPassword ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+            {touched.confirmPassword && errors.confirmPassword ? (
+              <small className={styles.errorText}>{errors.confirmPassword}</small>
+            ) : (
+              <small className={styles.helperText}>
+                Repita exatamente a mesma senha.
+              </small>
+            )}
+          </label>
+        </div>
+
       </div>
 
       <Button

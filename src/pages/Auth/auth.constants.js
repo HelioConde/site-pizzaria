@@ -17,6 +17,7 @@ export const initialRegisterForm = {
   reference: "",
   email: "",
   password: "",
+  confirmPassword: "",
 };
 
 export const initialLoginForm = {
@@ -35,6 +36,7 @@ export const initialRegisterTouched = {
   number: false,
   email: false,
   password: false,
+  confirmPassword: false,
 };
 
 export const initialLoginTouched = {

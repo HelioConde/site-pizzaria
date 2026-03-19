@@ -45,13 +45,24 @@
   border: 1px solid #e2e8f0;
   text-decoration: none;
   font-weight: 700;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
 }
 
 .backBtn:hover {
   background: #fff1f2;
   color: #ef4444;
   border-color: #fecdd3;
+  transform: translateY(-1px);
+}
+
+.backBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .kicker {
@@ -198,13 +209,23 @@
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
   white-space: nowrap;
 }
 
 .changeModeBtn:hover {
   background: #fee2e2;
   border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.changeModeBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .choiceGrid {
@@ -223,7 +244,10 @@
   display: grid;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   text-decoration: none;
 }
 
@@ -231,6 +255,11 @@
   transform: translateY(-2px);
   border-color: #fecaca;
   box-shadow: 0 12px 24px rgba(239, 68, 68, 0.08);
+}
+
+.choiceCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .choiceIcon {
@@ -274,12 +303,16 @@
   border: 1px solid #dbe3ef;
   border-radius: 24px;
   padding: 20px 22px;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
 .addressCard:hover {
   border-color: #ffb4ae;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  transform: translateY(-1px);
 }
 
 .addressCardActive {
@@ -342,12 +375,18 @@
   font-size: 1rem;
   color: #0f172a;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
     transform 0.15s ease;
 }
 
 .field input::placeholder {
   color: #94a3b8;
+}
+
+.field input:hover {
+  border-color: #b7c4d6;
 }
 
 .field input:focus {
@@ -543,7 +582,6 @@
   gap: 24px;
 }
 
-
 @media (max-width: 900px) {
   .containerGrid {
     grid-template-columns: 1fr;
@@ -577,13 +615,12 @@
     justify-content: stretch;
   }
 
-  .formActions>* {
+  .formActions > * {
     width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-
   .topBar,
   .hero,
   .content {
@@ -623,7 +660,7 @@
     justify-content: stretch;
   }
 
-  .mapToggleActions>* {
+  .mapToggleActions > * {
     width: 100%;
   }
 }

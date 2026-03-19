@@ -366,14 +366,7 @@ export default function Admin() {
   useEffect(() => {
     if (!hasAccess) return;
 
-    function isOrderReadyForAdmin(order) {
-      return (
-        order?.payment_status === PAYMENT_STATUS.PAID ||
-        order?.payment_status === PAYMENT_STATUS.DELIVERY_PAYMENT
-      );
-    }
-
-    function notifyNewReadyOrder(order) {
+    function notifyNewOrder(order) {
       setMessage(`Novo pedido recebido de ${order.customer_name || "Cliente"}.`);
       playNotificationSound();
       showBrowserNotification(order);
@@ -397,9 +390,7 @@ export default function Admin() {
 
           if (alreadyKnown) return;
 
-          if (isOrderReadyForAdmin(newOrder)) {
-            notifyNewReadyOrder(newOrder);
-          }
+          notifyNewOrder(newOrder);
         }
       )
       .on(
@@ -409,18 +400,8 @@ export default function Admin() {
           schema: "public",
           table: "orders",
         },
-        async (payload) => {
-          const oldOrder = payload.old;
-          const newOrder = payload.new;
-
-          const wasReady = isOrderReadyForAdmin(oldOrder);
-          const isReady = isOrderReadyForAdmin(newOrder);
-
+        async () => {
           await loadOrders();
-
-          if (!wasReady && isReady) {
-            notifyNewReadyOrder(newOrder);
-          }
         }
       )
       .subscribe((status) => {

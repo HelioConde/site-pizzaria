@@ -15,6 +15,7 @@ export default function ProductModal({
   onClose,
   onConfirm,
   formatPrice,
+  maxNotesLength = 220,
 }) {
   if (!open || !product) return null;
 
@@ -30,6 +31,8 @@ export default function ProductModal({
         className={styles.productModal}
         onClick={(e) => e.stopPropagation()}
         aria-label="Personalizar produto"
+        role="dialog"
+        aria-modal="true"
       >
         <div className={styles.productModalHead}>
           <div>
@@ -98,8 +101,13 @@ export default function ProductModal({
                 : "Ex: bem gelado, sem gelo, enviar colher..."
             }
             value={notes}
+            maxLength={maxNotesLength}
             onChange={(e) => setNotes(e.target.value)}
           />
+
+          <span className={styles.notesHint}>
+            {notes.length}/{maxNotesLength} caracteres
+          </span>
         </div>
 
         <div className={styles.productModalActions}>

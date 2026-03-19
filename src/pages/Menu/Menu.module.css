@@ -52,7 +52,14 @@
   font: inherit;
   color: #0f172a;
   outline: none;
-  transition: 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.searchInput:hover {
+  border-color: #c6d2e2;
 }
 
 .searchInput:focus {
@@ -70,6 +77,22 @@
   font: inherit;
   cursor: pointer;
   color: #64748b;
+  border-radius: 10px;
+  padding: 4px 6px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.searchClear:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+
+.searchClear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .filtersSection {
@@ -99,11 +122,22 @@
   padding: 12px 18px;
   border-radius: 999px;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .filterBtn:hover {
   transform: translateY(-1px);
+  border-color: #fecdd3;
+}
+
+.filterBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .filterActive {
@@ -146,12 +180,16 @@
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+  border-color: rgba(239, 68, 68, 0.18);
 }
 
 .imageWrap {
@@ -243,12 +281,23 @@
   color: #fff;
   box-shadow: 0 18px 40px rgba(239, 68, 68, 0.28);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease,
+    filter 0.2s ease;
 }
 
 .floatingCart:hover {
   transform: translateY(-2px);
   box-shadow: 0 22px 46px rgba(239, 68, 68, 0.34);
+}
+
+.floatingCart:focus-visible {
+  outline: none;
+  box-shadow:
+    0 22px 46px rgba(239, 68, 68, 0.34),
+    0 0 0 4px rgba(239, 68, 68, 0.16);
 }
 
 .floatingCartIcon {
@@ -298,6 +347,7 @@
 
 .floatingCartEmpty {
   opacity: 0.9;
+  filter: saturate(0.85);
 }
 
 .drawerOverlay {
@@ -364,6 +414,23 @@
   cursor: pointer;
   font-size: 1rem;
   flex-shrink: 0;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.closeBtn:hover {
+  background: #eef2f7;
+}
+
+.closeBtn:active {
+  transform: scale(0.97);
+}
+
+.closeBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
 }
 
 .emptyCart {
@@ -468,6 +535,13 @@
   font-size: 1rem;
   font-weight: 700;
   color: #0f172a;
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+
+.qtyBox button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .qtyBox span {
@@ -482,6 +556,12 @@
   color: #ef4444;
   cursor: pointer;
   font-weight: 600;
+}
+
+.removeBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  border-radius: 8px;
 }
 
 .summary {
@@ -589,11 +669,20 @@
   font: inherit;
   color: #0f172a;
   outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .notesField:focus {
   border-color: #f87171;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.notesHint {
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .productModalActions {

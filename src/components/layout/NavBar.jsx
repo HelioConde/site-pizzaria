@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useId, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import useAuthRole from "../../hooks/useAuthRole";
 
@@ -17,14 +17,19 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const accountRef = useRef(null);
+  const mobileMenuId = useId();
+  const accountMenuId = useId();
+
   const { isAuthenticated, userRole } = useAuthRole();
 
   function getAccountRoute() {
     if (!isAuthenticated) return "/auth";
-    if (userRole === "admin") return "/admin";
+    if (userRole === "admin") return "/admin/dashboard";
     if (userRole === "delivery") return "/motoboy";
     return "/account";
   }
@@ -47,23 +52,41 @@ export default function Navbar() {
     };
 
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
+
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
   useEffect(() => {
-    async function getSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    let isMounted = true;
 
-      setUser(session?.user ?? null);
+    async function getSession() {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!isMounted) return;
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error("Erro ao obter sessão no Navbar:", error);
+
+        if (!isMounted) return;
+        setUser(null);
+      }
     }
 
     getSession();
@@ -71,33 +94,71 @@ export default function Navbar() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+
       setUser(session?.user ?? null);
       setAccountOpen(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (accountRef.current && !accountRef.current.contains(event.target)) {
+      if (!accountRef.current) return;
+
+      if (!accountRef.current.contains(event.target)) {
         setAccountOpen(false);
       }
     }
 
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setAccountOpen(false);
+        setOpen(false);
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    setUser(null);
-    setAccountOpen(false);
+  useEffect(() => {
     setOpen(false);
-    navigate("/", { replace: true });
+    setAccountOpen(false);
+  }, [location.pathname, location.hash]);
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    try {
+      setIsLoggingOut(true);
+
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
+      setUser(null);
+      setAccountOpen(false);
+      setOpen(false);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Erro ao sair da conta:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   function getNavTo(section) {
@@ -117,7 +178,7 @@ export default function Navbar() {
   }
 
   const userName =
-    user?.user_metadata?.name ||
+    user?.user_metadata?.name?.trim() ||
     user?.email?.split("@")[0] ||
     "Cliente";
 
@@ -153,6 +214,7 @@ export default function Navbar() {
                 onClick={() => setAccountOpen((prev) => !prev)}
                 aria-haspopup="menu"
                 aria-expanded={accountOpen}
+                aria-controls={accountOpen ? accountMenuId : undefined}
               >
                 {accountLabel}
                 <span
@@ -166,7 +228,11 @@ export default function Navbar() {
               </button>
 
               {accountOpen && (
-                <div className={styles.accountDropdown} role="menu">
+                <div
+                  id={accountMenuId}
+                  className={styles.accountDropdown}
+                  role="menu"
+                >
                   <div className={styles.accountHeader}>
                     <strong className={styles.accountName}>{userName}</strong>
                     <span className={styles.accountEmail}>{user?.email}</span>
@@ -186,8 +252,9 @@ export default function Navbar() {
                     className={styles.accountDropdownItem}
                     onClick={handleLogout}
                     role="menuitem"
+                    disabled={isLoggingOut}
                   >
-                    Sair da conta
+                    {isLoggingOut ? "Saindo..." : "Sair da conta"}
                   </button>
                 </div>
               )}
@@ -219,7 +286,8 @@ export default function Navbar() {
             type="button"
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            aria-controls={mobileMenuId}
+            onClick={() => setOpen((prev) => !prev)}
           >
             <span className={styles.burgerLine} />
             <span className={styles.burgerLine} />
@@ -228,7 +296,11 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className={`${styles.mobile} ${open ? styles.open : ""}`}>
+      <div
+        id={mobileMenuId}
+        className={`${styles.mobile} ${open ? styles.open : ""}`}
+        aria-hidden={!open}
+      >
         <div className={styles.mobilePanel}>
           {links.map((item) => (
             <Link
@@ -252,7 +324,10 @@ export default function Navbar() {
               <Link
                 to={accountRoute}
                 className={styles.mobileAccountLink}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  setAccountOpen(false);
+                }}
               >
                 {accountLabel}
               </Link>
@@ -261,8 +336,9 @@ export default function Navbar() {
                 type="button"
                 className={styles.mobileLogout}
                 onClick={handleLogout}
+                disabled={isLoggingOut}
               >
-                Sair da conta
+                {isLoggingOut ? "Saindo..." : "Sair da conta"}
               </button>
             </div>
           ) : (

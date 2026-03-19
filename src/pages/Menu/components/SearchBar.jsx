@@ -9,6 +9,11 @@ export default function SearchBar({ value, onChange, onClear }) {
         placeholder="Buscar pizza ou ingrediente..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        inputMode="search"
+        spellCheck={false}
+        autoCapitalize="none"
+        autoCorrect="off"
+        aria-label="Buscar produtos do cardápio"
       />
 
       {value ? (
