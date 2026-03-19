@@ -1,15 +1,28 @@
 import { Link } from "react-router-dom";
 import styles from "./Highlights.module.css";
 
+const backgroundImageSrc = `${import.meta.env.BASE_URL}images/pizzaria-bg.png`;
+
 function formatPrice(value) {
+  if (value == null || value === "") return null;
+
   const numericValue = Number(value);
 
   if (!Number.isFinite(numericValue)) return null;
+  if (numericValue < 0) return null;
 
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   }).format(numericValue);
+}
+
+function hasValidOldPrice(value) {
+  if (value == null || value === "") return false;
+
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) && numericValue > 0;
 }
 
 function normalizeRating(value) {
@@ -62,11 +75,15 @@ function ItemCard({ item, badgeText }) {
       : "Descrição indisponível no momento.";
 
   const safeBadge =
-    typeof badgeText === "string" && badgeText.trim() ? badgeText.trim() : "Top";
+    typeof badgeText === "string" && badgeText.trim()
+      ? badgeText.trim()
+      : "Top";
 
   const productTarget = item?.slug || item?.id || null;
   const safePrice = formatPrice(item?.price);
-  const safeOldPrice = formatPrice(item?.oldPrice);
+  const safeOldPrice = hasValidOldPrice(item?.oldPrice)
+    ? formatPrice(item?.oldPrice)
+    : null;
 
   return (
     <Link
@@ -79,14 +96,14 @@ function ItemCard({ item, badgeText }) {
         <div className={styles.thumb} aria-hidden="true">
           <div className={styles.thumbFrame}>
             <img
-              src="./images/pizzaria-bg.png"
+              src={backgroundImageSrc}
               alt=""
               className={styles.thumbBg}
               loading="lazy"
             />
           </div>
 
-          {item?.image ? (
+          {typeof item?.image === "string" && item.image.trim() ? (
             <img
               src={item.image}
               alt={safeName}
@@ -127,87 +144,75 @@ function ItemCard({ item, badgeText }) {
   );
 }
 
-export default function Highlights({ data, products = [] }) {
-  if (!data || typeof data !== "object") return null;
-
-  const title =
-    typeof data.title === "string" && data.title.trim()
-      ? data.title.trim()
-      : "Destaques";
-
-  const subtitle =
-    typeof data.subtitle === "string" && data.subtitle.trim()
-      ? data.subtitle.trim()
-      : "";
-
+export default function Highlights({ products = [] }) {
   const safeProducts = Array.isArray(products) ? products.filter(Boolean) : [];
 
-  const productsByKey = Object.fromEntries(
-    safeProducts.flatMap((product) => {
-      const entries = [];
+  const activeProducts = safeProducts.filter((product) => product?.active);
 
-      if (product?.id) {
-        entries.push([product.id, product]);
-      }
+  const bestSellers = [...activeProducts]
+    .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+    .slice(0, 2);
 
-      if (product?.slug) {
-        entries.push([product.slug, product]);
-      }
+  const promotions = activeProducts
+    .filter((product) => hasValidOldPrice(product?.oldPrice))
+    .slice(0, 2);
 
-      return entries;
-    })
-  );
-
-  const groups = (Array.isArray(data.groups) ? data.groups : []).map(
-    (group, groupIndex) => ({
-      id: group?.id ?? `highlight-group-${groupIndex}`,
-      title:
-        typeof group?.title === "string" && group.title.trim()
-          ? group.title.trim()
-          : `Grupo ${groupIndex + 1}`,
-      badge:
-        typeof group?.badge === "string" && group.badge.trim()
-          ? group.badge.trim()
-          : "Top",
-      resolvedItems: (Array.isArray(group?.items) ? group.items : [])
-        .map((itemKey) => productsByKey[itemKey])
-        .filter(Boolean),
-    })
-  );
-
-  const visibleGroups = groups.filter((group) => group.resolvedItems.length > 0);
-
-  if (!visibleGroups.length) return null;
+  if (!bestSellers.length && !promotions.length) {
+    return null;
+  }
 
   return (
-    <section className={styles.wrap} aria-label={title}>
+    <section className={styles.wrap} aria-label="Destaques">
       <div className={styles.container}>
         <header className={styles.head}>
-          <h2 className={styles.title}>{title}</h2>
-          {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+          <h2 className={styles.title}>Destaques</h2>
+          <p className={styles.subtitle}>
+            Os sabores mais pedidos e as melhores promoções do momento.
+          </p>
         </header>
 
         <div className={styles.grid}>
-          {visibleGroups.map((group, index) => (
-            <div className={styles.panel} key={group.id}>
+          {bestSellers.length > 0 ? (
+            <div className={styles.panel}>
               <div className={styles.panelHead}>
                 <span className={styles.panelIcon} aria-hidden="true">
-                  {index === 0 ? "🍕" : "🔥"}
+                  🍕
                 </span>
-                <h3 className={styles.panelTitle}>{group.title}</h3>
+                <h3 className={styles.panelTitle}>Mais vendidos</h3>
               </div>
 
               <div className={styles.list}>
-                {group.resolvedItems.map((item, itemIndex) => (
+                {bestSellers.map((item, index) => (
                   <ItemCard
-                    key={item?.id ?? item?.slug ?? `${group.id}-item-${itemIndex}`}
+                    key={item?.id ?? item?.slug ?? `best-seller-${index}`}
                     item={item}
-                    badgeText={group.badge}
+                    badgeText="Top"
                   />
                 ))}
               </div>
             </div>
-          ))}
+          ) : null}
+
+          {promotions.length > 0 ? (
+            <div className={styles.panel}>
+              <div className={styles.panelHead}>
+                <span className={styles.panelIcon} aria-hidden="true">
+                  🔥
+                </span>
+                <h3 className={styles.panelTitle}>Promoções</h3>
+              </div>
+
+              <div className={styles.list}>
+                {promotions.map((item, index) => (
+                  <ItemCard
+                    key={item?.id ?? item?.slug ?? `promotion-${index}`}
+                    item={item}
+                    badgeText="Promo"
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

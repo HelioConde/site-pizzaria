@@ -22,12 +22,96 @@ import ProtectedRoute from "./components/routes/ProtectedRoute";
 import useAuthRole from "./hooks/useAuthRole";
 import { supabase } from "./lib/supabase";
 
-import db from "./data/db.json";
 import styles from "./App.module.css";
+
+const homeSections = {
+  carousel: [
+    {
+      id: "hero-1",
+      title: "Pizzas com pedido rápido e experiência moderna",
+      subtitle:
+        "Monte seu pedido, acompanhe a entrega e finalize tudo de forma simples.",
+      ctaLabel: "Fazer pedido",
+      ctaTo: "/menu",
+      secondaryCtaLabel: "Saiba mais",
+      secondaryCtaTo: "/#como-funciona",
+    },
+    {
+      id: "hero-2",
+      title: "Acompanhe seu pedido com mais praticidade",
+      subtitle:
+        "Uma experiência pensada para facilitar o pedido, o pagamento e a entrega.",
+      ctaLabel: "Ver cardápio",
+      ctaTo: "/menu",
+      secondaryCtaLabel: "Avaliações",
+      secondaryCtaTo: "/#depoimentos",
+    },
+    {
+      id: "hero-3",
+      title: "Sua pizzaria digital com visual moderno",
+      subtitle:
+        "Projeto com foco em performance, usabilidade e fluxo de compra intuitivo.",
+      ctaLabel: "Explorar menu",
+      ctaTo: "/menu",
+      secondaryCtaLabel: "Como funciona",
+      secondaryCtaTo: "/#como-funciona",
+    },
+  ],
+  howItWorks: {
+    title: "Como funciona",
+    subtitle: "Seu pedido em poucos passos.",
+    steps: [
+      {
+        id: "step-1",
+        icon: "cart",
+        title: "Escolha sua pizza",
+        description: "Abra o cardápio e selecione seus sabores favoritos.",
+      },
+      {
+        id: "step-2",
+        icon: "slice",
+        title: "Finalize o pedido",
+        description: "Informe seu endereço e escolha a forma de pagamento.",
+      },
+      {
+        id: "step-3",
+        icon: "bike",
+        title: "Receba em casa",
+        description: "Acompanhe o preparo e a entrega do seu pedido.",
+      },
+    ],
+  },
+  testimonials: {
+    title: "Avaliações",
+    subtitle: "O que nossos clientes acham da experiência.",
+    items: [
+      {
+        id: "testimonial-1",
+        name: "Cliente Base",
+        city: "Brasília - DF",
+        rating: 5,
+        text: "Pedido rápido, visual bonito e experiência muito boa no celular.",
+      },
+      {
+        id: "testimonial-2",
+        name: "Cliente Premium",
+        city: "Brasília - DF",
+        rating: 5,
+        text: "Fluxo de compra simples e acompanhamento bem organizado.",
+      },
+    ],
+  },
+  footer: {
+    credits: {
+      author: "Hélio Conde",
+      note: "Projeto de portfólio.",
+    },
+  },
+};
 
 function normalizeHomeProduct(product) {
   return {
-    id: product.id,
+    id: product.product_id ?? product.id,
     slug: product.slug,
     name: product.name,
     description: product.description,
@@ -38,6 +122,8 @@ function normalizeHomeProduct(product) {
     image: product.image_url || null,
     active: !!product.is_active,
     hero: !!product.is_featured,
+    sortOrder: Number(product.sort_order || 0),
+    totalSold: Number(product.total_sold || 0),
   };
 }
 
@@ -62,7 +148,6 @@ function NotFoundPage() {
 }
 
 function Home() {
-  const { sections } = db;
   const [products, setProducts] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState("");
@@ -77,10 +162,10 @@ function Home() {
           setIsLoadingProducts(true);
         }
 
-        const { data, error } = await supabase
-          .from("products")
+        const { data: salesData, error: salesError } = await supabase
+          .from("product_sales_summary")
           .select(`
-            id,
+            product_id,
             slug,
             name,
             description,
@@ -92,29 +177,62 @@ function Home() {
             is_active,
             is_featured,
             sort_order,
-            created_at
+            total_sold
           `)
           .eq("is_active", true)
-          .eq("is_featured", true)
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: true });
+          .order("total_sold", { ascending: false })
+          .limit(2);
 
-        if (error) {
-          throw error;
+        if (salesError) throw salesError;
+
+        let finalProducts = (salesData ?? []).map(normalizeHomeProduct);
+
+        if (finalProducts.length < 2) {
+          const { data: featuredData, error: featuredError } = await supabase
+            .from("products")
+            .select(`
+              id,
+              slug,
+              name,
+              description,
+              price,
+              old_price,
+              rating,
+              tag,
+              image_url,
+              is_active,
+              is_featured,
+              sort_order
+            `)
+            .eq("is_active", true)
+            .eq("is_featured", true)
+            .order("sort_order", { ascending: true })
+            .limit(4);
+
+          if (featuredError) throw featuredError;
+
+          const fallbackProducts = (featuredData ?? []).map(normalizeHomeProduct);
+          const existingIds = new Set(finalProducts.map((product) => product.id));
+
+          for (const product of fallbackProducts) {
+            if (!existingIds.has(product.id)) {
+              finalProducts.push(product);
+            }
+
+            if (finalProducts.length >= 2) break;
+          }
         }
 
         if (!isMounted) return;
 
-        setProducts((data ?? []).map(normalizeHomeProduct));
+        setProducts(finalProducts);
       } catch (error) {
-        console.error("Erro ao carregar destaques da home:", error);
+        console.error("Erro ao carregar home:", error);
 
         if (!isMounted) return;
 
         setProducts([]);
-        setProductsError(
-          "Não foi possível carregar os produtos em destaque no momento."
-        );
+        setProductsError("Erro ao carregar produtos.");
       } finally {
         if (isMounted) {
           setIsLoadingProducts(false);
@@ -124,34 +242,18 @@ function Home() {
 
     loadHighlightProducts();
 
-    const channel = supabase
-      .channel("home-highlights-products")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "products",
-        },
-        () => {
-          loadHighlightProducts();
-        }
-      )
-      .subscribe();
-
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
     };
   }, []);
 
   return (
     <>
       <main id="inicio">
-        <Carousel slides={sections.carousel} />
+        <Carousel slides={homeSections.carousel} />
 
         <section id="destaques" aria-busy={isLoadingProducts}>
-          <Highlights data={sections.highlights} products={products} />
+          <Highlights products={products} />
 
           {!isLoadingProducts && productsError ? (
             <div className={styles.highlightError}>{productsError}</div>
@@ -159,11 +261,11 @@ function Home() {
         </section>
 
         <section id="como-funciona">
-          <HowItWorks data={sections.howItWorks} />
+          <HowItWorks data={homeSections.howItWorks} />
         </section>
 
         <section id="depoimentos">
-          <Testimonials data={sections.testimonials} />
+          <Testimonials data={homeSections.testimonials} />
         </section>
 
         <section id="fazer-pedido">
@@ -171,7 +273,7 @@ function Home() {
         </section>
       </main>
 
-      <Footer store={db.store} footer={sections.footer} />
+      <Footer footer={homeSections.footer} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Account.module.css";
@@ -169,7 +169,7 @@ export default function Account() {
     };
   }, []);
 
-  async function loadAddresses(userId) {
+  const loadAddresses = useCallback(async (userId) => {
     setAddressesLoading(true);
 
     try {
@@ -188,9 +188,9 @@ export default function Account() {
     } finally {
       setAddressesLoading(false);
     }
-  }
+  }, []);
 
-  async function loadOrders(userId) {
+  const loadOrders = useCallback(async (userId) => {
     setOrdersLoading(true);
 
     try {
@@ -243,7 +243,7 @@ export default function Account() {
     } finally {
       setOrdersLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -251,21 +251,24 @@ export default function Account() {
     async function loadSession() {
       try {
         const {
-          data: { session },
-        } = await supabase.auth.getSession();
+          data: { user: currentUser },
+          error,
+        } = await supabase.auth.getUser();
 
-        if (!session) {
+        if (error) throw error;
+
+        if (!currentUser) {
           navigate("/auth", { replace: true, state: { from: "/account" } });
           return;
         }
 
         if (!active) return;
 
-        setUser(session.user);
+        setUser(currentUser);
 
         await Promise.all([
-          loadAddresses(session.user.id),
-          loadOrders(session.user.id),
+          loadAddresses(currentUser.id),
+          loadOrders(currentUser.id),
         ]);
       } catch (error) {
         console.error("Erro ao carregar conta:", error);
@@ -286,10 +289,20 @@ export default function Account() {
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [navigate, loadAddresses, loadOrders]);
 
   useEffect(() => {
     if (!user?.id) return;
+
+    let timeoutId = null;
+
+    const safeReloadOrders = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+
+      timeoutId = setTimeout(() => {
+        loadOrders(user.id);
+      }, 300);
+    };
 
     const channel = supabase
       .channel(`orders-account-${user.id}`)
@@ -301,14 +314,15 @@ export default function Account() {
           table: "orders",
           filter: `user_id=eq.${user.id}`,
         },
-        () => loadOrders(user.id)
+        safeReloadOrders
       )
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, loadOrders]);
 
   async function fetchAddressByCep(rawCep) {
     const cep = String(rawCep || "").replace(/\D/g, "");

@@ -12,6 +12,7 @@ import CartDrawer from "./components/CartDrawer";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
 const MAX_NOTES_LENGTH = 220;
+const DEFAULT_DELIVERY_FEE = 6.9;
 
 function formatPrice(value) {
   if (value == null) return null;
@@ -67,18 +68,26 @@ function isCustomizableProduct(product) {
 
 function sanitizeCartItem(item) {
   if (!item || typeof item !== "object") return null;
-  if (!item.id || !item.name) return null;
+
+  const rawId = item.id ?? null;
+  const rawProductId =
+    item.productId ?? item.baseProductId ?? item.originalProductId ?? null;
+  const rawName = item.name ?? "";
+
+  if (!rawId || !rawName) return null;
 
   return {
-    id: String(item.id),
-    productId: item.productId || null,
-    name: String(item.name || "Produto"),
+    id: String(rawId),
+    productId: rawProductId != null ? String(rawProductId) : null,
+    name: String(rawName || "Produto").trim(),
     price: Number(item.price || 0),
     image: item.image || null,
     quantity: Math.max(1, Number(item.quantity || 1)),
-    notes: String(item.notes || "").trim(),
+    notes: String(item.notes || "").trim().slice(0, MAX_NOTES_LENGTH),
     removedIngredients: Array.isArray(item.removedIngredients)
-      ? item.removedIngredients.filter(Boolean)
+      ? item.removedIngredients
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
       : [],
   };
 }
@@ -105,7 +114,19 @@ function generateCartItemId(productId) {
     return `${productId}-${crypto.randomUUID()}`;
   }
 
-  return `${productId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${productId}-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
+function normalizeDeliveryFee(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return DEFAULT_DELIVERY_FEE;
+  }
+
+  return numericValue;
 }
 
 export default function Menu() {
@@ -115,6 +136,7 @@ export default function Menu() {
 
   const [categories, setCategories] = useState([]);
   const [productsFromDb, setProductsFromDb] = useState([]);
+  const [storeSettings, setStoreSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuMessage, setMenuMessage] = useState("");
 
@@ -137,6 +159,7 @@ export default function Menu() {
       const [
         { data: categoriesData, error: categoriesError },
         { data: productsData, error: productsError },
+        { data: settingsData, error: settingsError },
       ] = await Promise.all([
         supabase
           .from("product_categories")
@@ -165,10 +188,16 @@ export default function Menu() {
           .eq("is_active", true)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true }),
+        supabase
+          .from("store_settings")
+          .select("delivery_fee, estimated_delivery_time")
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (categoriesError) throw categoriesError;
       if (productsError) throw productsError;
+      if (settingsError) throw settingsError;
 
       const normalizedCategories = (categoriesData ?? []).map((category) => ({
         id: category.id,
@@ -205,11 +234,13 @@ export default function Menu() {
 
       setCategories(normalizedCategories);
       setProductsFromDb(normalizedProducts);
+      setStoreSettings(settingsData ?? null);
       setMenuMessage("");
     } catch (error) {
       console.error("Erro ao carregar cardápio:", error);
       setCategories([]);
       setProductsFromDb([]);
+      setStoreSettings(null);
       setMenuMessage("Não foi possível carregar o cardápio agora.");
     } finally {
       setLoading(false);
@@ -265,13 +296,18 @@ export default function Menu() {
   const subtotal = useMemo(
     () =>
       cartItems.reduce(
-        (acc, item) => acc + Number(item.price || 0) * Number(item.quantity || 0),
+        (acc, item) =>
+          acc + Number(item.price || 0) * Number(item.quantity || 0),
         0
       ),
     [cartItems]
   );
 
-  const deliveryFee = cartItems.length > 0 ? 6.9 : 0;
+  const configuredDeliveryFee = useMemo(() => {
+    return normalizeDeliveryFee(storeSettings?.delivery_fee);
+  }, [storeSettings]);
+
+  const deliveryFee = cartItems.length > 0 ? configuredDeliveryFee : 0;
   const total = subtotal + deliveryFee;
 
   function resetProductOptions() {
@@ -282,6 +318,8 @@ export default function Menu() {
   }
 
   function handleOpenProductModal(product) {
+    if (!product?.id) return;
+
     setSelectedProduct({
       ...product,
       isCustomizable: isCustomizableProduct(product),
@@ -297,7 +335,7 @@ export default function Menu() {
   }
 
   function handleConfirmProduct() {
-    if (!selectedProduct) return;
+    if (!selectedProduct?.id) return;
 
     const removedIngredients = isCustomizableProduct(selectedProduct)
       ? [
@@ -313,8 +351,8 @@ export default function Menu() {
       ...prev,
       {
         id: generateCartItemId(selectedProduct.id),
-        productId: selectedProduct.id,
-        name: selectedProduct.name,
+        productId: String(selectedProduct.id),
+        name: String(selectedProduct.name || "Produto").trim(),
         price: Number(selectedProduct.price || 0),
         image: selectedProduct.image || null,
         quantity: 1,
@@ -332,7 +370,7 @@ export default function Menu() {
       prev
         .map((item) =>
           item.id === cartItemId
-            ? { ...item, quantity: Number(item.quantity || 0) - 1 }
+            ? { ...item, quantity: Math.max(0, Number(item.quantity || 0) - 1) }
             : item
         )
         .filter((item) => Number(item.quantity || 0) > 0)
@@ -390,9 +428,25 @@ export default function Menu() {
       )
       .subscribe();
 
+    const settingsChannel = supabase
+      .channel("menu-store-settings")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "store_settings",
+        },
+        () => {
+          loadMenuData();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(productsChannel);
       supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(settingsChannel);
     };
   }, [loadMenuData]);
 
@@ -424,7 +478,8 @@ export default function Menu() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+      const normalizedItems = cartItems.map(sanitizeCartItem).filter(Boolean);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedItems));
     } catch (error) {
       console.error("Erro ao salvar carrinho no localStorage:", error);
     }
@@ -442,7 +497,9 @@ export default function Menu() {
     if (!productsFromDb.length) return;
 
     const selected = productsFromDb.find(
-      (product) => product.id === openProductId || product.slug === openProductId
+      (product) =>
+        String(product.id) === String(openProductId) ||
+        String(product.slug) === String(openProductId)
     );
 
     if (!selected) return;
@@ -468,8 +525,8 @@ export default function Menu() {
             <span className={styles.kicker}>Cardápio digital</span>
             <h1 className={styles.title}>Nosso cardápio</h1>
             <p className={styles.subtitle}>
-              Escolha sua pizza favorita, filtre por categoria e monte seu pedido
-              com rapidez.
+              Escolha sua pizza favorita, filtre por categoria e monte seu
+              pedido com rapidez.
             </p>
 
             <SearchBar
@@ -495,7 +552,8 @@ export default function Menu() {
                 <strong>{activeCategoryName}</strong>
                 {search ? (
                   <>
-                    {" "}• Busca: <strong>“{search}”</strong>
+                    {" "}
+                    • Busca: <strong>“{search}”</strong>
                   </>
                 ) : null}
               </p>
@@ -579,7 +637,8 @@ export default function Menu() {
         <div className={styles.floatingCartInfo}>
           <strong className={styles.floatingCartTitle}>Ver carrinho</strong>
           <span className={styles.floatingCartMeta}>
-            {cartCount} {cartCount === 1 ? "item" : "itens"} • {formatPrice(total)}
+            {cartCount} {cartCount === 1 ? "item" : "itens"} •{" "}
+            {formatPrice(total)}
           </span>
         </div>
 

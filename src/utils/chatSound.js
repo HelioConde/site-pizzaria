@@ -1,4 +1,4 @@
-const CHAT_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-message.mp3`;
+const CHAT_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-chat.mp3`;
 
 let sharedAudio = null;
 let chatAudioUnlocked = false;
@@ -15,18 +15,15 @@ function getAudio() {
 }
 
 export function unlockChatSound() {
-  console.log("[CHAT SOUND] unlockChatSound chamado");
-  console.log("[CHAT SOUND] src:", CHAT_SOUND_SRC);
-  console.log("[CHAT SOUND] unlocked atual:", chatAudioUnlocked);
-  console.log("[CHAT SOUND] unlockPromise ativa?", !!unlockPromise);
+  if (typeof window === "undefined") {
+    return Promise.resolve(false);
+  }
 
   if (chatAudioUnlocked) {
-    console.log("[CHAT SOUND] já estava desbloqueado");
     return Promise.resolve(true);
   }
 
   if (unlockPromise) {
-    console.log("[CHAT SOUND] unlock já em andamento");
     return unlockPromise;
   }
 
@@ -39,11 +36,7 @@ export function unlockChatSound() {
       audio.volume = 0.01;
       audio.muted = true;
 
-      console.log("[CHAT SOUND] tentando play mudo para desbloqueio");
-
       await audio.play();
-
-      console.log("[CHAT SOUND] play mudo executado com sucesso");
 
       audio.pause();
       audio.currentTime = 0;
@@ -51,12 +44,11 @@ export function unlockChatSound() {
       audio.volume = 0.65;
 
       chatAudioUnlocked = true;
-      console.log("[CHAT SOUND] desbloqueado = true");
+      window.__chatAudioUnlocked = true;
 
       if (pendingPlayCount > 0) {
         const queued = pendingPlayCount;
         pendingPlayCount = 0;
-        console.log("[CHAT SOUND] reproduzindo sons pendentes:", queued);
 
         for (let i = 0; i < queued; i += 1) {
           setTimeout(() => {
@@ -68,11 +60,11 @@ export function unlockChatSound() {
       return true;
     } catch (error) {
       chatAudioUnlocked = false;
+      window.__chatAudioUnlocked = false;
       console.warn("[CHAT SOUND] bloqueado pelo navegador:", error);
       return false;
     } finally {
       unlockPromise = null;
-      console.log("[CHAT SOUND] unlock finalizado");
     }
   })();
 
@@ -80,23 +72,11 @@ export function unlockChatSound() {
 }
 
 export function playChatSound() {
-  console.log("[CHAT SOUND] playChatSound chamado");
-  console.log("[CHAT SOUND] desbloqueado?", chatAudioUnlocked);
-  console.log("[CHAT SOUND] unlock em andamento?", !!unlockPromise);
-  console.log("[CHAT SOUND] src:", CHAT_SOUND_SRC);
+  if (typeof window === "undefined") return false;
 
   if (!chatAudioUnlocked) {
     pendingPlayCount += 1;
-    console.warn(
-      "[CHAT SOUND] ainda não desbloqueado, som enfileirado. pendingPlayCount =",
-      pendingPlayCount
-    );
-
-    if (!unlockPromise) {
-      console.warn("[CHAT SOUND] nenhum unlock em andamento no momento");
-    }
-
-    return;
+    return false;
   }
 
   try {
@@ -109,21 +89,20 @@ export function playChatSound() {
 
     const playResult = audio.play();
 
-    if (playResult?.then) {
-      playResult
-        .then(() => {
-          console.log("[CHAT SOUND] som tocando com sucesso");
-        })
-        .catch((error) => {
-          console.warn("[CHAT SOUND] erro ao tocar:", error);
-          chatAudioUnlocked = false;
-        });
-    } else {
-      console.log("[CHAT SOUND] play sem promise, assumindo sucesso");
+    if (playResult?.catch) {
+      playResult.catch((error) => {
+        console.warn("[CHAT SOUND] erro ao tocar:", error);
+        chatAudioUnlocked = false;
+        window.__chatAudioUnlocked = false;
+      });
     }
+
+    return true;
   } catch (error) {
     console.warn("[CHAT SOUND] erro inesperado ao tocar:", error);
     chatAudioUnlocked = false;
+    window.__chatAudioUnlocked = false;
+    return false;
   }
 }
 

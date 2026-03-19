@@ -8,10 +8,7 @@ function normalizeHours(value) {
 
   if (Array.isArray(value)) {
     return value.filter(
-      (item) =>
-        item &&
-        typeof item === "object" &&
-        (item.label || item.value)
+      (item) => item && typeof item === "object" && (item.label || item.value)
     );
   }
 
@@ -21,9 +18,7 @@ function normalizeHours(value) {
     return Array.isArray(parsed)
       ? parsed.filter(
           (item) =>
-            item &&
-            typeof item === "object" &&
-            (item.label || item.value)
+            item && typeof item === "object" && (item.label || item.value)
         )
       : [];
   } catch {
@@ -33,9 +28,11 @@ function normalizeHours(value) {
 
 function normalizeUrl(url) {
   if (!url || typeof url !== "string") return "";
+
   const trimmed = url.trim();
 
   if (!trimmed) return "";
+
   if (
     trimmed.startsWith("http://") ||
     trimmed.startsWith("https://") ||
@@ -49,8 +46,19 @@ function normalizeUrl(url) {
 }
 
 function normalizeWhatsApp(value) {
-  if (!value || typeof value !== "string") return "";
-  return value.replace(/\D/g, "");
+  if (value == null) return "";
+  return String(value).replace(/\D/g, "");
+}
+
+function formatCurrency(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) return "";
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(numericValue);
 }
 
 function getIcon(name) {
@@ -78,7 +86,21 @@ export default function Footer({ footer }) {
       try {
         const { data, error } = await supabase
           .from("store_settings")
-          .select("*")
+          .select(`
+            store_name,
+            tagline,
+            phone,
+            whatsapp,
+            email,
+            city,
+            address,
+            instagram,
+            delivery_fee,
+            estimated_delivery_time,
+            maps_embed_url,
+            maps_open_url,
+            hours
+          `)
           .limit(1)
           .maybeSingle();
 
@@ -96,24 +118,8 @@ export default function Footer({ footer }) {
 
     loadStoreSettings();
 
-    const channel = supabase
-      .channel("footer-store-settings")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "store_settings",
-        },
-        () => {
-          loadStoreSettings();
-        }
-      )
-      .subscribe();
-
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -122,6 +128,12 @@ export default function Footer({ footer }) {
     const whatsapp = normalizeWhatsApp(storeSettings?.whatsapp);
     const instagram = normalizeUrl(storeSettings?.instagram);
     const mapsOpenUrl = normalizeUrl(storeSettings?.maps_open_url);
+    const deliveryFee = formatCurrency(storeSettings?.delivery_fee);
+    const estimatedDeliveryTime =
+      typeof storeSettings?.estimated_delivery_time === "string" &&
+      storeSettings.estimated_delivery_time.trim()
+        ? storeSettings.estimated_delivery_time.trim()
+        : "";
 
     return {
       name: storeSettings?.store_name || "Base Studio Pizzas",
@@ -133,6 +145,8 @@ export default function Footer({ footer }) {
       email: storeSettings?.email || "contato@basestudiopizzas.com",
       city: storeSettings?.city || "Brasília - DF",
       address: storeSettings?.address || "Brasília - DF",
+      deliveryFee,
+      estimatedDeliveryTime,
       maps: {
         embedUrl: storeSettings?.maps_embed_url || "",
         openUrl: mapsOpenUrl,
@@ -145,9 +159,7 @@ export default function Footer({ footer }) {
             { label: "Dom", value: "17h às 23h" },
           ],
       socials: [
-        instagram
-          ? { name: "Instagram", url: instagram }
-          : null,
+        instagram ? { name: "Instagram", url: instagram } : null,
         whatsapp
           ? { name: "WhatsApp", url: `https://wa.me/${whatsapp}` }
           : null,
@@ -160,10 +172,8 @@ export default function Footer({ footer }) {
   }
 
   const year = new Date().getFullYear();
-  const creditsAuthor =
-    footer?.credits?.author?.trim?.() || "Hélio Conde";
-  const creditsNote =
-    footer?.credits?.note?.trim?.() || "Projeto de portfólio.";
+  const creditsAuthor = footer?.credits?.author?.trim?.() || "Hélio Conde";
+  const creditsNote = footer?.credits?.note?.trim?.() || "Projeto de portfólio.";
 
   return (
     <footer className={styles.wrap} aria-label="Rodapé">
@@ -179,13 +189,21 @@ export default function Footer({ footer }) {
               <li>
                 📍 {mergedStore.city || mergedStore.address || "Não informado"}
               </li>
+
+              {mergedStore.deliveryFee ? (
+                <li>🚚 Taxa de entrega: {mergedStore.deliveryFee}</li>
+              ) : null}
+
+              {mergedStore.estimatedDeliveryTime ? (
+                <li>⏱️ Entrega estimada: {mergedStore.estimatedDeliveryTime}</li>
+              ) : null}
             </ul>
           </div>
 
           <div className={styles.column}>
             <h5 className={styles.colTitle}>Redes</h5>
 
-            {(mergedStore.socials ?? []).length ? (
+            {mergedStore.socials.length ? (
               <div className={styles.socials}>
                 {mergedStore.socials.map((social) => (
                   <a
@@ -210,7 +228,7 @@ export default function Footer({ footer }) {
             <h5 className={styles.colTitle}>Horários</h5>
 
             <ul className={styles.hours}>
-              {(mergedStore.hours ?? []).map((hour, index) => {
+              {mergedStore.hours.map((hour, index) => {
                 const label =
                   typeof hour?.label === "string" && hour.label.trim()
                     ? hour.label.trim()

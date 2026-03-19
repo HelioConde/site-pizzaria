@@ -13,10 +13,14 @@ export default function DashboardHeader({
   homeRoute = "/",
 }) {
   const safeUserName =
-    typeof userName === "string" && userName.trim() ? userName.trim() : "Usuário";
+    typeof userName === "string" && userName.trim()
+      ? userName.trim()
+      : "Usuário";
 
   const safeUserEmail =
-    typeof userEmail === "string" && userEmail.trim() ? userEmail.trim() : "";
+    typeof userEmail === "string" && userEmail.trim()
+      ? userEmail.trim()
+      : "";
 
   const safeTitle =
     typeof title === "string" && title.trim() ? title.trim() : "Painel";
@@ -31,17 +35,19 @@ export default function DashboardHeader({
 
   const safeAccountRoute =
     typeof accountRoute === "string" && accountRoute.trim()
-      ? accountRoute
+      ? accountRoute.trim()
       : "/";
 
   const safeHomeRoute =
-    typeof homeRoute === "string" && homeRoute.trim() ? homeRoute : "/";
+    typeof homeRoute === "string" && homeRoute.trim()
+      ? homeRoute.trim()
+      : "/";
+
+  const canLogout = typeof onLogout === "function" && !isLoggingOut;
 
   function handleLogoutClick() {
-    if (isLoggingOut) return;
-    if (typeof onLogout === "function") {
-      onLogout();
-    }
+    if (!canLogout) return;
+    onLogout();
   }
 
   return (
@@ -67,18 +73,12 @@ export default function DashboardHeader({
 
         <div className={styles.right}>
           <div className={styles.userBox}>
-            <strong
-              className={styles.userName}
-              title={safeUserName}
-            >
+            <strong className={styles.userName} title={safeUserName}>
               {safeUserName}
             </strong>
 
             {safeUserEmail ? (
-              <span
-                className={styles.userEmail}
-                title={safeUserEmail}
-              >
+              <span className={styles.userEmail} title={safeUserEmail}>
                 {safeUserEmail}
               </span>
             ) : null}
@@ -88,6 +88,7 @@ export default function DashboardHeader({
             to={safeAccountRoute}
             className={styles.secondaryBtn}
             aria-label={safeAccountLabel}
+            title={safeAccountLabel}
           >
             {safeAccountLabel}
           </Link>
@@ -96,7 +97,7 @@ export default function DashboardHeader({
             type="button"
             className={styles.primaryBtn}
             onClick={handleLogoutClick}
-            disabled={isLoggingOut || typeof onLogout !== "function"}
+            disabled={!canLogout}
             aria-busy={isLoggingOut}
           >
             {isLoggingOut ? "Saindo..." : "Sair"}

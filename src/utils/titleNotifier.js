@@ -5,7 +5,6 @@ let originalTitle =
 
 export function startTitleBlink(message = "🔴 Nova mensagem") {
   if (typeof document === "undefined") return;
-
   if (blinking) return;
 
   originalTitle = document.title;
@@ -17,8 +16,6 @@ export function startTitleBlink(message = "🔴 Nova mensagem") {
     document.title = showAlert ? message : originalTitle;
     showAlert = !showAlert;
   }, 1000);
-
-  console.log("[TITLE] blink iniciado:", { originalTitle, message });
 }
 
 export function stopTitleBlink() {
@@ -27,10 +24,6 @@ export function stopTitleBlink() {
   if (intervalRef) {
     clearInterval(intervalRef);
     intervalRef = null;
-  }
-
-  if (blinking) {
-    console.log("[TITLE] blink finalizado");
   }
 
   blinking = false;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import AdminContentHeader from "../components/AdminContentHeader";
 import styles from "../Admin.module.css";
@@ -26,6 +26,10 @@ function formatDate(value) {
 }
 
 function normalizePaymentStatus(status) {
+  return String(status || "").trim().toLowerCase();
+}
+
+function normalizeOrderStatus(status) {
   return String(status || "").trim().toLowerCase();
 }
 
@@ -77,7 +81,7 @@ function getPaymentStatusClass(status, styles) {
 }
 
 function getOrderStatusLabel(status) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = normalizeOrderStatus(status);
 
   switch (normalized) {
     case "pending":
@@ -98,7 +102,7 @@ function getOrderStatusLabel(status) {
 }
 
 function getOrderStatusClass(status, styles) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = normalizeOrderStatus(status);
 
   switch (normalized) {
     case "pending":
@@ -125,7 +129,7 @@ export default function PaymentsSection() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  async function loadPayments() {
+  const loadPayments = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -145,7 +149,7 @@ export default function PaymentsSection() {
 
       if (error) throw error;
 
-      setPayments(data ?? []);
+      setPayments(Array.isArray(data) ? data : []);
       setMessage("");
     } catch (error) {
       console.error("Erro ao carregar pagamentos:", error);
@@ -154,7 +158,7 @@ export default function PaymentsSection() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadPayments();
@@ -168,14 +172,16 @@ export default function PaymentsSection() {
           schema: "public",
           table: "orders",
         },
-        loadPayments
+        () => {
+          loadPayments();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadPayments]);
 
   const filteredPayments = useMemo(() => {
     let result = payments;
@@ -192,14 +198,18 @@ export default function PaymentsSection() {
 
     return result.filter((payment) => {
       const id = String(payment.id || "").toLowerCase();
+      const shortId = String(payment.id || "").slice(0, 8).toLowerCase();
       const name = String(payment.customer_name || "").toLowerCase();
       const phone = String(payment.customer_phone || "").toLowerCase();
       const method = getPaymentMethodLabel(payment.payment_method).toLowerCase();
-      const paymentStatus = getPaymentStatusLabel(payment.payment_status).toLowerCase();
+      const paymentStatus = getPaymentStatusLabel(
+        payment.payment_status
+      ).toLowerCase();
       const orderStatus = getOrderStatusLabel(payment.order_status).toLowerCase();
 
       return (
         id.includes(term) ||
+        shortId.includes(term) ||
         name.includes(term) ||
         phone.includes(term) ||
         method.includes(term) ||
@@ -223,7 +233,8 @@ export default function PaymentsSection() {
           normalizePaymentStatus(payment.payment_status) === "delivery_payment"
       ).length,
       cancelled: payments.filter(
-        (payment) => normalizePaymentStatus(payment.payment_status) === "cancelled"
+        (payment) =>
+          normalizePaymentStatus(payment.payment_status) === "cancelled"
       ).length,
       totalRevenue: payments
         .filter((payment) => {
@@ -267,6 +278,11 @@ export default function PaymentsSection() {
             </article>
 
             <article className={styles.statCard}>
+              <span>Na entrega</span>
+              <strong>{stats.deliveryPayment}</strong>
+            </article>
+
+            <article className={styles.statCard}>
               <span>Cancelados</span>
               <strong>{stats.cancelled}</strong>
             </article>
@@ -281,8 +297,9 @@ export default function PaymentsSection() {
             <div className={styles.filterGroup}>
               <button
                 type="button"
-                className={`${styles.filterButton} ${filter === "all" ? styles.filterButtonActive : ""
-                  }`}
+                className={`${styles.filterButton} ${
+                  filter === "all" ? styles.filterButtonActive : ""
+                }`}
                 onClick={() => setFilter("all")}
               >
                 Todos
@@ -290,8 +307,9 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${filter === "paid" ? styles.filterButtonActive : ""
-                  }`}
+                className={`${styles.filterButton} ${
+                  filter === "paid" ? styles.filterButtonActive : ""
+                }`}
                 onClick={() => setFilter("paid")}
               >
                 Pagos
@@ -299,8 +317,9 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${filter === "pending" ? styles.filterButtonActive : ""
-                  }`}
+                className={`${styles.filterButton} ${
+                  filter === "pending" ? styles.filterButtonActive : ""
+                }`}
                 onClick={() => setFilter("pending")}
               >
                 Pendentes
@@ -308,8 +327,11 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${filter === "delivery_payment" ? styles.filterButtonActive : ""
-                  }`}
+                className={`${styles.filterButton} ${
+                  filter === "delivery_payment"
+                    ? styles.filterButtonActive
+                    : ""
+                }`}
                 onClick={() => setFilter("delivery_payment")}
               >
                 Na entrega
@@ -317,8 +339,9 @@ export default function PaymentsSection() {
 
               <button
                 type="button"
-                className={`${styles.filterButton} ${filter === "cancelled" ? styles.filterButtonActive : ""
-                  }`}
+                className={`${styles.filterButton} ${
+                  filter === "cancelled" ? styles.filterButtonActive : ""
+                }`}
                 onClick={() => setFilter("cancelled")}
               >
                 Cancelados
@@ -390,6 +413,7 @@ export default function PaymentsSection() {
                       <span className={styles.paymentInfoLabel}>Data</span>
                       <strong>{formatDate(payment.created_at)}</strong>
                     </div>
+
                     <div
                       className={`${styles.paymentInfoBlock} ${styles.paymentInfoBlockWide}`}
                     >
@@ -398,7 +422,12 @@ export default function PaymentsSection() {
                       </span>
 
                       <div className={styles.paymentStatusWrap}>
-                        <span className={getOrderStatusClass(payment.order_status, styles)}>
+                        <span
+                          className={getOrderStatusClass(
+                            payment.order_status,
+                            styles
+                          )}
+                        >
                           {getOrderStatusLabel(payment.order_status)}
                         </span>
                       </div>

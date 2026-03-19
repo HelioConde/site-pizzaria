@@ -16,34 +16,97 @@ export default function AddressForm({
       </div>
 
       <div className={styles.formGrid}>
-        {[
-          ["label", "Nome do endereço", "Casa, trabalho..."],
-          ["cep", "CEP", "00000-000"],
-          ["address", "Endereço", "Rua, avenida..."],
-          ["district", "Bairro", "Seu bairro"],
-          ["city", "Cidade", "Cidade"],
-          ["state", "Estado", "UF"],
-          ["number", "Número", "123"],
-          ["complement", "Complemento", "Casa, apto..."],
-          ["reference", "Referência", "Portão azul..."],
-        ].map(([name, label, placeholder]) => (
-          <label
-            key={name}
-            className={`${styles.field} ${
-              name === "address" || name === "reference"
-                ? styles.fieldFull
-                : ""
-            }`}
-          >
-            <span>{label}</span>
-            <input
-              name={name}
-              value={addressForm[name] || ""}
-              onChange={onChange}
-              placeholder={placeholder}
-            />
-          </label>
-        ))}
+        <label className={styles.field}>
+          <span>Nome do endereço</span>
+          <input
+            name="label"
+            value={addressForm.label || ""}
+            onChange={onChange}
+            placeholder="Casa, trabalho..."
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>CEP</span>
+          <input
+            name="cep"
+            value={addressForm.cep || ""}
+            onChange={onChange}
+            placeholder="00000-000"
+            inputMode="numeric"
+          />
+        </label>
+
+        <label className={`${styles.field} ${styles.fieldFull}`}>
+          <span>Endereço</span>
+          <input
+            name="address"
+            value={addressForm.address || ""}
+            onChange={onChange}
+            placeholder="Rua, avenida..."
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Bairro</span>
+          <input
+            name="district"
+            value={addressForm.district || ""}
+            onChange={onChange}
+            placeholder="Seu bairro"
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Cidade</span>
+          <input
+            name="city"
+            value={addressForm.city || ""}
+            onChange={onChange}
+            placeholder="Cidade"
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Estado</span>
+          <input
+            name="state"
+            value={addressForm.state || ""}
+            onChange={onChange}
+            placeholder="UF"
+            maxLength={2}
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Número</span>
+          <input
+            name="number"
+            value={addressForm.number || ""}
+            onChange={onChange}
+            placeholder="123"
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Complemento</span>
+          <input
+            name="complement"
+            value={addressForm.complement || ""}
+            onChange={onChange}
+            placeholder="Casa, apto..."
+          />
+        </label>
+
+        <label className={`${styles.field} ${styles.fieldFull}`}>
+          <span>Referência</span>
+          <input
+            name="reference"
+            value={addressForm.reference || ""}
+            onChange={onChange}
+            placeholder="Portão azul..."
+          />
+        </label>
 
         <label className={styles.checkboxField}>
           <input

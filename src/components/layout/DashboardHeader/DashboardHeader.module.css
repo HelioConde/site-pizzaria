@@ -37,12 +37,15 @@
   flex-shrink: 0;
   border-radius: 14px;
   outline: none;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .brand:hover {
   transform: translateY(-1px);
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .brand:active {
@@ -73,6 +76,7 @@
 
 .brandText {
   font-size: 0.98rem;
+  line-height: 1.15;
 }
 
 .context {
@@ -98,7 +102,7 @@
 }
 
 .badge:hover {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .title {
@@ -132,7 +136,6 @@
 .userName,
 .userEmail {
   max-width: 100%;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -140,11 +143,14 @@
 .userName {
   font-size: 0.92rem;
   color: #0f172a;
+  white-space: nowrap;
+  font-weight: 800;
 }
 
 .userEmail {
   font-size: 0.8rem;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .secondaryBtn,
@@ -168,11 +174,9 @@
     box-shadow 0.2s ease,
     opacity 0.2s ease;
   outline: none;
+  white-space: nowrap;
 }
 
-/* ========================
-   BOTÃO SECUNDÁRIO
-======================== */
 .secondaryBtn {
   border: 1px solid #dbe2ea;
   background: #fff;
@@ -192,9 +196,6 @@
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
 }
 
-/* ========================
-   BOTÃO PRINCIPAL
-======================== */
 .primaryBtn {
   border: none;
   background: #ff4b43;
@@ -216,7 +217,7 @@
 }
 
 .primaryBtn:disabled,
-.secondaryBtn[aria-disabled="true"] {
+.secondaryBtn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
   pointer-events: none;
@@ -238,6 +239,7 @@
 
   .left {
     justify-content: space-between;
+    align-items: flex-start;
   }
 
   .right {
@@ -290,6 +292,14 @@
 
   .userBox {
     width: 100%;
+  }
+
+  .userName,
+  .userEmail {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
   }
 
   .secondaryBtn,

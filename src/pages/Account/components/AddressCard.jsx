@@ -15,9 +15,7 @@ export default function AddressCard({
     <div className={styles.addressCard}>
       <div className={styles.addressCardTop}>
         <p className={styles.addressCardTitle}>
-          <strong>
-            {address.label?.trim() || `Endereço ${index + 1}`}
-          </strong>
+          <strong>{address.label?.trim() || `Endereço ${index + 1}`}</strong>
           {address.is_default ? " • Principal" : ""}
         </p>
       </div>
@@ -33,20 +31,16 @@ export default function AddressCard({
         {address.state ? ` - ${address.state}` : ""}
       </p>
 
-      {address.cep && (
-        <p className={styles.addressCardLine}>
-          CEP: {formatCep(address.cep)}
-        </p>
-      )}
+      {address.cep ? (
+        <p className={styles.addressCardLine}>CEP: {formatCep(address.cep)}</p>
+      ) : null}
 
-      {address.reference && (
-        <p className={styles.addressCardLine}>
-          Referência: {address.reference}
-        </p>
-      )}
+      {address.reference ? (
+        <p className={styles.addressCardLine}>Referência: {address.reference}</p>
+      ) : null}
 
       <div className={styles.addressActions}>
-        {!address.is_default && (
+        {!address.is_default ? (
           <Button
             variant="ghost"
             size="sm"
@@ -57,13 +51,9 @@ export default function AddressCard({
               ? "Salvando..."
               : "Tornar principal"}
           </Button>
-        )}
+        ) : null}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onEdit(address)}
-        >
+        <Button variant="ghost" size="sm" onClick={() => onEdit(address)}>
           Editar
         </Button>
 
@@ -74,9 +64,7 @@ export default function AddressCard({
           onClick={() => onDelete(address.id)}
           disabled={deletingAddressId === address.id}
         >
-          {deletingAddressId === address.id
-            ? "Excluindo..."
-            : "Excluir"}
+          {deletingAddressId === address.id ? "Excluindo..." : "Excluir"}
         </Button>
       </div>
     </div>

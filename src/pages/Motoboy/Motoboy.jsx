@@ -21,9 +21,18 @@ const DELIVERY_QUERY_STATUSES = [
 
 const NOTIFICATION_SOUND_SRC = `${import.meta.env.BASE_URL}sounds/new-order.mp3`;
 const GPS_MIN_SEND_INTERVAL = 5000;
+const GPS_MIN_DISTANCE_CHANGE = 0.00005;
+
+function hasMeaningfulLocationChange(lastLat, lastLng, nextLat, nextLng) {
+  if (lastLat == null || lastLng == null) return true;
+
+  return (
+    Math.abs(Number(nextLat) - Number(lastLat)) >= GPS_MIN_DISTANCE_CHANGE ||
+    Math.abs(Number(nextLng) - Number(lastLng)) >= GPS_MIN_DISTANCE_CHANGE
+  );
+}
 
 export default function Motoboy() {
-  
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
@@ -39,7 +48,6 @@ export default function Motoboy() {
     name: "Motoboy",
     email: "",
   });
-  const [audioEnabled, setAudioEnabled] = useState(false);
   const [showEnableSoundButton, setShowEnableSoundButton] = useState(false);
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState("");
@@ -103,13 +111,11 @@ export default function Motoboy() {
       audio.currentTime = 0;
 
       audioUnlockedRef.current = true;
-      setAudioEnabled(true);
       setShowEnableSoundButton(false);
 
       await requestNotificationPermission();
     } catch (error) {
       audioUnlockedRef.current = false;
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
       console.warn("Áudio do motoboy ainda bloqueado:", error);
     }
@@ -117,7 +123,6 @@ export default function Motoboy() {
 
   const playNotificationSound = useCallback(() => {
     if (!audioUnlockedRef.current) {
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
       return;
     }
@@ -130,13 +135,11 @@ export default function Motoboy() {
       audio.play().catch((error) => {
         console.warn("Não foi possível tocar o som do motoboy:", error);
         audioUnlockedRef.current = false;
-        setAudioEnabled(false);
         setShowEnableSoundButton(true);
       });
     } catch (error) {
       console.error("Erro ao tocar som do motoboy:", error);
       audioUnlockedRef.current = false;
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
     }
   }, []);
@@ -163,7 +166,6 @@ export default function Motoboy() {
 
   const stopGpsTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
-      console.log("🛑 Parando watch GPS:", watchIdRef.current);
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
@@ -173,81 +175,65 @@ export default function Motoboy() {
       latitude: null,
       longitude: null,
     });
+
+    lastSentLocationRef.current = {
+      lat: null,
+      lng: null,
+      sentAt: 0,
+    };
   }, []);
 
-  async function debugGeolocationPermission() {
-    if (!navigator.permissions) {
-      console.log("⚠️ Permissions API não suportada.");
-      return;
-    }
+  const sendLocation = useCallback(
+    async (orderId, latitude, longitude) => {
+      const now = Date.now();
+      const lastSent = lastSentLocationRef.current;
 
-    try {
-      const result = await navigator.permissions.query({ name: "geolocation" });
-      console.log("🔐 Permissão de geolocalização:", result.state);
+      const hasIntervalElapsed =
+        now - Number(lastSent.sentAt || 0) >= GPS_MIN_SEND_INTERVAL;
+      const hasMovedEnough = hasMeaningfulLocationChange(
+        lastSent.lat,
+        lastSent.lng,
+        latitude,
+        longitude
+      );
 
-      result.onchange = () => {
-        console.log("🔄 Permissão mudou para:", result.state);
-      };
-    } catch (error) {
-      console.error("Erro ao consultar permissão:", error);
-    }
-  }
+      if (!hasIntervalElapsed && !hasMovedEnough) {
+        return;
+      }
 
-
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      console.log("GPS OK", position.coords);
-    },
-    (error) => {
-      console.error("GPS ERRO", error);
-    },
-    {
-      enableHighAccuracy: false,
-      timeout: 20000,
-      maximumAge: 10000,
-    }
-  );
-  useEffect(() => {
-    debugGeolocationPermission();
-  }, []);
-
-  
-const sendLocation = useCallback(
-  async (orderId, latitude, longitude) => {
-    console.log("📤 Tentando enviar localização ao Supabase...", {
-      orderId,
-      latitude,
-      longitude,
-    });
-
-    try {
-      const { error } = await supabase
-        .from("order_delivery_tracking")
-        .insert({
+      try {
+        const payload = {
           order_id: orderId,
           courier_id: userInfo.id,
           latitude,
           longitude,
-        });
+          created_at: new Date().toISOString(),
+        };
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from("order_delivery_tracking")
+          .upsert(payload, {
+            onConflict: "order_id",
+          });
 
-      console.log("✅ Localização enviada ao Supabase com sucesso");
-    } catch (error) {
-      console.error("❌ Erro no Supabase ao enviar localização:", error);
-    }
-  },
-  [userInfo.id]
-);
+        if (error) throw error;
+
+        lastSentLocationRef.current = {
+          lat: latitude,
+          lng: longitude,
+          sentAt: now,
+        };
+
+        setLastGpsAt(new Date().toISOString());
+      } catch (error) {
+        console.error("Erro ao enviar localização:", error);
+      }
+    },
+    [userInfo.id]
+  );
 
   const startGpsTracking = useCallback(
     async (orderId) => {
-      console.log("📡 Tentando iniciar GPS...", {
-        orderId,
-        hasGeolocation: "geolocation" in navigator,
-        isSecureContext: window.isSecureContext,
-      });
-
       if (!navigator.geolocation) {
         setGpsError("Geolocalização não é suportada neste dispositivo.");
         return;
@@ -259,26 +245,15 @@ const sendLocation = useCallback(
       }
 
       if (watchIdRef.current !== null) {
-        console.log("🛑 Limpando watch anterior:", watchIdRef.current);
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
 
       setGpsError("");
 
-      const logPosition = async (position, source = "watch") => {
+      const logPosition = async (position) => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
-
-        console.log(`✅ GPS obtido via ${source}`, {
-          latitude,
-          longitude,
-          accuracy: position.coords.accuracy,
-          altitude: position.coords.altitude,
-          speed: position.coords.speed,
-          heading: position.coords.heading,
-          timestamp: position.timestamp,
-        });
 
         setCurrentCourierPosition({
           latitude,
@@ -289,8 +264,8 @@ const sendLocation = useCallback(
         await sendLocation(orderId, latitude, longitude);
       };
 
-      const handleError = (error, source = "watch") => {
-        console.error(`❌ Erro ao obter GPS via ${source}:`, error);
+      const handleError = (error) => {
+        console.error("Erro ao obter GPS:", error);
 
         switch (error.code) {
           case error.PERMISSION_DENIED:
@@ -310,16 +285,13 @@ const sendLocation = useCallback(
       };
 
       try {
-        console.log("⏳ Tentando posição inicial...");
         await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
-              await logPosition(position, "getCurrentPosition");
+              await logPosition(position);
               resolve(position);
             },
-            (error) => {
-              reject(error);
-            },
+            reject,
             {
               enableHighAccuracy: true,
               timeout: 20000,
@@ -328,19 +300,16 @@ const sendLocation = useCallback(
           );
         });
       } catch (firstError) {
-        console.warn("⚠️ Falha na posição inicial com alta precisão:", firstError);
+        console.warn("Falha na posição inicial com alta precisão:", firstError);
 
         try {
-          console.log("🔁 Tentando fallback com precisão normal...");
           await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
               async (position) => {
-                await logPosition(position, "fallback");
+                await logPosition(position);
                 resolve(position);
               },
-              (error) => {
-                reject(error);
-              },
+              reject,
               {
                 enableHighAccuracy: false,
                 timeout: 20000,
@@ -349,20 +318,16 @@ const sendLocation = useCallback(
             );
           });
         } catch (fallbackError) {
-          handleError(fallbackError, "fallback");
+          handleError(fallbackError);
           return;
         }
       }
 
-      console.log("📡 Iniciando watchPosition contínuo...");
-
       const watchId = navigator.geolocation.watchPosition(
         async (position) => {
-          await logPosition(position, "watchPosition");
+          await logPosition(position);
         },
-        (error) => {
-          handleError(error, "watchPosition");
-        },
+        handleError,
         {
           enableHighAccuracy: false,
           timeout: 20000,
@@ -371,10 +336,10 @@ const sendLocation = useCallback(
       );
 
       watchIdRef.current = watchId;
-      console.log("✅ watchPosition iniciado com ID:", watchId);
     },
     [sendLocation]
   );
+
   const mapOrdersWithItems = useCallback(async (ordersData) => {
     const safeOrders = (ordersData ?? []).map((order) => ({
       ...order,
@@ -473,11 +438,9 @@ const sendLocation = useCallback(
         audio.currentTime = 0;
 
         audioUnlockedRef.current = true;
-        setAudioEnabled(true);
         setShowEnableSoundButton(false);
       } catch {
         audioUnlockedRef.current = false;
-        setAudioEnabled(false);
         setShowEnableSoundButton(true);
       }
     }
@@ -522,7 +485,7 @@ const sendLocation = useCallback(
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("role, name")
+          .select("role, name, is_active")
           .eq("id", session.user.id)
           .maybeSingle();
 
@@ -532,6 +495,12 @@ const sendLocation = useCallback(
 
         if (role !== USER_ROLE.DELIVERY) {
           navigate("/", { replace: true });
+          return;
+        }
+
+        if (profile?.is_active === false) {
+          await supabase.auth.signOut();
+          navigate("/auth", { replace: true });
           return;
         }
 
@@ -670,12 +639,6 @@ const sendLocation = useCallback(
   }
 
   async function handleAcceptDelivery(orderId) {
-    console.log("HANDLE ACCEPT DELIVERY INICIO", {
-      orderId,
-      myActiveOrder,
-      userInfo,
-    });
-
     if (myActiveOrder) {
       setMessage("Você já possui uma entrega em andamento.");
       return;
@@ -685,8 +648,6 @@ const sendLocation = useCallback(
     setMessage("");
 
     try {
-      console.log("ANTES DO UPDATE");
-
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -697,8 +658,6 @@ const sendLocation = useCallback(
         .eq("id", orderId)
         .is("delivery_user_id", null)
         .select("*");
-
-      console.log("RESULTADO UPDATE", { data, error });
 
       if (error) throw error;
 
@@ -755,7 +714,10 @@ const sendLocation = useCallback(
       const deliveredAt = new Date(order.delivered_at);
       if (Number.isNaN(deliveredAt.getTime())) return false;
 
-      return isSameDay(deliveredAt, today);
+      const assignedToMe =
+        String(order.delivery_user_id || "") === String(userInfo.id || "");
+
+      return isSameDay(deliveredAt, today) && assignedToMe;
     }).length;
 
     return {
@@ -763,7 +725,7 @@ const sendLocation = useCallback(
       activeRoute: myActiveOrder ? 1 : 0,
       deliveredToday,
     };
-  }, [orders, availableOrders, myActiveOrder]);
+  }, [orders, availableOrders, myActiveOrder, userInfo.id]);
 
   if (accessLoading) {
     return (
@@ -820,17 +782,14 @@ const sendLocation = useCallback(
             Aceite pedidos disponíveis, acompanhe sua entrega atual e marque quando concluir.
           </p>
 
-          {audioEnabled ? (
-            <p className={styles.audioStatus}>🔊 Som ativo</p>
-          ) : null}
-
           <div className={styles.heroTopGrid}>
             {myActiveOrder ? (
               <div className={styles.gpsStatusBox}>
                 <div className={styles.gpsStatusTop}>
                   <span
-                    className={`${styles.gpsBadge} ${gpsActive ? styles.gpsBadgeActive : styles.gpsBadgeInactive
-                      }`}
+                    className={`${styles.gpsBadge} ${
+                      gpsActive ? styles.gpsBadgeActive : styles.gpsBadgeInactive
+                    }`}
                   >
                     {gpsActive ? "📍 GPS ativo" : "⚠️ GPS inativo"}
                   </span>
@@ -875,6 +834,11 @@ const sendLocation = useCallback(
             )}
 
             <div className={styles.statCard}>
+              <span className={styles.statLabel}>Disponíveis</span>
+              <strong className={styles.statValue}>{stats.availableRoutes}</strong>
+            </div>
+
+            <div className={styles.statCard}>
               <span className={styles.statLabel}>Em rota</span>
               <strong className={styles.statValue}>{stats.activeRoute}</strong>
             </div>
@@ -895,8 +859,6 @@ const sendLocation = useCallback(
             </p>
           ) : null}
 
-
-
           {myActiveOrder ? (
             <div className={styles.mapSection}>
               <h2 className={styles.sectionTitle}>Mapa da entrega</h2>
@@ -909,8 +871,6 @@ const sendLocation = useCallback(
               />
             </div>
           ) : null}
-
-
 
           {myActiveOrder ? (
             <section className={styles.ordersSection}>
@@ -933,6 +893,7 @@ const sendLocation = useCallback(
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Pedidos disponíveis</h2>
             </div>
+
             {myActiveOrder ? (
               <div className={styles.warningBox}>
                 <strong>Você já está em uma entrega.</strong>
@@ -964,9 +925,7 @@ const sendLocation = useCallback(
                 ))}
               </div>
             )}
-
           </section>
-
         </div>
       </section>
     </main>

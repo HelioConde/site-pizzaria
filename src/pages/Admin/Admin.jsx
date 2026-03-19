@@ -44,7 +44,6 @@ export default function Admin() {
     name: "Administrador",
     email: "",
   });
-  const [audioEnabled, setAudioEnabled] = useState(false);
   const [showEnableSoundButton, setShowEnableSoundButton] = useState(false);
 
   const audioUnlockedRef = useRef(false);
@@ -109,13 +108,11 @@ export default function Admin() {
       audio.currentTime = 0;
 
       audioUnlockedRef.current = true;
-      setAudioEnabled(true);
       setShowEnableSoundButton(false);
 
       await requestNotificationPermission();
     } catch (error) {
       audioUnlockedRef.current = false;
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
       console.warn("Áudio ainda bloqueado pelo navegador:", error);
     }
@@ -128,7 +125,6 @@ export default function Admin() {
 
   const playNotificationSound = useCallback(() => {
     if (!audioUnlockedRef.current) {
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
       return;
     }
@@ -141,13 +137,11 @@ export default function Admin() {
       audio.play().catch((error) => {
         console.warn("Não foi possível tocar o som:", error);
         audioUnlockedRef.current = false;
-        setAudioEnabled(false);
         setShowEnableSoundButton(true);
       });
     } catch (error) {
       console.error("Erro ao tocar som de notificação:", error);
       audioUnlockedRef.current = false;
-      setAudioEnabled(false);
       setShowEnableSoundButton(true);
     }
   }, []);
@@ -193,7 +187,7 @@ export default function Admin() {
   );
 
   useEffect(() => {
-    const currentSection = searchParams.get("section");
+    const currentSection = String(searchParams.get("section") || "").trim();
     const validSections = Object.values(ADMIN_SECTION);
 
     if (!currentSection || !validSections.includes(currentSection)) {
@@ -215,11 +209,9 @@ export default function Admin() {
         audio.currentTime = 0;
 
         audioUnlockedRef.current = true;
-        setAudioEnabled(true);
         setShowEnableSoundButton(false);
       } catch {
         audioUnlockedRef.current = false;
-        setAudioEnabled(false);
         setShowEnableSoundButton(true);
       }
     }
@@ -239,12 +231,16 @@ export default function Admin() {
   }, [stopTitleBlink]);
 
   useEffect(() => {
-    window.addEventListener("click", unlockAudio, { once: true });
-    window.addEventListener("keydown", unlockAudio, { once: true });
+    const handleFirstInteraction = () => {
+      unlockAudio();
+    };
+
+    window.addEventListener("click", handleFirstInteraction, { once: true });
+    window.addEventListener("keydown", handleFirstInteraction, { once: true });
 
     return () => {
-      window.removeEventListener("click", unlockAudio);
-      window.removeEventListener("keydown", unlockAudio);
+      window.removeEventListener("click", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
     };
   }, [unlockAudio]);
 
@@ -259,32 +255,38 @@ export default function Admin() {
 
       if (ordersError) throw ordersError;
 
-      const safeOrders = ordersData ?? [];
+      const safeOrders = Array.isArray(ordersData) ? ordersData : [];
 
-      if (!safeOrders.length) {
+      if (safeOrders.length === 0) {
         setOrders([]);
         setMessage("");
         knownOrderIdsRef.current = new Set();
         return;
       }
 
-      const orderIds = safeOrders.map((order) => order.id);
+      const orderIds = safeOrders
+        .map((order) => order.id)
+        .filter(Boolean);
 
-      const { data: itemsData, error: itemsError } = await supabase
-        .from("order_items")
-        .select("*")
-        .in("order_id", orderIds);
+      let itemsByOrderId = {};
 
-      if (itemsError) throw itemsError;
+      if (orderIds.length > 0) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from("order_items")
+          .select("*")
+          .in("order_id", orderIds);
 
-      const itemsByOrderId = (itemsData ?? []).reduce((acc, item) => {
-        if (!acc[item.order_id]) {
-          acc[item.order_id] = [];
-        }
+        if (itemsError) throw itemsError;
 
-        acc[item.order_id].push(item);
-        return acc;
-      }, {});
+        itemsByOrderId = (itemsData ?? []).reduce((acc, item) => {
+          if (!acc[item.order_id]) {
+            acc[item.order_id] = [];
+          }
+
+          acc[item.order_id].push(item);
+          return acc;
+        }, {});
+      }
 
       const mergedOrders = safeOrders.map((order) => ({
         ...order,
@@ -294,7 +296,9 @@ export default function Admin() {
 
       setOrders(mergedOrders);
       setMessage("");
-      knownOrderIdsRef.current = new Set(mergedOrders.map((order) => order.id));
+      knownOrderIdsRef.current = new Set(
+        mergedOrders.map((order) => order.id).filter(Boolean)
+      );
     } catch (error) {
       console.error("Erro ao carregar pedidos do admin:", error);
       setOrders([]);

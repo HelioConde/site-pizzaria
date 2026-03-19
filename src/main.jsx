@@ -10,8 +10,10 @@ const params = new URLSearchParams(window.location.search);
 const redirect = params.get("redirect");
 
 function normalizeBasePath(path) {
-  if (!path) return "/";
-  return path.endsWith("/") ? path.slice(0, -1) || "/" : path;
+  if (!path || typeof path !== "string") return "/";
+  const trimmed = path.trim();
+  if (!trimmed) return "/";
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) || "/" : trimmed;
 }
 
 function normalizeRedirectPath(path) {
@@ -21,8 +23,22 @@ function normalizeRedirectPath(path) {
 
   if (!normalized) return null;
 
+  try {
+    normalized = decodeURIComponent(normalized);
+  } catch {
+    return null;
+  }
+
   if (!normalized.startsWith("/")) {
     normalized = `/${normalized}`;
+  }
+
+  if (normalized.startsWith("//")) {
+    return null;
+  }
+
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(normalized)) {
+    return null;
   }
 
   return normalized;
@@ -35,7 +51,20 @@ if (safeRedirect) {
   const nextUrl =
     safeBasePath === "/" ? safeRedirect : `${safeBasePath}${safeRedirect}`;
 
-  window.history.replaceState(null, "", nextUrl);
+  const currentHash = window.location.hash || "";
+  const currentParams = new URLSearchParams(window.location.search);
+
+  currentParams.delete("redirect");
+
+  const remainingQuery = currentParams.toString();
+  const hasQueryInRedirect = safeRedirect.includes("?");
+  const separator = hasQueryInRedirect ? "&" : "?";
+
+  const finalUrl = `${nextUrl}${
+    remainingQuery ? `${separator}${remainingQuery}` : ""
+  }${currentHash}`;
+
+  window.history.replaceState(null, "", finalUrl);
 }
 
 const rootElement = document.getElementById("root");
@@ -46,7 +75,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter basename={basePath}>
+    <BrowserRouter basename={safeBasePath}>
       <App />
     </BrowserRouter>
   </StrictMode>

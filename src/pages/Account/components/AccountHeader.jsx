@@ -1,7 +1,8 @@
 import styles from "../Account.module.css";
 
 export default function AccountHeader({ firstName }) {
-  const initial = firstName?.[0]?.toUpperCase() || "C";
+  const safeFirstName = String(firstName || "").trim() || "Cliente";
+  const initial = safeFirstName[0]?.toUpperCase() || "C";
 
   return (
     <section className={styles.hero}>
@@ -12,7 +13,7 @@ export default function AccountHeader({ firstName }) {
           <div className={styles.avatar}>{initial}</div>
 
           <div>
-            <h1 className={styles.title}>Olá, {firstName}</h1>
+            <h1 className={styles.title}>Olá, {safeFirstName}</h1>
 
             <p className={styles.subtitle}>
               Gerencie seus dados, endereços e acompanhe suas informações de compra.

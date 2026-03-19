@@ -4,9 +4,14 @@ import { supabase } from "../../lib/supabase";
 import styles from "./PaymentOnlineCheck.module.css";
 
 const CART_STORAGE_KEY = "base-studio-pizzas-cart";
+const CHECKOUT_STORAGE_PREFIX = "base-studio-pizzas-checkout-";
 
 function clearCartOnly() {
   localStorage.removeItem(CART_STORAGE_KEY);
+}
+
+function getCheckoutStorageKey(checkoutToken) {
+  return `${CHECKOUT_STORAGE_PREFIX}${checkoutToken}`;
 }
 
 export default function PaymentOnlineCheck() {
@@ -22,30 +27,44 @@ export default function PaymentOnlineCheck() {
 
   const isMountedRef = useRef(true);
   const hasStartedRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
 
   async function loadOrderByStripeSession(currentSessionId) {
     if (!currentSessionId) return null;
 
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select("id, stripe_session_id, created_at")
       .eq("stripe_session_id", currentSessionId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.error("Erro ao buscar pedido por stripe_session_id:", error);
       return null;
     }
 
-    if (!Array.isArray(data) || data.length === 0) {
-      return null;
-    }
+    return data ?? null;
+  }
 
-    return data[0];
+  function safeSetState(callback) {
+    if (!isMountedRef.current || hasNavigatedRef.current) return;
+    callback();
+  }
+
+  function redirectToSuccess(orderId) {
+    if (!orderId || hasNavigatedRef.current) return;
+
+    hasNavigatedRef.current = true;
+    navigate(`/payment-success?order_id=${orderId}`, {
+      replace: true,
+    });
   }
 
   useEffect(() => {
     isMountedRef.current = true;
+    hasNavigatedRef.current = false;
 
     return () => {
       isMountedRef.current = false;
@@ -57,14 +76,22 @@ export default function PaymentOnlineCheck() {
     hasStartedRef.current = true;
 
     async function handleOnlineCheck() {
+      const storageKey = checkoutToken
+        ? getCheckoutStorageKey(checkoutToken)
+        : null;
+
       try {
-        setLoading(true);
-        setStatus("loading");
-        setMessage("");
+        safeSetState(() => {
+          setLoading(true);
+          setStatus("loading");
+          setMessage("");
+        });
 
         if (!sessionId || !checkoutToken) {
-          setStatus("error");
-          setMessage("Informações do pagamento online não foram encontradas.");
+          safeSetState(() => {
+            setStatus("error");
+            setMessage("Informações do pagamento online não foram encontradas.");
+          });
           return;
         }
 
@@ -73,22 +100,25 @@ export default function PaymentOnlineCheck() {
         if (existingOrder?.id) {
           clearCartOnly();
 
-          if (!isMountedRef.current) return;
+          if (storageKey) {
+            localStorage.removeItem(storageKey);
+          }
 
-          navigate(`/payment-success?order_id=${existingOrder.id}`, {
-            replace: true,
-          });
+          redirectToSuccess(existingOrder.id);
           return;
         }
 
-        const storageKey = `base-studio-pizzas-checkout-${checkoutToken}`;
-        const savedCheckout = localStorage.getItem(storageKey);
+        const savedCheckout = storageKey
+          ? localStorage.getItem(storageKey)
+          : null;
 
         if (!savedCheckout) {
-          setStatus("error");
-          setMessage(
-            "Não encontramos os dados temporários do checkout neste navegador."
-          );
+          safeSetState(() => {
+            setStatus("error");
+            setMessage(
+              "Não encontramos os dados temporários do checkout neste navegador."
+            );
+          });
           return;
         }
 
@@ -98,15 +128,18 @@ export default function PaymentOnlineCheck() {
           checkoutPayload = JSON.parse(savedCheckout);
         } catch (error) {
           console.error("Erro ao ler checkout salvo:", error);
-          setStatus("error");
-          setMessage("Os dados temporários do checkout estão inválidos.");
+
+          safeSetState(() => {
+            setStatus("error");
+            setMessage("Os dados temporários do checkout estão inválidos.");
+          });
           return;
         }
 
-        if (!isMountedRef.current) return;
-
-        setStatus("checking");
-        setMessage("Confirmando seu pagamento online...");
+        safeSetState(() => {
+          setStatus("checking");
+          setMessage("Confirmando seu pagamento online...");
+        });
 
         const { data, error } = await supabase.functions.invoke(
           "confirm-checkout-session",
@@ -121,43 +154,65 @@ export default function PaymentOnlineCheck() {
 
         if (error) {
           console.error("Erro ao confirmar sessão online:", error);
-          setStatus("error");
-          setMessage(
-            "Não foi possível confirmar automaticamente o pagamento agora."
-          );
+
+          safeSetState(() => {
+            setStatus("error");
+            setMessage(
+              "Não foi possível confirmar automaticamente o pagamento agora."
+            );
+          });
           return;
         }
 
         if (data?.paid && data?.order?.id) {
           clearCartOnly();
-          localStorage.removeItem(storageKey);
 
-          if (!isMountedRef.current) return;
+          if (storageKey) {
+            localStorage.removeItem(storageKey);
+          }
 
-          navigate(`/payment-success?order_id=${data.order.id}`, {
-            replace: true,
-          });
+          redirectToSuccess(data.order.id);
+          return;
+        }
+
+        const confirmedOrder = await loadOrderByStripeSession(sessionId);
+
+        if (confirmedOrder?.id) {
+          clearCartOnly();
+
+          if (storageKey) {
+            localStorage.removeItem(storageKey);
+          }
+
+          redirectToSuccess(confirmedOrder.id);
           return;
         }
 
         if (data?.success === false) {
-          setStatus("pending");
-          setMessage(
-            data?.message || "O pagamento ainda não foi concluído no Stripe."
-          );
+          safeSetState(() => {
+            setStatus("pending");
+            setMessage(
+              data?.message || "O pagamento ainda não foi concluído no Stripe."
+            );
+          });
           return;
         }
 
-        setStatus("error");
-        setMessage("Não foi possível finalizar o processamento do pedido.");
+        safeSetState(() => {
+          setStatus("error");
+          setMessage("Não foi possível finalizar o processamento do pedido.");
+        });
       } catch (error) {
         console.error("Erro no PaymentOnlineCheck:", error);
-        setStatus("error");
-        setMessage("Ocorreu um erro ao validar seu pagamento online.");
+
+        safeSetState(() => {
+          setStatus("error");
+          setMessage("Ocorreu um erro ao validar seu pagamento online.");
+        });
       } finally {
-        if (isMountedRef.current) {
+        safeSetState(() => {
           setLoading(false);
-        }
+        });
       }
     }
 

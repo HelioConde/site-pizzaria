@@ -1,6 +1,10 @@
 import styles from "../Account.module.css";
 
-export default function DefaultAddressCard({ loading, defaultAddress, formatCep }) {
+export default function DefaultAddressCard({
+  loading,
+  defaultAddress,
+  formatCep,
+}) {
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
@@ -28,13 +32,13 @@ export default function DefaultAddressCard({ loading, defaultAddress, formatCep 
             {defaultAddress.state ? ` - ${defaultAddress.state}` : ""}
           </span>
 
-          {defaultAddress.cep && (
+          {defaultAddress.cep ? (
             <span>CEP: {formatCep(defaultAddress.cep)}</span>
-          )}
+          ) : null}
 
-          {defaultAddress.reference && (
+          {defaultAddress.reference ? (
             <span>Referência: {defaultAddress.reference}</span>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className={styles.emptyState}>

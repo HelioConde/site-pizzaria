@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import AdminContentHeader from "../components/AdminContentHeader";
 import styles from "../Admin.module.css";
@@ -26,27 +26,27 @@ function formatDate(value) {
 }
 
 function normalizeCustomerName(order) {
-  return String(order.customer_name || "").trim() || "Cliente sem nome";
+  return String(order?.customer_name || "").trim() || "Cliente sem nome";
 }
 
 function normalizeCustomerEmail(order) {
-  return String(order.customer_email || "").trim() || "Não informado";
+  return String(order?.customer_email || "").trim() || "Não informado";
 }
 
 function normalizeCustomerPhone(order) {
-  return String(order.customer_phone || "").trim() || "Não informado";
+  return String(order?.customer_phone || "").trim() || "Não informado";
 }
 
 function buildCustomerKey(order) {
-  const userId = String(order.user_id || "").trim();
-  const email = String(order.customer_email || "").trim().toLowerCase();
-  const phone = String(order.customer_phone || "").replace(/\D/g, "");
+  const userId = String(order?.user_id || "").trim();
+  const email = String(order?.customer_email || "").trim().toLowerCase();
+  const phone = String(order?.customer_phone || "").replace(/\D/g, "");
 
   if (userId) return `user:${userId}`;
   if (email) return `email:${email}`;
   if (phone) return `phone:${phone}`;
 
-  return `guest:${String(order.id)}`;
+  return `guest:${String(order?.id || "")}`;
 }
 
 export default function CustomersSection() {
@@ -55,7 +55,7 @@ export default function CustomersSection() {
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
 
-  async function loadCustomers() {
+  const loadCustomers = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -74,7 +74,7 @@ export default function CustomersSection() {
 
       if (error) throw error;
 
-      const orders = data ?? [];
+      const orders = Array.isArray(data) ? data : [];
 
       const grouped = orders.reduce((acc, order) => {
         const key = buildCustomerKey(order);
@@ -146,7 +146,7 @@ export default function CustomersSection() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadCustomers();
@@ -160,14 +160,16 @@ export default function CustomersSection() {
           schema: "public",
           table: "orders",
         },
-        loadCustomers
+        () => {
+          loadCustomers();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadCustomers]);
 
   const filteredCustomers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -176,9 +178,9 @@ export default function CustomersSection() {
 
     return customers.filter((customer) => {
       return (
-        customer.name.toLowerCase().includes(term) ||
-        customer.email.toLowerCase().includes(term) ||
-        customer.phone.toLowerCase().includes(term)
+        String(customer.name || "").toLowerCase().includes(term) ||
+        String(customer.email || "").toLowerCase().includes(term) ||
+        String(customer.phone || "").toLowerCase().includes(term)
       );
     });
   }, [customers, search]);
@@ -187,15 +189,15 @@ export default function CustomersSection() {
     return {
       totalCustomers: customers.length,
       totalOrders: customers.reduce(
-        (acc, customer) => acc + customer.ordersCount,
+        (acc, customer) => acc + Number(customer.ordersCount || 0),
         0
       ),
       totalRevenue: customers.reduce(
-        (acc, customer) => acc + customer.totalSpent,
+        (acc, customer) => acc + Number(customer.totalSpent || 0),
         0
       ),
       recurringCustomers: customers.filter(
-        (customer) => customer.ordersCount > 1
+        (customer) => Number(customer.ordersCount || 0) > 1
       ).length,
     };
   }, [customers]);

@@ -10,17 +10,17 @@ export default function AccountInfoCard({ name, email, phone }) {
       <div className={styles.infoList}>
         <div className={styles.infoItem}>
           <span>Nome</span>
-          <strong>{name}</strong>
+          <strong>{name || "Não informado"}</strong>
         </div>
 
         <div className={styles.infoItem}>
           <span>E-mail</span>
-          <strong>{email}</strong>
+          <strong>{email || "Não informado"}</strong>
         </div>
 
         <div className={styles.infoItem}>
           <span>Telefone</span>
-          <strong>{phone}</strong>
+          <strong>{phone || "Não informado"}</strong>
         </div>
       </div>
     </article>

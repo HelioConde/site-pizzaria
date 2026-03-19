@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import AdminContentHeader from "../components/AdminContentHeader";
+import ConfirmDialog from "../../../components/ui/ConfirmDialog/ConfirmDialog";
 import styles from "../Admin.module.css";
 
 function generateSlug(value) {
@@ -19,8 +20,14 @@ export default function CategoriesSection() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   async function loadCategories() {
     setLoading(true);
@@ -34,7 +41,7 @@ export default function CategoriesSection() {
 
       if (error) throw error;
 
-      setCategories(data || []);
+      setCategories(Array.isArray(data) ? data : []);
       setMessage("");
     } catch (error) {
       console.error("Erro ao carregar categorias:", error);
@@ -57,7 +64,9 @@ export default function CategoriesSection() {
           schema: "public",
           table: "product_categories",
         },
-        loadCategories
+        () => {
+          loadCategories();
+        }
       )
       .subscribe();
 
@@ -104,7 +113,7 @@ export default function CategoriesSection() {
   }
 
   async function handleToggleActive(category) {
-    setSaving(true);
+    setTogglingId(category.id);
     setMessage("");
 
     try {
@@ -129,7 +138,7 @@ export default function CategoriesSection() {
       console.error("Erro ao atualizar categoria:", error);
       setMessage("Não foi possível atualizar a categoria.");
     } finally {
-      setSaving(false);
+      setTogglingId(null);
     }
   }
 
@@ -175,6 +184,58 @@ export default function CategoriesSection() {
     );
   }
 
+  function requestDeleteCategory(category) {
+    if (!category?.id) return;
+
+    setCategoryToDelete(category);
+    setConfirmOpen(true);
+    setMessage("");
+  }
+
+  function closeDeleteDialog() {
+    if (deletingId) return;
+
+    setConfirmOpen(false);
+    setCategoryToDelete(null);
+  }
+
+  async function confirmDeleteCategory() {
+    if (!categoryToDelete?.id) return;
+
+    setDeletingId(categoryToDelete.id);
+    setMessage("");
+
+    try {
+      const { error } = await supabase
+        .from("product_categories")
+        .delete()
+        .eq("id", categoryToDelete.id);
+
+      if (error) throw error;
+
+      setCategories((prev) =>
+        prev.filter((item) => item.id !== categoryToDelete.id)
+      );
+
+      if (editingId === categoryToDelete.id) {
+        setEditingId(null);
+      }
+
+      setMessage("Categoria excluída com sucesso.");
+      setConfirmOpen(false);
+      setCategoryToDelete(null);
+    } catch (error) {
+      console.error("Erro ao excluir categoria:", error);
+
+      setMessage(
+        error.message ||
+          "Não foi possível excluir a categoria. Verifique se ela está vinculada a produtos."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <>
       <AdminContentHeader
@@ -198,6 +259,7 @@ export default function CategoriesSection() {
               placeholder="Nova categoria (ex: Pizzas especiais)"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
+              disabled={saving}
             />
 
             <button
@@ -222,6 +284,10 @@ export default function CategoriesSection() {
             <div className={styles.categoryGrid}>
               {categories.map((category) => {
                 const isEditing = editingId === category.id;
+                const isBusy =
+                  saving ||
+                  togglingId === category.id ||
+                  deletingId === category.id;
 
                 return (
                   <article key={category.id} className={styles.categoryCard}>
@@ -234,6 +300,7 @@ export default function CategoriesSection() {
                           onChange={(e) =>
                             handleCategoryNameChange(category.id, e.target.value)
                           }
+                          disabled={saving}
                         />
                       ) : (
                         <h3 className={styles.categoryTitle}>{category.name}</h3>
@@ -288,7 +355,7 @@ export default function CategoriesSection() {
                               setEditingId(category.id);
                               setMessage("");
                             }}
-                            disabled={saving}
+                            disabled={isBusy}
                           >
                             Editar
                           </button>
@@ -297,9 +364,24 @@ export default function CategoriesSection() {
                             type="button"
                             className={styles.secondaryActionButton}
                             onClick={() => handleToggleActive(category)}
-                            disabled={saving}
+                            disabled={isBusy}
                           >
-                            {category.is_active ? "Desativar" : "Ativar"}
+                            {togglingId === category.id
+                              ? "Atualizando..."
+                              : category.is_active
+                                ? "Desativar"
+                                : "Ativar"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.secondaryActionButton}
+                            onClick={() => requestDeleteCategory(category)}
+                            disabled={isBusy}
+                          >
+                            {deletingId === category.id
+                              ? "Excluindo..."
+                              : "Excluir"}
                           </button>
                         </>
                       )}
@@ -311,6 +393,19 @@ export default function CategoriesSection() {
           )}
         </div>
       </section>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir categoria"
+        description={`Tem certeza que deseja excluir "${
+          categoryToDelete?.name || "esta categoria"
+        }"? Essa ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={confirmDeleteCategory}
+        onCancel={closeDeleteDialog}
+        loading={deletingId != null}
+      />
     </>
   );
 }

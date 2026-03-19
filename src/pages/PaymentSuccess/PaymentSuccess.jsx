@@ -64,11 +64,29 @@ function buildRegionLine(order) {
     .join(" • ");
 }
 
+function normalizeOrderItems(order) {
+  if (!Array.isArray(order?.order_items)) return [];
+
+  return order.order_items
+    .map((item) => ({
+      id: item.id,
+      name: String(item.name || "Produto").trim(),
+      quantity: Math.max(1, Number(item.quantity || 1)),
+      unitPrice: Number(item.unit_price || 0),
+      notes: String(item.notes || "").trim(),
+      removedIngredients: Array.isArray(item.removed_ingredients)
+        ? item.removed_ingredients.filter(Boolean)
+        : [],
+    }))
+    .filter((item) => item.name);
+}
+
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const orderIdFromUrl = searchParams.get("order_id");
 
   const [order, setOrder] = useState(null);
+  const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -77,6 +95,8 @@ export default function PaymentSuccess() {
       try {
         setLoading(true);
         setMessage("");
+        setOrder(null);
+        setOrderItems([]);
 
         if (!orderIdFromUrl) {
           setMessage("Pedido não encontrado na URL.");
@@ -85,7 +105,17 @@ export default function PaymentSuccess() {
 
         const { data, error } = await supabase
           .from("orders")
-          .select("*")
+          .select(`
+            *,
+            order_items (
+              id,
+              name,
+              quantity,
+              unit_price,
+              notes,
+              removed_ingredients
+            )
+          `)
           .eq("id", orderIdFromUrl)
           .single();
 
@@ -96,6 +126,7 @@ export default function PaymentSuccess() {
         }
 
         setOrder(data);
+        setOrderItems(normalizeOrderItems(data));
       } catch (error) {
         console.error("Erro na página de sucesso:", error);
         setMessage("Ocorreu um erro ao carregar os dados do pedido.");
@@ -195,6 +226,13 @@ export default function PaymentSuccess() {
     return "Pedido confirmado";
   }, [order]);
 
+  const itemsTotal = useMemo(() => {
+    return orderItems.reduce(
+      (acc, item) => acc + Number(item.unitPrice || 0) * Number(item.quantity || 0),
+      0
+    );
+  }, [orderItems]);
+
   if (loading) {
     return (
       <main className={styles.page}>
@@ -284,6 +322,47 @@ export default function PaymentSuccess() {
                 </div>
               ) : null}
             </div>
+          </div>
+
+          <div className={styles.box}>
+            <h2 className={styles.sectionTitle}>Itens do pedido</h2>
+
+            {orderItems.length === 0 ? (
+              <p className={styles.text}>Nenhum item encontrado para este pedido.</p>
+            ) : (
+              <>
+                <div className={styles.grid}>
+                  {orderItems.map((item) => (
+                    <div key={item.id} className={styles.item}>
+                      <span className={styles.label}>
+                        {item.quantity}x {item.name}
+                      </span>
+                      <p>{formatPrice(item.unitPrice * item.quantity)}</p>
+
+                      {item.removedIngredients.length > 0 ? (
+                        <p className={styles.tip}>
+                          {item.removedIngredients.join(" • ")}
+                        </p>
+                      ) : null}
+
+                      {item.notes ? (
+                        <p className={styles.tip}>{item.notes}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.status}>
+                  <span>
+                    <strong>Subtotal dos itens:</strong> {formatPrice(itemsTotal)}
+                  </span>
+
+                  <span>
+                    <strong>Entrega:</strong> {formatPrice(order?.delivery_fee)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className={styles.box}>

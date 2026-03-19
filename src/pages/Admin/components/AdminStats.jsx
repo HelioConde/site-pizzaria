@@ -20,6 +20,11 @@ export default function AdminStats({ stats }) {
       </article>
 
       <article className={styles.statCard}>
+        <span>Aguardando motoboy</span>
+        <strong>{stats.waitingCourier}</strong>
+      </article>
+
+      <article className={styles.statCard}>
         <span>Saiu para entrega</span>
         <strong>{stats.outForDelivery}</strong>
       </article>

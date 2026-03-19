@@ -8,6 +8,7 @@ import { FILTER_OPTIONS } from "../admin.constants";
 import styles from "../Admin.module.css";
 import { unlockChatSound, playChatSound } from "../../../utils/chatSound";
 import { startTitleBlink, stopTitleBlink } from "../../../utils/titleNotifier";
+import { showChatBrowserNotification, requestChatNotificationPermission, } from "../../../utils/chatNotification";
 import { supabase } from "../../../lib/supabase";
 
 const MAX_VISIBLE_CHATS = 4;
@@ -30,6 +31,7 @@ export default function OrdersSection({
   const orderRefs = useRef({});
   const highlightTimeoutsRef = useRef({});
   const knownNotificationMessageIdsRef = useRef(new Set());
+  const chatChannelsRef = useRef([]);
 
   const orderMap = useMemo(() => {
     return filteredOrders.reduce((acc, order) => {
@@ -38,12 +40,19 @@ export default function OrdersSection({
     }, {});
   }, [filteredOrders]);
 
-  const watchedOrderIdsKey = useMemo(() => {
-    return filteredOrders.map((order) => order.id).join("|");
+  const watchedOrders = useMemo(() => {
+    return filteredOrders.map((order) => ({
+      id: order.id,
+      customer_name: order.customer_name,
+    }));
   }, [filteredOrders]);
 
+  const watchedOrderIdsKey = useMemo(() => {
+    return watchedOrders.map((order) => order.id).join("|");
+  }, [watchedOrders]);
+
   const addToast = useCallback((title, messageText) => {
-    const id = `${Date.now()}-${Math.random()}`;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     setToasts((prev) => [
       ...prev,
@@ -98,9 +107,9 @@ export default function OrdersSection({
       prev.map((chat) =>
         chat.orderId === orderId
           ? {
-              ...chat,
-              unreadCount: 0,
-            }
+            ...chat,
+            unreadCount: 0,
+          }
           : chat
       )
     );
@@ -151,9 +160,9 @@ export default function OrdersSection({
       prev.map((chat) =>
         chat.orderId === orderId
           ? {
-              ...chat,
-              minimized: !chat.minimized,
-            }
+            ...chat,
+            minimized: !chat.minimized,
+          }
           : chat
       )
     );
@@ -198,6 +207,10 @@ export default function OrdersSection({
   }, []);
 
   useEffect(() => {
+    requestChatNotificationPermission();
+  }, []);
+
+  useEffect(() => {
     const handleFocus = () => {
       stopTitleBlink();
     };
@@ -220,12 +233,16 @@ export default function OrdersSection({
   }, []);
 
   useEffect(() => {
-    if (!filteredOrders.length) return;
+    chatChannelsRef.current.forEach((channel) => {
+      supabase.removeChannel(channel);
+    });
+    chatChannelsRef.current = [];
+
+    if (!watchedOrders.length) return;
 
     let active = true;
-    const channels = [];
 
-    filteredOrders.forEach((order) => {
+    watchedOrders.forEach((order) => {
       const channel = supabase
         .channel(`admin-orders-section-chat-watch-${order.id}`)
         .on(
@@ -258,6 +275,11 @@ export default function OrdersSection({
             addToast(
               `📩 Pedido #${String(order.id).slice(0, 4)}`,
               `${order.customer_name || "Cliente"} enviou uma nova mensagem`
+            );
+
+            showChatBrowserNotification(
+              `Pedido #${String(order.id).slice(0, 4)}`,
+              `${order.customer_name || "Cliente"} enviou uma mensagem`
             );
 
             pulseOrder(order.id);
@@ -294,22 +316,41 @@ export default function OrdersSection({
         )
         .subscribe();
 
-      channels.push(channel);
+      chatChannelsRef.current.push(channel);
     });
 
     return () => {
       active = false;
-      channels.forEach((channel) => {
+
+      chatChannelsRef.current.forEach((channel) => {
         supabase.removeChannel(channel);
       });
+
+      chatChannelsRef.current = [];
     };
-  }, [watchedOrderIdsKey, filteredOrders, addToast, pulseOrder, enforceChatLimit]);
+  }, [
+    watchedOrderIdsKey,
+    watchedOrders,
+    addToast,
+    pulseOrder,
+    enforceChatLimit,
+  ]);
+
+  useEffect(() => {
+    setOpenChats((prev) => prev.filter((chat) => orderMap[chat.orderId]));
+  }, [orderMap]);
 
   useEffect(() => {
     return () => {
       Object.values(highlightTimeoutsRef.current).forEach((timeoutId) => {
         clearTimeout(timeoutId);
       });
+
+      chatChannelsRef.current.forEach((channel) => {
+        supabase.removeChannel(channel);
+      });
+
+      chatChannelsRef.current = [];
     };
   }, []);
 

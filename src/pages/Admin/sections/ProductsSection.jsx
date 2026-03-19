@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import AdminContentHeader from "../components/AdminContentHeader";
 import ProductForm from "../components/ProductForm";
+import ConfirmDialog from "../../../components/ui/ConfirmDialog/ConfirmDialog";
 import styles from "../Admin.module.css";
 
 function formatPrice(value) {
@@ -22,17 +23,62 @@ function generateSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeImageUrl(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue) return "";
+
+  if (/^https?:\/\//i.test(rawValue)) {
+    return rawValue;
+  }
+
+  let normalized = rawValue
+    .replace(/^https?:\/\/[^/]+/i, "")
+    .replace(/^\/+/, "")
+    .replace(/^\.?\//, "")
+    .replace(/^admin\/+/i, "")
+    .replace(/^site-pizzaria\/+/i, "")
+    .replace(/\\/g, "/");
+
+  if (!normalized) return "";
+
+  const duplicatedImagesPathPattern = /^(images\/pizzas\/)+(.*)$/i;
+  const duplicatedMatch = normalized.match(duplicatedImagesPathPattern);
+
+  if (duplicatedMatch) {
+    const finalSegment = duplicatedMatch[2] || "";
+    normalized = `images/pizzas/${finalSegment}`.replace(/\/+/g, "/");
+  }
+
+  return normalized.replace(/^\/+/, "");
+}
+
+function resolveImageUrl(path) {
+  const normalized = normalizeImageUrl(path);
+
+  if (!normalized) return "";
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  return `${import.meta.env.BASE_URL}${normalized}`;
+}
+
 export default function ProductsSection() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [categories, setCategories] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("product_categories")
@@ -41,14 +87,14 @@ export default function ProductsSection() {
 
       if (error) throw error;
 
-      setCategories(data || []);
+      setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro ao carregar categorias:", error);
       setCategories([]);
     }
-  }
+  }, []);
 
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -76,7 +122,7 @@ export default function ProductsSection() {
 
       if (error) throw error;
 
-      setProducts(data ?? []);
+      setProducts(Array.isArray(data) ? data : []);
       setMessage("");
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
@@ -85,11 +131,11 @@ export default function ProductsSection() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     await Promise.all([loadCategories(), loadProducts()]);
-  }
+  }, [loadCategories, loadProducts]);
 
   useEffect(() => {
     loadAll();
@@ -112,7 +158,7 @@ export default function ProductsSection() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadAll, loadProducts]);
 
   function resetFormState() {
     setShowForm(false);
@@ -121,18 +167,27 @@ export default function ProductsSection() {
 
   async function handleCreateProduct(data) {
     try {
+      const name = String(data.name || "").trim();
+      const slug = generateSlug(name);
+
       const { error } = await supabase.from("products").insert({
-        name: data.name,
-        description: data.description || null,
+        name,
+        description: String(data.description || "").trim() || null,
         price: Number(data.price || 0),
-        old_price: data.old_price ? Number(data.old_price) : null,
-        category_id: data.category_id,
-        image_url: data.image_url || null,
-        tag: data.tag || null,
-        rating: data.rating ? Number(data.rating) : null,
-        is_active: data.is_active,
-        is_featured: data.is_featured,
-        slug: generateSlug(data.name),
+        old_price:
+          data.old_price !== "" && data.old_price != null
+            ? Number(data.old_price)
+            : null,
+        category_id: data.category_id || null,
+        image_url: normalizeImageUrl(data.image_url) || null,
+        tag: String(data.tag || "").trim() || null,
+        rating:
+          data.rating !== "" && data.rating != null
+            ? Number(data.rating)
+            : null,
+        is_active: !!data.is_active,
+        is_featured: !!data.is_featured,
+        slug,
       });
 
       if (error) throw error;
@@ -150,20 +205,29 @@ export default function ProductsSection() {
     if (!editingProduct) return;
 
     try {
+      const name = String(data.name || "").trim();
+      const slug = generateSlug(name);
+
       const { error } = await supabase
         .from("products")
         .update({
-          name: data.name,
-          description: data.description || null,
+          name,
+          description: String(data.description || "").trim() || null,
           price: Number(data.price || 0),
-          old_price: data.old_price ? Number(data.old_price) : null,
-          category_id: data.category_id,
-          image_url: data.image_url || null,
-          tag: data.tag || null,
-          rating: data.rating ? Number(data.rating) : null,
-          is_active: data.is_active,
-          is_featured: data.is_featured,
-          slug: generateSlug(data.name),
+          old_price:
+            data.old_price !== "" && data.old_price != null
+              ? Number(data.old_price)
+              : null,
+          category_id: data.category_id || null,
+          image_url: normalizeImageUrl(data.image_url) || null,
+          tag: String(data.tag || "").trim() || null,
+          rating:
+            data.rating !== "" && data.rating != null
+              ? Number(data.rating)
+              : null,
+          is_active: !!data.is_active,
+          is_featured: !!data.is_featured,
+          slug,
           updated_at: new Date().toISOString(),
         })
         .eq("id", editingProduct.id);
@@ -184,10 +248,12 @@ export default function ProductsSection() {
     setMessage("");
 
     try {
+      const nextIsActive = !product.is_active;
+
       const { error } = await supabase
         .from("products")
         .update({
-          is_active: !product.is_active,
+          is_active: nextIsActive,
           updated_at: new Date().toISOString(),
         })
         .eq("id", product.id);
@@ -197,13 +263,13 @@ export default function ProductsSection() {
       setProducts((prev) =>
         prev.map((item) =>
           item.id === product.id
-            ? { ...item, is_active: !item.is_active }
+            ? { ...item, is_active: nextIsActive }
             : item
         )
       );
 
       setMessage(
-        !product.is_active
+        nextIsActive
           ? "Produto ativado com sucesso."
           : "Produto desativado com sucesso."
       );
@@ -212,6 +278,54 @@ export default function ProductsSection() {
       setMessage("Não foi possível atualizar o produto.");
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  function requestDeleteProduct(product) {
+    if (!product?.id) return;
+
+    setProductToDelete(product);
+    setConfirmOpen(true);
+    setMessage("");
+  }
+
+  function closeDeleteDialog() {
+    if (deletingId) return;
+
+    setConfirmOpen(false);
+    setProductToDelete(null);
+  }
+
+  async function confirmDeleteProduct() {
+    if (!productToDelete?.id) return;
+
+    setDeletingId(productToDelete.id);
+    setMessage("");
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productToDelete.id);
+
+      if (error) throw error;
+
+      setProducts((prev) =>
+        prev.filter((item) => item.id !== productToDelete.id)
+      );
+
+      if (editingProduct?.id === productToDelete.id) {
+        resetFormState();
+      }
+
+      setMessage("Produto excluído com sucesso.");
+      setConfirmOpen(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error("Erro ao excluir produto:", error);
+      setMessage(error.message || "Não foi possível excluir o produto.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -266,6 +380,7 @@ export default function ProductsSection() {
               onClick={() => {
                 setEditingProduct(null);
                 setShowForm(true);
+                setMessage("");
               }}
             >
               + Novo Produto
@@ -351,15 +466,19 @@ export default function ProductsSection() {
             <div className={styles.productsGrid}>
               {filteredProducts.map((product) => {
                 const category = categoriesById[product.category_id];
+                const resolvedImageUrl = resolveImageUrl(product.image_url);
+                const isBusy =
+                  updatingId === product.id || deletingId === product.id;
 
                 return (
                   <article key={product.id} className={styles.productCard}>
                     <div className={styles.productImageWrap}>
-                      {product.image_url ? (
+                      {resolvedImageUrl ? (
                         <img
-                          src={product.image_url}
+                          src={resolvedImageUrl}
                           alt={product.name}
                           className={styles.productImage}
+                          loading="lazy"
                         />
                       ) : (
                         <div className={styles.productImagePlaceholder}>🍕</div>
@@ -427,6 +546,7 @@ export default function ProductsSection() {
                             setShowForm(true);
                             setMessage("");
                           }}
+                          disabled={isBusy}
                         >
                           Editar
                         </button>
@@ -435,13 +555,24 @@ export default function ProductsSection() {
                           type="button"
                           className={styles.secondaryActionButton}
                           onClick={() => handleToggleActive(product)}
-                          disabled={updatingId === product.id}
+                          disabled={isBusy}
                         >
                           {updatingId === product.id
                             ? "Atualizando..."
                             : product.is_active
-                            ? "Desativar"
-                            : "Ativar"}
+                              ? "Desativar"
+                              : "Ativar"}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={styles.secondaryActionButton}
+                          onClick={() => requestDeleteProduct(product)}
+                          disabled={isBusy}
+                        >
+                          {deletingId === product.id
+                            ? "Excluindo..."
+                            : "Excluir"}
                         </button>
                       </div>
                     </div>
@@ -452,6 +583,19 @@ export default function ProductsSection() {
           )}
         </div>
       </section>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir produto"
+        description={`Tem certeza que deseja excluir "${
+          productToDelete?.name || "este produto"
+        }"? Essa ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={confirmDeleteProduct}
+        onCancel={closeDeleteDialog}
+        loading={deletingId != null}
+      />
     </>
   );
 }

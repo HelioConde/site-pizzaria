@@ -3,6 +3,58 @@ import { Link } from "react-router-dom";
 import styles from "./Carousel.module.css";
 import Button from "../Button/Button";
 
+function normalizeTitleParts(slide) {
+  if (Array.isArray(slide?.titleParts) && slide.titleParts.length > 0) {
+    return slide.titleParts;
+  }
+
+  if (typeof slide?.title === "string" && slide.title.trim()) {
+    return [slide.title.trim(), "", ""];
+  }
+
+  return ["", "", ""];
+}
+
+function normalizeDescription(slide) {
+  if (typeof slide?.description === "string" && slide.description.trim()) {
+    return slide.description.trim();
+  }
+
+  if (typeof slide?.subtitle === "string" && slide.subtitle.trim()) {
+    return slide.subtitle.trim();
+  }
+
+  return "";
+}
+
+function normalizePrimaryCta(slide) {
+  if (slide?.primaryCta && typeof slide.primaryCta === "object") {
+    return {
+      href: slide.primaryCta.href || "/menu",
+      label: slide.primaryCta.label || "Fazer pedido",
+    };
+  }
+
+  return {
+    href: slide?.ctaTo || "/menu",
+    label: slide?.ctaLabel || "Fazer pedido",
+  };
+}
+
+function normalizeSecondaryCta(slide) {
+  if (slide?.secondaryCta && typeof slide.secondaryCta === "object") {
+    return {
+      href: slide.secondaryCta.href || "#destaques",
+      label: slide.secondaryCta.label || "Saiba mais",
+    };
+  }
+
+  return {
+    href: slide?.secondaryCtaTo || "#destaques",
+    label: slide?.secondaryCtaLabel || "Saiba mais",
+  };
+}
+
 export default function Carousel({
   slides,
   autoPlay = true,
@@ -32,7 +84,6 @@ export default function Carousel({
 
   function goTo(nextIndex) {
     if (!max) return;
-
     setIndex(((nextIndex % max) + max) % max);
   }
 
@@ -155,14 +206,10 @@ export default function Carousel({
         >
           {safeSlides.map((slide, slideIndex) => {
             const isActive = slideIndex === index;
-            const titleParts = Array.isArray(slide.titleParts)
-              ? slide.titleParts
-              : [slide.title || "", "", ""];
-
-            const primaryHref = slide?.primaryCta?.href || "/menu";
-            const primaryLabel = slide?.primaryCta?.label || "Fazer pedido";
-            const secondaryHref = slide?.secondaryCta?.href || "#destaques";
-            const secondaryLabel = slide?.secondaryCta?.label || "Saiba mais";
+            const titleParts = normalizeTitleParts(slide);
+            const description = normalizeDescription(slide);
+            const primaryCta = normalizePrimaryCta(slide);
+            const secondaryCta = normalizeSecondaryCta(slide);
 
             return (
               <article
@@ -193,22 +240,26 @@ export default function Carousel({
                       {titleParts?.[2] || ""}
                     </h1>
 
-                    {slide?.description ? (
-                      <p className={styles.desc}>{slide.description}</p>
+                    {description ? (
+                      <p className={styles.desc}>{description}</p>
                     ) : null}
 
                     <div className={styles.ctaRow}>
                       <Button
                         as={Link}
-                        to={primaryHref}
+                        to={primaryCta.href}
                         variant="primary"
                         size="md"
                       >
-                        {primaryLabel} <span aria-hidden="true">→</span>
+                        {primaryCta.label} <span aria-hidden="true">→</span>
                       </Button>
 
-                      <Button as="a" href={secondaryHref} variant="ghost">
-                        {secondaryLabel}
+                      <Button
+                        as={Link}
+                        to={secondaryCta.href}
+                        variant="ghost"
+                      >
+                        {secondaryCta.label}
                       </Button>
                     </div>
 

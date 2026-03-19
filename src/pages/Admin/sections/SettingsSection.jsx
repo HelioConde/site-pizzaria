@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import AdminContentHeader from "../components/AdminContentHeader";
 import styles from "../Admin.module.css";
@@ -17,13 +17,43 @@ const initialForm = {
   estimated_delivery_time: "",
 };
 
+function normalizeText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/[^\d()+\-\s]/g, "").trim();
+}
+
+function normalizeWhatsapp(value) {
+  return String(value || "").replace(/[^\d]/g, "").trim();
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeUrl(value) {
+  return String(value || "").trim();
+}
+
+function normalizeMoneyValue(value) {
+  if (value === "" || value == null) return "";
+
+  const numeric = Number(value);
+
+  if (Number.isNaN(numeric)) return "";
+
+  return String(Math.max(0, numeric));
+}
+
 export default function SettingsSection() {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -37,7 +67,7 @@ export default function SettingsSection() {
 
       if (data) {
         setForm({
-          id: data.id,
+          id: data.id ?? null,
           store_name: data.store_name ?? "",
           tagline: data.tagline ?? "",
           phone: data.phone ?? "",
@@ -46,9 +76,12 @@ export default function SettingsSection() {
           city: data.city ?? "",
           address: data.address ?? "",
           instagram: data.instagram ?? "",
-          delivery_fee: data.delivery_fee ?? "",
+          delivery_fee:
+            data.delivery_fee != null ? String(data.delivery_fee) : "",
           estimated_delivery_time: data.estimated_delivery_time ?? "",
         });
+      } else {
+        setForm(initialForm);
       }
 
       setMessage("");
@@ -58,7 +91,7 @@ export default function SettingsSection() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -72,41 +105,77 @@ export default function SettingsSection() {
           schema: "public",
           table: "store_settings",
         },
-        loadSettings
+        () => {
+          loadSettings();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadSettings]);
 
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => {
+      let nextValue = value;
+
+      if (name === "phone") {
+        nextValue = normalizePhone(value);
+      }
+
+      if (name === "whatsapp") {
+        nextValue = normalizeWhatsapp(value);
+      }
+
+      if (name === "email") {
+        nextValue = normalizeEmail(value);
+      }
+
+      if (name === "instagram") {
+        nextValue = normalizeUrl(value);
+      }
+
+      if (name === "delivery_fee") {
+        nextValue = normalizeMoneyValue(value);
+      }
+
+      return {
+        ...prev,
+        [name]: nextValue,
+      };
+    });
   }
 
   async function handleSave(event) {
     event.preventDefault();
+
+    const normalizedStoreName = normalizeText(form.store_name);
+
+    if (!normalizedStoreName) {
+      setMessage("Preencha o nome da loja.");
+      return;
+    }
+
     setSaving(true);
     setMessage("");
 
     try {
       const payload = {
-        store_name: form.store_name.trim(),
-        tagline: form.tagline.trim() || null,
-        phone: form.phone.trim() || null,
-        whatsapp: form.whatsapp.trim() || null,
-        email: form.email.trim() || null,
-        city: form.city.trim() || null,
-        address: form.address.trim() || null,
-        instagram: form.instagram.trim() || null,
-        delivery_fee: Number(form.delivery_fee || 0),
-        estimated_delivery_time: form.estimated_delivery_time.trim() || null,
+        store_name: normalizedStoreName,
+        tagline: normalizeText(form.tagline) || null,
+        phone: normalizePhone(form.phone) || null,
+        whatsapp: normalizeWhatsapp(form.whatsapp) || null,
+        email: normalizeEmail(form.email) || null,
+        city: normalizeText(form.city) || null,
+        address: normalizeText(form.address) || null,
+        instagram: normalizeUrl(form.instagram) || null,
+        delivery_fee:
+          form.delivery_fee !== "" ? Math.max(0, Number(form.delivery_fee)) : 0,
+        estimated_delivery_time:
+          normalizeText(form.estimated_delivery_time) || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -127,7 +196,10 @@ export default function SettingsSection() {
         if (error) throw error;
 
         if (data?.id) {
-          setForm((prev) => ({ ...prev, id: data.id }));
+          setForm((prev) => ({
+            ...prev,
+            id: data.id,
+          }));
         }
       }
 
@@ -262,6 +334,7 @@ export default function SettingsSection() {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   name="delivery_fee"
                   value={form.delivery_fee}
                   onChange={handleChange}
@@ -280,7 +353,9 @@ export default function SettingsSection() {
                 />
               </label>
 
-              <label className={`${styles.settingsField} ${styles.settingsFieldWide}`}>
+              <label
+                className={`${styles.settingsField} ${styles.settingsFieldWide}`}
+              >
                 <span>Tagline</span>
                 <textarea
                   name="tagline"

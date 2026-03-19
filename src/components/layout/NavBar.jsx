@@ -29,7 +29,7 @@ export default function Navbar() {
 
   function getAccountRoute() {
     if (!isAuthenticated) return "/auth";
-    if (userRole === "admin") return "/admin/dashboard";
+    if (userRole === "admin") return "/admin?section=dashboard";
     if (userRole === "delivery") return "/motoboy";
     return "/account";
   }
@@ -52,6 +52,7 @@ export default function Navbar() {
     };
 
     window.addEventListener("resize", onResize);
+
     return () => {
       window.removeEventListener("resize", onResize);
     };
@@ -227,7 +228,7 @@ export default function Navbar() {
                 </span>
               </button>
 
-              {accountOpen && (
+              {accountOpen ? (
                 <div
                   id={accountMenuId}
                   className={styles.accountDropdown}
@@ -257,7 +258,7 @@ export default function Navbar() {
                     {isLoggingOut ? "Saindo..." : "Sair da conta"}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           ) : (
             <Button
@@ -301,6 +302,13 @@ export default function Navbar() {
         className={`${styles.mobile} ${open ? styles.open : ""}`}
         aria-hidden={!open}
       >
+        <button
+          className={styles.backdrop}
+          aria-label="Fechar menu"
+          type="button"
+          onClick={() => setOpen(false)}
+        />
+
         <div className={styles.mobilePanel}>
           {links.map((item) => (
             <Link
@@ -361,13 +369,6 @@ export default function Navbar() {
             Fazer pedido →
           </Button>
         </div>
-
-        <button
-          className={styles.backdrop}
-          aria-label="Fechar menu"
-          type="button"
-          onClick={() => setOpen(false)}
-        />
       </div>
     </header>
   );

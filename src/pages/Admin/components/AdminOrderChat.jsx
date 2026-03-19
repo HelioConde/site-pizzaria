@@ -26,13 +26,22 @@ export default function AdminOrderChat({ orderId }) {
   const listRef = useRef(null);
 
   const canSend = useMemo(() => {
-    return Boolean(String(message || "").trim()) && !sending && !!currentUser?.id;
-  }, [message, sending, currentUser]);
+    return (
+      Boolean(String(message || "").trim()) &&
+      !sending &&
+      !!currentUser?.id &&
+      !!orderId
+    );
+  }, [message, sending, currentUser, orderId]);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((behavior = "auto") => {
     requestAnimationFrame(() => {
       if (!listRef.current) return;
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+
+      listRef.current.scrollTo({
+        top: listRef.current.scrollHeight,
+        behavior,
+      });
     });
   }, []);
 
@@ -40,12 +49,18 @@ export default function AdminOrderChat({ orderId }) {
     let active = true;
 
     async function loadCurrentUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!active) return;
-      setCurrentUser(user || null);
+        if (!active) return;
+        setCurrentUser(user || null);
+      } catch (error) {
+        console.error("Erro ao carregar usuário atual do chat admin:", error);
+        if (!active) return;
+        setCurrentUser(null);
+      }
     }
 
     loadCurrentUser();
@@ -59,8 +74,16 @@ export default function AdminOrderChat({ orderId }) {
     let active = true;
 
     async function loadMessages() {
+      if (!orderId) {
+        setMessages([]);
+        setLoading(false);
+        setChatError("Pedido inválido para carregar o chat.");
+        return;
+      }
+
       setLoading(true);
       setChatError("");
+      setMessages([]);
 
       const { data, error } = await supabase
         .from("order_messages")
@@ -78,42 +101,56 @@ export default function AdminOrderChat({ orderId }) {
         return;
       }
 
-      setMessages(data || []);
+      setMessages(Array.isArray(data) ? data : []);
       setLoading(false);
-      scrollToBottom();
+      scrollToBottom("auto");
     }
 
     loadMessages();
 
-    const channel = supabase
-      .channel(`order-messages-${orderId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "order_messages",
-          filter: `order_id=eq.${orderId}`,
-        },
-        (payload) => {
-          if (!active) return;
+    const channel = orderId
+      ? supabase
+          .channel(`order-messages-${orderId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "order_messages",
+              filter: `order_id=eq.${orderId}`,
+            },
+            (payload) => {
+              if (!active) return;
 
-          setMessages((prev) => {
-            const alreadyExists = prev.some((item) => item.id === payload.new.id);
-            if (alreadyExists) return prev;
-            return [...prev, payload.new];
-          });
+              setMessages((prev) => {
+                const alreadyExists = prev.some(
+                  (item) => item.id === payload.new.id
+                );
+                if (alreadyExists) return prev;
 
-          scrollToBottom();
-        }
-      )
-      .subscribe((status) => {
-        console.log(`CHAT ADMIN ${orderId} realtime status:`, status);
-      });
+                const next = [...prev, payload.new];
+                next.sort(
+                  (a, b) =>
+                    new Date(a.created_at).getTime() -
+                    new Date(b.created_at).getTime()
+                );
+                return next;
+              });
+
+              scrollToBottom("smooth");
+            }
+          )
+          .subscribe((status) => {
+            console.log(`CHAT ADMIN ${orderId} realtime status:`, status);
+          })
+      : null;
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
+
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [orderId, scrollToBottom]);
 
@@ -122,7 +159,7 @@ export default function AdminOrderChat({ orderId }) {
 
     const trimmed = String(message || "").trim();
 
-    if (!trimmed || !currentUser?.id || sending) return;
+    if (!trimmed || !currentUser?.id || sending || !orderId) return;
 
     setSending(true);
     setChatError("");
@@ -150,11 +187,17 @@ export default function AdminOrderChat({ orderId }) {
       setMessages((prev) => {
         const alreadyExists = prev.some((item) => item.id === data.id);
         if (alreadyExists) return prev;
-        return [...prev, data];
+
+        const next = [...prev, data];
+        next.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        return next;
       });
 
       setMessage("");
-      scrollToBottom();
+      scrollToBottom("smooth");
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       setChatError("Não foi possível enviar a mensagem.");
@@ -169,7 +212,8 @@ export default function AdminOrderChat({ orderId }) {
         <div className={styles.chatHeaderText}>
           <span className={styles.infoLabel}>Chat com cliente</span>
           <p className={styles.chatSubtitle}>
-            Use este espaço para alinhar endereço, referência ou status do pedido.
+            Use este espaço para alinhar endereço, referência ou status do
+            pedido.
           </p>
         </div>
       </div>
@@ -217,7 +261,9 @@ export default function AdminOrderChat({ orderId }) {
 
         <div className={styles.chatActions}>
           <div className={styles.chatFeedback}>
-            {chatError ? <span className={styles.chatError}>{chatError}</span> : null}
+            {chatError ? (
+              <span className={styles.chatError}>{chatError}</span>
+            ) : null}
           </div>
 
           <button

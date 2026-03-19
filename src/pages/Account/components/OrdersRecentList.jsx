@@ -369,7 +369,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
         .on(
           "postgres_changes",
           {
-            event: "INSERT",
+            event: "*",
             schema: "public",
             table: "order_delivery_tracking",
             filter: `order_id=eq.${order.id}`,
@@ -377,10 +377,12 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
           (payload) => {
             if (!active) return;
 
-            setTrackingByOrderId((prev) => ({
-              ...prev,
-              [order.id]: payload.new,
-            }));
+            if (payload.new) {
+              setTrackingByOrderId((prev) => ({
+                ...prev,
+                [order.id]: payload.new,
+              }));
+            }
           }
         )
         .subscribe();
@@ -411,6 +413,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
         .in("order_id", orderIds);
 
       if (!active) return;
+
       if (error) {
         console.error("Erro ao carregar mensagens conhecidas do cliente:", error);
         return;
@@ -500,10 +503,13 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
     };
   }, []);
 
-  const handleIncomingMessage = useCallback((orderId) => {
-    setActiveChatOrderId(orderId);
-    pulseOrder(orderId);
-  }, [pulseOrder]);
+  const handleIncomingMessage = useCallback(
+    (orderId) => {
+      setActiveChatOrderId(orderId);
+      pulseOrder(orderId);
+    },
+    [pulseOrder]
+  );
 
   const handleOpenChat = useCallback((orderId) => {
     setUnreadByOrderId((prev) => ({
@@ -731,9 +737,7 @@ export default function OrdersRecentList({ orders = [], loading = false }) {
                     <div className={styles.orderTrackingMapSection}>
                       <div className={styles.orderTrackingMapHeader}>
                         <strong>Acompanhe seu pedido</strong>
-                        <span>
-                          O motoboy está a caminho do seu endereço.
-                        </span>
+                        <span>O motoboy está a caminho do seu endereço.</span>
                       </div>
 
                       <DeliveryRouteMap

@@ -6,7 +6,6 @@ import {
   ORDER_STATUS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_STATUS,
-  STATUS_META,
 } from "../admin.constants";
 import {
   buildDeliveryAddress,
@@ -21,8 +20,25 @@ import {
 } from "../admin.utils";
 
 function buildItemsSummary(items) {
-  if (!items.length) return "Nenhum item";
-  return `${items.length} ${items.length === 1 ? "item" : "itens"}`;
+  if (!Array.isArray(items) || !items.length) return "Nenhum item";
+
+  const totalQuantity = items.reduce(
+    (acc, item) => acc + Math.max(1, Number(item.quantity || 1)),
+    0
+  );
+
+  return `${totalQuantity} ${totalQuantity === 1 ? "item" : "itens"}`;
+}
+
+function normalizeItemDetails(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  return String(value || "").trim();
 }
 
 export default function AdminOrderCard({
@@ -43,11 +59,6 @@ export default function AdminOrderCard({
   const [courierLocation, setCourierLocation] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showMap, setShowMap] = useState(false);
-
-  const statusClass =
-    styles[
-    STATUS_META[order.normalized_status]?.badgeClass || "statusBadgeDefault"
-    ];
 
   const isPaid =
     String(order.payment_status || "").toLowerCase() === PAYMENT_STATUS.PAID;
@@ -82,7 +93,7 @@ export default function AdminOrderCard({
         .maybeSingle();
 
       if (!error && active) {
-        setCourierLocation(data);
+        setCourierLocation(data ?? null);
       }
     }
 
@@ -100,7 +111,7 @@ export default function AdminOrderCard({
         },
         (payload) => {
           if (!active) return;
-          setCourierLocation(payload.new);
+          setCourierLocation(payload.new ?? null);
         }
       )
       .subscribe();
@@ -120,8 +131,9 @@ export default function AdminOrderCard({
   return (
     <article
       ref={(node) => registerOrderRef?.(order.id, node)}
-      className={`${styles.orderCard} ${isHighlighted ? styles.orderCardHighlighted : ""
-        }`}
+      className={`${styles.orderCard} ${
+        isHighlighted ? styles.orderCardHighlighted : ""
+      }`}
     >
       <div className={styles.orderHeader}>
         <div className={styles.orderHeaderMain}>
@@ -142,16 +154,18 @@ export default function AdminOrderCard({
           </span>
 
           <span
-            className={`${styles.paymentBadge} ${isPaid ? styles.paymentPaid : styles.paymentPending
-              }`}
+            className={`${styles.paymentBadge} ${
+              isPaid ? styles.paymentPaid : styles.paymentPending
+            }`}
           >
             {getPaymentStatusLabel(order)}
           </span>
-          
+
           <button
             type="button"
-            className={`${styles.chatOpenButton} ${unreadCount > 0 ? styles.chatOpenButtonUnread : ""
-              }`}
+            className={`${styles.chatOpenButton} ${
+              unreadCount > 0 ? styles.chatOpenButtonUnread : ""
+            }`}
             onClick={() => onOpenChat?.(order)}
             title="Abrir chat flutuante"
           >
@@ -163,7 +177,9 @@ export default function AdminOrderCard({
           </button>
 
           <div className={styles.priceToggleWrap}>
-            <span className={styles.badgeStrong}>{formatPrice(order.total)}</span>
+            <span className={styles.badgeStrong}>
+              {formatPrice(order.total)}
+            </span>
 
             <button
               type="button"
@@ -205,8 +221,9 @@ export default function AdminOrderCard({
             <div className={styles.infoBlock}>
               <span className={styles.infoLabel}>Pagamento</span>
               <span
-                className={`${styles.paymentBadge} ${isPaid ? styles.paymentPaid : styles.paymentPending
-                  }`}
+                className={`${styles.paymentBadge} ${
+                  isPaid ? styles.paymentPaid : styles.paymentPending
+                }`}
               >
                 {getPaymentStatusLabel(order)}
               </span>
@@ -226,9 +243,7 @@ export default function AdminOrderCard({
               <div className={styles.chatInlineHint}>
                 <div className={styles.chatInlineHintText}>
                   <span className={styles.infoLabel}>Atendimento</span>
-                  <strong>
-                    O chat deste pedido abre em janela flutuante.
-                  </strong>
+                  <strong>O chat deste pedido abre em janela flutuante.</strong>
                 </div>
 
                 <button
@@ -258,30 +273,37 @@ export default function AdminOrderCard({
 
           {groupedItems.length ? (
             <div className={styles.itemsGrid}>
-              {groupedItems.map((item, index) => (
-                <div
-                  key={item.id || `${item.name}-${index}`}
-                  className={styles.itemCardCompact}
-                >
-                  <div className={styles.itemInfo}>
-                    <span className={styles.itemName}>
-                      🍕 {item.name} x{item.quantity}
-                    </span>
+              {groupedItems.map((item, index) => {
+                const removedIngredientsText = normalizeItemDetails(
+                  item.removedIngredients
+                );
+                const notesText = normalizeItemDetails(item.notes);
 
-                    {item.removedIngredients ? (
-                      <span className={styles.itemDetails}>
-                        Remover: {item.removedIngredients}
+                return (
+                  <div
+                    key={item.id || `${item.name}-${index}`}
+                    className={styles.itemCardCompact}
+                  >
+                    <div className={styles.itemInfo}>
+                      <span className={styles.itemName}>
+                        🍕 {item.name} x{item.quantity}
                       </span>
-                    ) : null}
 
-                    {item.notes ? (
-                      <span className={styles.itemDetails}>
-                        Obs.: {item.notes}
-                      </span>
-                    ) : null}
+                      {removedIngredientsText ? (
+                        <span className={styles.itemDetails}>
+                          Remover: {removedIngredientsText}
+                        </span>
+                      ) : null}
+
+                      {notesText ? (
+                        <span className={styles.itemDetails}>
+                          Obs.: {notesText}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <strong>Nenhum item encontrado</strong>
@@ -304,8 +326,9 @@ export default function AdminOrderCard({
             <button
               key={option.value}
               type="button"
-              className={`${styles.actionButton} ${isActive ? styles.actionButtonActive : ""
-                } ${!isAllowed && !isActive ? styles.actionButtonBlocked : ""}`}
+              className={`${styles.actionButton} ${
+                isActive ? styles.actionButtonActive : ""
+              } ${!isAllowed && !isActive ? styles.actionButtonBlocked : ""}`}
               onClick={() => onUpdateStatus(order.id, option.value)}
               disabled={isDisabled}
               aria-pressed={isActive}
@@ -324,7 +347,7 @@ export default function AdminOrderCard({
       </div>
 
       <div className={styles.orderDetailsPanel}>
-        {order.normalized_status === ORDER_STATUS.DELIVERY && (
+        {order.normalized_status === ORDER_STATUS.DELIVERY ? (
           <div className={styles.deliveryDetailsCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionHeaderText}>
@@ -401,7 +424,7 @@ export default function AdminOrderCard({
               )
             ) : null}
           </div>
-        )}
+        ) : null}
       </div>
     </article>
   );

@@ -4,8 +4,7 @@ build/
 .env
 .DS_Store
 Thumbs.db
-.vscode/
-=======
+
 # Logs
 logs
 *.log
@@ -15,8 +14,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
 dist-ssr
 *.local
 
@@ -24,7 +21,6 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj

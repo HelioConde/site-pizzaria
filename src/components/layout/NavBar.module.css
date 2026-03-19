@@ -346,6 +346,7 @@
   position: fixed;
   inset: 0;
   display: none;
+  z-index: 80;
 }
 
 .open {
@@ -358,6 +359,7 @@
   background: rgba(2, 6, 23, 0.35);
   border: 0;
   animation: fadeIn 0.18s ease;
+  z-index: 0;
 }
 
 .mobilePanel {
@@ -372,6 +374,7 @@
   box-shadow: var(--shadow);
   animation: mobilePanelEnter 0.2s ease;
   transform-origin: top right;
+  z-index: 1;
 }
 
 .mobileLink {
@@ -531,6 +534,10 @@
 .mobileCta {
   width: 100%;
   margin-top: 10px;
+}
+
+.cta {
+  white-space: nowrap;
 }
 
 @keyframes dropdownEnter {

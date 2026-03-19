@@ -147,7 +147,6 @@ export default function AccountOrderChat({
           });
 
           if (isIncomingFromStore) {
-            console.log("[ACCOUNT CHAT] mensagem recebida da loja, tocando som");
             playChatSound();
             onIncomingMessage?.(newMessage);
             onMarkAsRead?.();

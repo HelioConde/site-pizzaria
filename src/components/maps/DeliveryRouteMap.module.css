@@ -1,3 +1,13 @@
+.deliveryMapCard {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
 .deliveryMapWrap {
   width: 100%;
   margin-top: 12px;
@@ -8,7 +18,7 @@
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-    justify-content: center;
+  justify-content: center;
   flex-direction: row;
   align-items: center;
 }
@@ -19,13 +29,64 @@
   gap: 6px;
   padding: 10px 14px;
   border-radius: 999px;
-  background: #f4f7fb;
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f6fc 100%);
   border: 1px solid #d8e1ee;
   font-size: 0.95rem;
+  color: #213047;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
+}
+
+.mapMetaBadge strong {
+  font-weight: 800;
 }
 
 .mapError {
   margin: 0 0 12px;
   color: #c62828;
   font-size: 0.95rem;
+  text-align: center;
+  background: #fff3f3;
+  border: 1px solid #ffd5d5;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.mapFrame {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #dbe4f0;
+  background: #eef3f9;
+}
+
+.mapEmptyState {
+  width: 100%;
+  padding: 18px 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px dashed #cfd9e6;
+  color: #4b5563;
+  text-align: center;
+  font-size: 0.96rem;
+}
+
+.customerMarker {
+  filter: hue-rotate(120deg) saturate(1.15);
+}
+
+@media (max-width: 768px) {
+  .deliveryMapCard {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .deliveryMapMeta {
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .mapMetaBadge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
 }
