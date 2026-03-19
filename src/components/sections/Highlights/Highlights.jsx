@@ -35,6 +35,28 @@ function normalizeRating(value) {
   return Math.round(numericValue * 10) / 10;
 }
 
+function normalizeImagePath(image) {
+  if (typeof image !== "string") return null;
+
+  const trimmedImage = image.trim();
+
+  if (!trimmedImage) return null;
+
+  if (
+    trimmedImage.startsWith("http://") ||
+    trimmedImage.startsWith("https://") ||
+    trimmedImage.startsWith("data:")
+  ) {
+    return trimmedImage;
+  }
+
+  const cleanPath = trimmedImage.startsWith("/")
+    ? trimmedImage.slice(1)
+    : trimmedImage;
+
+  return `${import.meta.env.BASE_URL}${cleanPath}`;
+}
+
 function Rating({ value }) {
   const safeValue = normalizeRating(value);
 
@@ -84,6 +106,7 @@ function ItemCard({ item, badgeText }) {
   const safeOldPrice = hasValidOldPrice(item?.oldPrice)
     ? formatPrice(item?.oldPrice)
     : null;
+  const pizzaImageSrc = normalizeImagePath(item?.image);
 
   return (
     <Link
@@ -103,9 +126,9 @@ function ItemCard({ item, badgeText }) {
             />
           </div>
 
-          {typeof item?.image === "string" && item.image.trim() ? (
+          {pizzaImageSrc ? (
             <img
-              src={item.image}
+              src={pizzaImageSrc}
               alt={safeName}
               className={styles.thumbPizza}
               loading="lazy"
