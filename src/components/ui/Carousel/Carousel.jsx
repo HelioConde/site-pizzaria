@@ -55,6 +55,20 @@ function normalizeSecondaryCta(slide) {
   };
 }
 
+function normalizeImage(slide) {
+  if (typeof slide?.image === "string" && slide.image.trim()) {
+    return slide.image.trim();
+  }
+
+  return null;
+}
+
+function getSlideVariantClass(slide, styles) {
+  if (slide?.id === "hero-2") return styles.heroMap;
+  if (slide?.id === "hero-3") return styles.heroAdmin;
+  return "";
+}
+
 export default function Carousel({
   slides,
   autoPlay = true,
@@ -210,10 +224,12 @@ export default function Carousel({
             const description = normalizeDescription(slide);
             const primaryCta = normalizePrimaryCta(slide);
             const secondaryCta = normalizeSecondaryCta(slide);
+            const image = normalizeImage(slide);
+            const variantClass = getSlideVariantClass(slide, styles);
 
             return (
               <article
-                className={styles.slide}
+                className={`${styles.slide} ${variantClass}`.trim()}
                 key={slide.id ?? `${carouselId}-${slideIndex}`}
                 id={`${carouselId}-slide-${slideIndex}`}
                 role="group"
@@ -269,7 +285,24 @@ export default function Carousel({
                   </div>
 
                   <div className={styles.right}>
-                    <MockCard />
+                    {image ? (
+                      <div className={styles.heroImageWrap}>
+                        <img
+                          className={styles.heroImage}
+                          src={image}
+                          alt={
+                            slide?.imageAlt ||
+                            slide?.title ||
+                            "Destaque do sistema"
+                          }
+                          loading={slideIndex === 0 ? "eager" : "lazy"}
+                          decoding="async"
+                          draggable="false"
+                        />
+                      </div>
+                    ) : (
+                      <MockCard />
+                    )}
                   </div>
                 </div>
               </article>
@@ -289,7 +322,11 @@ export default function Carousel({
           ‹
         </button>
 
-        <div className={styles.dots} role="tablist" aria-label="Selecionar slide">
+        <div
+          className={styles.dots}
+          role="tablist"
+          aria-label="Selecionar slide"
+        >
           {safeSlides.map((_, slideIndex) => {
             const isActive = slideIndex === index;
 

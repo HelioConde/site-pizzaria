@@ -23,7 +23,6 @@ import {
   formatAddressNumber,
   mapUserMetadataToForm,
   mapAddressToForm,
-  buildFullAddress,
   hasEnoughAddressForMap,
   validateDeliveryData,
 } from "../checkout.utils";
@@ -56,17 +55,14 @@ export default function useCheckout() {
 
   const hasInitializedGpsRef = useRef(false);
   const lastGeocodeKeyRef = useRef("");
-  const geocodeAbortRef = useRef(null);
 
-  const subtotal = useMemo(
-    () =>
-      cartItems.reduce(
-        (acc, item) =>
-          acc + Number(item.price || 0) * Number(item.quantity || 0),
-        0
-      ),
-    [cartItems]
-  );
+  const subtotal = useMemo(() => {
+    return cartItems.reduce(
+      (acc, item) =>
+        acc + Number(item.price || 0) * Number(item.quantity || 0),
+      0
+    );
+  }, [cartItems]);
 
   const configuredDeliveryFee = useMemo(() => {
     return normalizeDeliveryFee(storeSettings?.delivery_fee);
@@ -145,98 +141,6 @@ export default function useCheckout() {
     );
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (geocodeAbortRef.current) {
-        geocodeAbortRef.current.abort();
-        geocodeAbortRef.current = null;
-      }
-    };
-  }, []);
-
-  async function geocodeAddress(address, cep = "") {
-    if (!address.trim()) return;
-
-    if (geocodeAbortRef.current) {
-      geocodeAbortRef.current.abort();
-    }
-
-    const controller = new AbortController();
-    geocodeAbortRef.current = controller;
-
-    setIsGeocoding(true);
-
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(
-          address
-        )}`,
-        {
-          signal: controller.signal,
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (Array.isArray(data) && data.length > 0) {
-        setDeliveryLat(Number(data[0].lat));
-        setDeliveryLng(Number(data[0].lon));
-        setHasConfirmedMapLocation(false);
-        setMessage("");
-        return;
-      }
-
-      const cepDigits = normalizeDigits(cep);
-
-      if (cepDigits.length === 8) {
-        const cepResponse = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&postalcode=${cepDigits}&country=Brazil`,
-          {
-            signal: controller.signal,
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        const cepData = await cepResponse.json();
-
-        if (Array.isArray(cepData) && cepData.length > 0) {
-          setDeliveryLat(Number(cepData[0].lat));
-          setDeliveryLng(Number(cepData[0].lon));
-          setHasConfirmedMapLocation(false);
-          setMessage(
-            "Não localizamos automaticamente o endereço exato. Ajuste o ponto no mapa, se desejar."
-          );
-          return;
-        }
-      }
-
-      setDeliveryLat(null);
-      setDeliveryLng(null);
-      setHasConfirmedMapLocation(false);
-      setMessage(
-        "Não localizamos automaticamente o endereço exato. Você pode continuar sem mapa."
-      );
-    } catch (error) {
-      if (error.name === "AbortError") return;
-
-      console.error("Erro ao localizar endereço:", error);
-      setDeliveryLat(null);
-      setDeliveryLng(null);
-      setHasConfirmedMapLocation(false);
-      setMessage("Não foi possível localizar o endereço automaticamente.");
-    } finally {
-      if (geocodeAbortRef.current === controller) {
-        geocodeAbortRef.current = null;
-      }
-      setIsGeocoding(false);
-    }
-  }
-
   async function loadStoreSettings() {
     try {
       const { data, error } = await supabase
@@ -282,11 +186,14 @@ export default function useCheckout() {
           changeFor: prev.changeFor || "",
         }));
 
-        const hasSavedCoords =
-          defaultAddress?.latitude != null && defaultAddress?.longitude != null;
+        const savedLat = defaultAddress?.latitude ?? defaultAddress?.lat ?? null;
+        const savedLng =
+          defaultAddress?.longitude ?? defaultAddress?.lng ?? null;
 
-        setDeliveryLat(hasSavedCoords ? Number(defaultAddress.latitude) : null);
-        setDeliveryLng(hasSavedCoords ? Number(defaultAddress.longitude) : null);
+        const hasSavedCoords = savedLat != null && savedLng != null;
+
+        setDeliveryLat(hasSavedCoords ? Number(savedLat) : null);
+        setDeliveryLng(hasSavedCoords ? Number(savedLng) : null);
         setHasConfirmedMapLocation(hasSavedCoords);
         setSkipMapSelection(false);
 
@@ -299,7 +206,7 @@ export default function useCheckout() {
           String(defaultAddress?.number || "").trim(),
         ].join("|");
 
-        lastGeocodeKeyRef.current = savedAddressKey;
+        lastGeocodeKeyRef.current = hasSavedCoords ? savedAddressKey : "";
       } else {
         setSelectedAddressId(null);
         setShowNewAddressForm(true);
@@ -393,69 +300,12 @@ export default function useCheckout() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!hasAddressReadyForMap) {
-      setIsGeocoding(false);
-      if (geocodeAbortRef.current) {
-        geocodeAbortRef.current.abort();
-        geocodeAbortRef.current = null;
-      }
-      lastGeocodeKeyRef.current = "";
-      return;
-    }
-
-    if (skipMapSelection) {
-      setIsGeocoding(false);
-      if (geocodeAbortRef.current) {
-        geocodeAbortRef.current.abort();
-        geocodeAbortRef.current = null;
-      }
-      return;
-    }
-
-    if (!showNewAddressForm && selectedAddressId && hasConfirmedMapLocation) {
-      return;
-    }
-
-    const addressKey = [
-      normalizeDigits(activeDelivery.cep),
-      normalizeSpaces(activeDelivery.address),
-      normalizeSpaces(activeDelivery.district),
-      normalizeSpaces(activeDelivery.city),
-      String(activeDelivery.state || "").trim(),
-      normalizeSpaces(activeDelivery.number),
-    ].join("|");
-
-    if (!addressKey || addressKey === lastGeocodeKeyRef.current) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      lastGeocodeKeyRef.current = addressKey;
-      const address = buildFullAddress(activeDelivery);
-      geocodeAddress(address, activeDelivery.cep);
-    }, 700);
-
-    return () => clearTimeout(timeout);
-  }, [
-    hasAddressReadyForMap,
-    skipMapSelection,
-    showNewAddressForm,
-    selectedAddressId,
-    hasConfirmedMapLocation,
-    activeDelivery.cep,
-    activeDelivery.address,
-    activeDelivery.district,
-    activeDelivery.city,
-    activeDelivery.state,
-    activeDelivery.number,
-  ]);
-
   function resetMapState() {
     setDeliveryLat(null);
     setDeliveryLng(null);
     setHasConfirmedMapLocation(false);
     setSkipMapSelection(false);
+    setIsGeocoding(false);
     lastGeocodeKeyRef.current = "";
   }
 
@@ -587,12 +437,13 @@ export default function useCheckout() {
       changeFor: prev.changeFor || "",
     }));
 
-    const hasSavedCoords =
-      address.latitude != null && address.longitude != null;
+    const savedLat = address?.latitude ?? address?.lat ?? null;
+    const savedLng = address?.longitude ?? address?.lng ?? null;
+    const hasSavedCoords = savedLat != null && savedLng != null;
 
     if (hasSavedCoords) {
-      setDeliveryLat(Number(address.latitude));
-      setDeliveryLng(Number(address.longitude));
+      setDeliveryLat(Number(savedLat));
+      setDeliveryLng(Number(savedLng));
       setHasConfirmedMapLocation(true);
     } else {
       setDeliveryLat(null);
@@ -669,8 +520,8 @@ export default function useCheckout() {
         number: normalizeSpaces(deliveryForm.number),
         complement: normalizeSpaces(deliveryForm.complement) || null,
         reference: normalizeSpaces(deliveryForm.reference) || null,
-        latitude: hasConfirmedMapLocation ? deliveryLat : null,
-        longitude: hasConfirmedMapLocation ? deliveryLng : null,
+        latitude: deliveryLat != null ? Number(deliveryLat) : null,
+        longitude: deliveryLng != null ? Number(deliveryLng) : null,
         is_default: shouldBeDefault,
       });
 
@@ -801,8 +652,8 @@ export default function useCheckout() {
           delivery_complement:
             normalizeSpaces(activeDelivery.complement) || null,
           delivery_reference: normalizeSpaces(activeDelivery.reference) || null,
-          delivery_lat: hasConfirmedMapLocation ? deliveryLat : null,
-          delivery_lng: hasConfirmedMapLocation ? deliveryLng : null,
+          delivery_lat: deliveryLat != null ? Number(deliveryLat) : null,
+          delivery_lng: deliveryLng != null ? Number(deliveryLng) : null,
           notes,
         })
         .select()
@@ -889,13 +740,14 @@ export default function useCheckout() {
 
       const shouldUpdateAddressCoords =
         selectedAddress &&
-        hasConfirmedMapLocation &&
         deliveryLat != null &&
         deliveryLng != null &&
         !Number.isNaN(Number(deliveryLat)) &&
         !Number.isNaN(Number(deliveryLng)) &&
-        (Number(selectedAddress.latitude) !== Number(deliveryLat) ||
-          Number(selectedAddress.longitude) !== Number(deliveryLng));
+        (Number(selectedAddress.latitude ?? selectedAddress.lat) !==
+          Number(deliveryLat) ||
+          Number(selectedAddress.longitude ?? selectedAddress.lng) !==
+            Number(deliveryLng));
 
       if (
         mode === "account" &&
@@ -906,8 +758,8 @@ export default function useCheckout() {
         const { error: addressUpdateError } = await supabase
           .from("addresses")
           .update({
-            latitude: deliveryLat,
-            longitude: deliveryLng,
+            latitude: Number(deliveryLat),
+            longitude: Number(deliveryLng),
           })
           .eq("id", selectedAddressId)
           .eq("user_id", user.id);
@@ -956,8 +808,8 @@ export default function useCheckout() {
             number: normalizeSpaces(deliveryForm.number) || null,
             complement: normalizeSpaces(deliveryForm.complement) || null,
             reference: normalizeSpaces(deliveryForm.reference) || null,
-            lat: hasConfirmedMapLocation ? deliveryLat : null,
-            lng: hasConfirmedMapLocation ? deliveryLng : null,
+            lat: deliveryLat != null ? Number(deliveryLat) : null,
+            lng: deliveryLng != null ? Number(deliveryLng) : null,
           },
         };
 

@@ -17,9 +17,9 @@ function normalizeHours(value) {
 
     return Array.isArray(parsed)
       ? parsed.filter(
-          (item) =>
-            item && typeof item === "object" && (item.label || item.value)
-        )
+        (item) =>
+          item && typeof item === "object" && (item.label || item.value)
+      )
       : [];
   } catch {
     return [];
@@ -131,7 +131,7 @@ export default function Footer({ footer }) {
     const deliveryFee = formatCurrency(storeSettings?.delivery_fee);
     const estimatedDeliveryTime =
       typeof storeSettings?.estimated_delivery_time === "string" &&
-      storeSettings.estimated_delivery_time.trim()
+        storeSettings.estimated_delivery_time.trim()
         ? storeSettings.estimated_delivery_time.trim()
         : "";
 
@@ -154,11 +154,13 @@ export default function Footer({ footer }) {
       hours: normalizedHours.length
         ? normalizedHours
         : [
-            { label: "Seg–Sex", value: "18h às 23h" },
-            { label: "Sáb", value: "18h às 00h" },
-            { label: "Dom", value: "17h às 23h" },
-          ],
+          { label: "Seg–Sex", value: "18h às 23h" },
+          { label: "Sáb", value: "18h às 00h" },
+          { label: "Dom", value: "17h às 23h" },
+        ],
       socials: [
+        Linkedin ? { name: "Linkedin", url: "https://www.linkedin.com/in/helioconde/" } : null,
+        Github ? { name: "Github", url: "https://github.com/helioconde" } : null,
         instagram ? { name: "Instagram", url: instagram } : null,
         whatsapp
           ? { name: "WhatsApp", url: `https://wa.me/${whatsapp}` }

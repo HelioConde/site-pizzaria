@@ -207,11 +207,9 @@
   height: 190px;
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  background: linear-gradient(
-    135deg,
-    rgba(148, 163, 184, 0.35),
-    rgba(239, 68, 68, 0.18)
-  );
+  background: linear-gradient(135deg,
+      rgba(148, 163, 184, 0.35),
+      rgba(239, 68, 68, 0.18));
 }
 
 /* Controls */
@@ -308,6 +306,53 @@
   border-color: rgba(239, 68, 68, 0.45);
 }
 
+.heroImageWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: visible;
+}
+
+.heroImage {
+  display: block;
+  width: 100%;
+  max-width: 860px;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 30px 60px rgba(15, 23, 42, 0.18));
+  transition: transform 0.45s ease, opacity 0.45s ease;
+}
+
+/* Hero 2: mapa com mais destaque, mas sem cortar demais */
+.heroMap .heroImageWrap {
+  justify-content: center;
+}
+
+.heroMap .heroImage {
+  transform: scale(1.05) translateX(8px);
+}
+
+/* Hero 3: admin com mais cara de sistema */
+.heroAdmin .heroImage {
+  transform: scale(1.15) translateX(-50px);
+}
+
+.heroAdmin .heroImageWrap {
+  transform: scale(1.2);
+}
+
+.heroLeft {
+  transform: scale(0.9) rotate(-6deg);
+}
+
+.heroRight {
+  transform: scale(0.9) rotate(6deg);
+}
+
 /* Responsivo */
 @media (max-width: 980px) {
   .wrap {
@@ -376,7 +421,7 @@
     align-items: stretch;
   }
 
-  .ctaRow > * {
+  .ctaRow>* {
     width: 100%;
   }
 
