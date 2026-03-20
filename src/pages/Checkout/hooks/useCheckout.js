@@ -27,6 +27,24 @@ import {
   validateDeliveryData,
 } from "../checkout.utils";
 
+function normalizeBasePath(baseUrl) {
+  const value = String(baseUrl || "/").trim();
+  if (!value) return "/";
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function buildAppPath(path) {
+  const basePath = normalizeBasePath(import.meta.env.BASE_URL);
+  const cleanPath = String(path || "").replace(/^\/+/, "");
+  return `${basePath}${cleanPath}`;
+}
+
+function buildAppUrl(path) {
+  const origin = window.location.origin;
+  const appPath = buildAppPath(path);
+  return new URL(appPath, origin).toString();
+}
+
 export default function useCheckout() {
   const navigate = useNavigate();
 
@@ -768,11 +786,6 @@ export default function useCheckout() {
       }
 
       if (deliveryForm.paymentMethod === PAYMENT_METHOD.ONLINE) {
-        const basePath = import.meta.env.BASE_URL || "/";
-        const normalizedBasePath = basePath.endsWith("/")
-          ? basePath
-          : `${basePath}/`;
-
         const checkoutToken = `checkout_${Date.now()}_${Math.random()
           .toString(36)
           .slice(2, 10)}`;
@@ -818,14 +831,20 @@ export default function useCheckout() {
           JSON.stringify(payload)
         );
 
+        const successUrl = `${buildAppUrl(
+          "payment-online-check"
+        )}?session_id={CHECKOUT_SESSION_ID}&checkout_token=${checkoutToken}`;
+
+        const cancelUrl = buildAppUrl("checkout");
+
         const { data, error } = await supabase.functions.invoke(
           "create-checkout-session",
           {
             body: {
               ...payload,
               checkoutToken,
-              successUrl: `${window.location.origin}${normalizedBasePath}payment-online-check?session_id={CHECKOUT_SESSION_ID}&checkout_token=${checkoutToken}`,
-              cancelUrl: `${window.location.origin}${normalizedBasePath}checkout`,
+              successUrl,
+              cancelUrl,
             },
           }
         );
@@ -848,7 +867,9 @@ export default function useCheckout() {
         });
 
         clearCartOnly();
-        navigate(`/payment-success?order_id=${order.id}`, { replace: true });
+        navigate(buildAppPath(`payment-success?order_id=${order.id}`), {
+          replace: true,
+        });
         return;
       }
 
@@ -861,7 +882,9 @@ export default function useCheckout() {
         });
 
         clearCartOnly();
-        navigate(`/payment-success?order_id=${order.id}`, { replace: true });
+        navigate(buildAppPath(`payment-success?order_id=${order.id}`), {
+          replace: true,
+        });
         return;
       }
 

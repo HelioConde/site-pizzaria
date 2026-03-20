@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./PaymentOnlineCheck.module.css";
@@ -12,6 +12,18 @@ function clearCartOnly() {
 
 function getCheckoutStorageKey(checkoutToken) {
   return `${CHECKOUT_STORAGE_PREFIX}${checkoutToken}`;
+}
+
+function normalizeBasePath(baseUrl) {
+  const value = String(baseUrl || "/").trim();
+  if (!value) return "/";
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function buildAppPath(path) {
+  const basePath = normalizeBasePath(import.meta.env.BASE_URL);
+  const cleanPath = String(path || "").replace(/^\/+/, "");
+  return `${basePath}${cleanPath}`;
 }
 
 export default function PaymentOnlineCheck() {
@@ -28,6 +40,10 @@ export default function PaymentOnlineCheck() {
   const isMountedRef = useRef(true);
   const hasStartedRef = useRef(false);
   const hasNavigatedRef = useRef(false);
+
+  const checkoutPath = useMemo(() => buildAppPath("checkout"), []);
+  const menuPath = useMemo(() => buildAppPath("menu"), []);
+  const paymentSuccessPath = useMemo(() => buildAppPath("payment-success"), []);
 
   async function loadOrderByStripeSession(currentSessionId) {
     if (!currentSessionId) return null;
@@ -57,7 +73,7 @@ export default function PaymentOnlineCheck() {
     if (!orderId || hasNavigatedRef.current) return;
 
     hasNavigatedRef.current = true;
-    navigate(`/payment-success?order_id=${orderId}`, {
+    navigate(`${paymentSuccessPath}?order_id=${orderId}`, {
       replace: true,
     });
   }
@@ -217,7 +233,7 @@ export default function PaymentOnlineCheck() {
     }
 
     handleOnlineCheck();
-  }, [sessionId, checkoutToken, navigate]);
+  }, [sessionId, checkoutToken, navigate, paymentSuccessPath]);
 
   return (
     <main className={styles.page}>
@@ -267,11 +283,11 @@ export default function PaymentOnlineCheck() {
           ) : null}
 
           <div className={styles.actions}>
-            <Link to="/checkout" className={styles.secondary}>
+            <Link to={checkoutPath} className={styles.secondary}>
               Voltar ao checkout
             </Link>
 
-            <Link to="/menu" className={styles.primary}>
+            <Link to={menuPath} className={styles.primary}>
               Ir ao cardápio
             </Link>
           </div>
