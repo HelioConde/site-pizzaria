@@ -36,7 +36,7 @@ const homeSections = {
       ctaTo: "/menu",
       secondaryCtaLabel: "Ver como funciona",
       secondaryCtaTo: "/#como-funciona",
-      image: "/images/hero/hero1.png",
+      image: `${import.meta.env.BASE_URL}images/hero/hero1.png`,
       imageAlt: "Tela do cardápio digital da Base Studio Pizzas em desktop e mobile",
     },
     {
@@ -49,7 +49,7 @@ const homeSections = {
       ctaTo: "/menu",
       secondaryCtaLabel: "Avaliações",
       secondaryCtaTo: "/#depoimentos",
-      image: "/images/hero/hero2.png",
+      image: `${import.meta.env.BASE_URL}images/hero/hero2.png`,
       imageAlt: "Tela de acompanhamento de pedido com mapa e rota em desktop e mobile",
     },
     {
@@ -62,7 +62,7 @@ const homeSections = {
       ctaTo: "/menu",
       secondaryCtaLabel: "Como funciona",
       secondaryCtaTo: "/#como-funciona",
-      image: "/images/hero/hero3.png",
+      image: `${import.meta.env.BASE_URL}images/hero/hero3.png`,
       imageAlt: "Painel administrativo e acompanhamento de pedidos da Base Studio Pizzas",
     },
   ],
