@@ -59,11 +59,11 @@ test("featured product cards provide clear menu access with realistic discounts"
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(products) });
   });
   await page.goto("./");
-  const section = page.locator('section[aria-label="Destaques"]');
+  const section = page.locator('#destaques section[aria-label="Destaques"]');
   await expect(section).toBeVisible();
   await expect(section.getByRole("link", { name: /Ver cardápio completo/i })).toBeVisible();
   await expect(section.getByRole("link", { name: /Abrir Pizza Calabresa para personalizar/i })).toHaveCount(2);
   await expect(section.getByRole("link", { name: /Abrir Pizza Mussarela para personalizar/i })).toHaveCount(1);
-  await expect(section).toContainText("R$ 35,00");
-  await expect(section).not.toContainText("R$ 30,00");
+  await expect(section).toContainText(/R\$\s*35,00/);
+  await expect(section).not.toContainText(/R\$\s*30,00/);
 });
