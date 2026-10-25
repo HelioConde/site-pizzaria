@@ -213,7 +213,6 @@ export default function Carousel({
       className={styles.wrap}
       aria-label={ariaLabel}
       aria-roledescription="carousel"
-      id="inicio"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocusCapture={() => setIsPaused(true)}
