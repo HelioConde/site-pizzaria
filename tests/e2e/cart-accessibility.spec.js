@@ -23,3 +23,24 @@ test("cart keyboard navigation is retained in dialog", async ({ page }) => {
   await page.keyboard.press("Shift+Tab");
   await expect(page.getByRole("button", { name: "Fechar carrinho" })).toBeFocused();
 });
+
+
+test("invalid stored cart values do not corrupt the cart summary", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("base-studio-pizzas-cart", JSON.stringify([
+      { id: "valid-1", productId: "p1", name: "Pizza Teste", price: 30, quantity: 2 },
+      { id: "bad-1", name: "Preço negativo", price: -100, quantity: 2 },
+      { id: "bad-2", name: "Preço infinito", price: "Infinity", quantity: 2 },
+      { id: "bad-3", name: "Quantidade inválida", price: 10, quantity: -3 },
+    ]));
+  });
+  await page.goto("./menu");
+  const cartButton = page.getByRole("button", { name: /Abrir carrinho com 2 item/i });
+  await expect(cartButton).toBeVisible();
+  await cartButton.click();
+  const cart = page.getByRole("dialog", { name: "Carrinho de compras" });
+  await expect(cart).toContainText("Pizza Teste");
+  await expect(cart).not.toContainText("Preço negativo");
+  await expect(cart).not.toContainText("Preço infinito");
+  await expect(cart).toContainText("R$ 60,00");
+});
