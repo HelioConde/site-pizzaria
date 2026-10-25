@@ -20,6 +20,10 @@
     --space-8: 32px;
     --space-12: 48px;
     --focus-ring: #9a3412;
+    --brand-deep: #992d23;
+    --surface-warm: #fffaf6;
+    --line-warm: #eddfd4;
+    --shadow-card: 0 14px 45px rgba(76, 44, 30, 0.06);
 }
 
 html {
@@ -64,7 +68,6 @@ body::before {
 
     background-repeat: no-repeat;
     background-size: cover;
-    will-change: transform, background-position;
 }
 
 body::after {
@@ -81,10 +84,6 @@ body::after {
 
     filter: blur(18px);
     opacity: 0.95;
-}
-
-button:hover {
-    transform: translateY(-1px);
 }
 
 a {
