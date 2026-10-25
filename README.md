@@ -1,301 +1,162 @@
-# Base Studio Pizzas — Plataforma de delivery (estudo)
+<!-- README do projeto Base Studio Pizzas -->
+<div align="center">
 
-**Projeto full-stack em evolução para simular pedidos, gestão de pizzaria e entregas em diferentes perfis de usuário.**
+# 🍕 Base Studio Pizzas
 
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-64748b)
+### Plataforma full-stack de delivery para pizzarias
 
-## Apresentação
+**Do cardápio à entrega:** uma experiência web com jornadas próprias para clientes, administradores e entregadores.
 
-A aplicação é voltada ao aprendizado de fluxos reais de delivery: cliente, administração, entregador, andamento dos pedidos e localização. O escopo inclui rastreamento por GPS, mas **não se deve assumir que todos os recursos estão integrados e homologados para produção**.
+[![Projeto concluído](https://img.shields.io/badge/STATUS-PROJETO%20CONCLU%C3%8DDO-16803c?style=for-the-badge)](https://github.com/HelioConde/site-pizzaria)
+[![React](https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-**Antes de usar com clientes reais:** revisar autenticação, permissões, dados de localização, pagamentos, privacidade e qualidade dos testes.
+**[🌐 Acessar demonstração](https://helioconde.github.io/site-pizzaria/)** · **[💻 Explorar código](https://github.com/HelioConde/site-pizzaria)** · **[👤 Meu portfólio](https://helioconde.github.io/portfolio2.0/)**
 
----
-
-### Plataforma Fullstack de Delivery
-
-## 🚧 Projeto em Desenvolvimento
-
-⚠️ Este projeto ainda está em desenvolvimento e novas funcionalidades estão sendo implementadas continuamente.
-
-Algumas funcionalidades podem estar incompletas ou em fase de testes.  
-O objetivo deste projeto é simular um **sistema real de delivery**, evoluindo gradualmente com melhorias de arquitetura, experiência do usuário e novas funcionalidades.
-
-Sugestões e feedbacks são bem-vindos.
-
-Plataforma completa de delivery para pizzarias modernas, com painel de **Cliente, Administrador e Motoboy**, incluindo **rastreamento em tempo real via GPS**.
-
-Projeto desenvolvido como simulação de produto real de mercado, com foco em **arquitetura escalável, controle de permissões e experiência do usuário (UX)**.
+</div>
 
 ---
 
-## 🚀 Visão Geral
+## ✨ Sobre o projeto
 
-O **Base Studio Pizzas** simula um sistema completo de delivery, permitindo:
+O **Base Studio Pizzas** é um projeto de portfólio **concluído em sua versão 1.0**, desenvolvido para representar o funcionamento de uma plataforma de delivery: descoberta de produtos, criação de pedidos, acompanhamento operacional e gerenciamento de entregas.
 
-- 📱 Clientes realizarem pedidos online
-- 📦 Acompanhamento do status do pedido
-- 🛠️ Administradores gerenciarem pedidos
-- 🛵 Motoboys aceitarem entregas
-- 📍 Rastreamento da entrega em tempo real via GPS
+Em vez de apenas uma página de pizzaria, o sistema organiza as jornadas de **três perfis distintos**, combinando interface responsiva, autenticação, banco de dados, eventos em tempo real e geolocalização.
 
-Este projeto demonstra a construção de uma **aplicação real de mercado**, com diferentes perfis de usuários e fluxo completo de entrega.
+> **Concluído para portfólio ≠ serviço comercial homologado.** A implementação e sua proposta de demonstração estão finalizadas; uma operação real depende de infraestrutura, políticas de acesso, contas de pagamento, testes ponta a ponta, privacidade e configuração da loja.
 
----
+## 🖼️ Visão da experiência
 
-## 🧰 Tecnologias Utilizadas
+![Apresentação visual do cardápio digital](public/images/hero/hero1.png)
 
-Frontend  
-React • Vite • React Router
+*Imagem de apresentação incluída no próprio projeto. [Abrir a demonstração](https://helioconde.github.io/site-pizzaria/) para explorar as páginas.*
 
-Backend (BaaS)  
-Supabase • PostgreSQL
+## 🧩 Principais funcionalidades
 
-Mapas e Rastreamento  
-Leaflet • OpenStreetMap
+| Experiência | O que foi desenvolvido |
+| :--- | :--- |
+| **🛒 Cliente** | Cardápio por categorias, busca, detalhes dos produtos, carrinho, checkout, endereço e acompanhamento de pedidos |
+| **👤 Conta** | Autenticação, histórico de pedidos e gerenciamento de endereços |
+| **📊 Administração** | Painel de operação, pedidos, produtos, categorias, clientes, entregadores, pagamentos, relatórios e configurações |
+| **🛵 Entregador** | Painel de entregas, aceitação de pedidos, atualização de status e envio de localização mediante permissão |
+| **🗺️ Rastreamento** | Visualização de mapa e rota com Leaflet/OpenStreetMap; atualizações de entrega integradas ao Supabase |
+| **💳 Pagamentos** | Fluxos de checkout e páginas de retorno/validação de pagamento online; integração Stripe condicionada ao serviço seguro de checkout |
 
-Pagamentos  
-Stripe
+### Fluxo de um pedido
 
-Deploy  
-GitHub Pages
+```text
+Cliente escolhe produtos
+         ↓
+Carrinho e checkout
+         ↓
+Pedido registrado no Supabase
+         ↓
+Administração recebe e acompanha
+         ↓
+Preparação → atribuição/aceite do entregador
+         ↓
+Saída para entrega → rastreamento
+         ↓
+Entrega concluída e acompanhamento pelo cliente
+```
 
----
+As telas e os recursos específicos disponíveis dependem do **perfil autenticado**, dos dados e das permissões configurados no Supabase.
 
-## 🧠 Funcionalidades
+## 🧱 Tecnologias
 
-### 👤 Cliente
+| Camada | Stack |
+| --- | --- |
+| **Frontend** | React 19, JavaScript, Vite e React Router |
+| **Estilização** | CSS Modules e Lucide React |
+| **Backend** | Supabase Auth, PostgreSQL e Realtime |
+| **Mapa e localização** | Leaflet, React Leaflet, OpenStreetMap e Geolocation API |
+| **Rotas** | Edge Function de rotas com openrouteservice (requer configuração) |
+| **Pagamento online** | Stripe e integração por função de backend (requer configuração) |
+| **Qualidade** | ESLint e workflow GitHub Actions para Playwright |
+| **Publicação web** | GitHub Pages |
 
-- Cadastro e login
-- Visualização do cardápio
-- Carrinho de compras
-- Finalização de pedido
-- Acompanhamento do status do pedido
-- Rastreamento da entrega em tempo real
-- Confirmação de recebimento
+## 🚀 Como executar localmente
 
----
+**Pré-requisitos:** Node.js moderno (recomendado 22+) e npm; um projeto Supabase configurado com o esquema e as políticas necessárias.
 
-### 🛠️ Administrador
+```bash
+git clone https://github.com/HelioConde/site-pizzaria.git
+cd site-pizzaria
+npm ci
+```
 
-- Login administrativo
-- Visualização global de pedidos
-- Alteração de status do pedido
-- Atribuição de motoboy
-- Correção manual de status
-- Controle de fluxo da entrega
+Crie um arquivo `.env.local` na raiz:
 
-Status possíveis:
+```dotenv
+VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
+```
 
-- Aguardando pagamento  
-- Pago  
-- Em preparo  
-- Aguardando motoboy  
-- Saiu para entrega  
-- Entregue  
+Em seguida:
 
----
+```bash
+npm run dev
+```
 
-### 🛵 Motoboy
+Abra o endereço informado pelo Vite no terminal (geralmente `http://localhost:5173`).
 
-- Login exclusivo
-- Visualização de pedidos disponíveis
-- Aceitar entregas
-- Acesso ao endereço do cliente
-- Botões de ação:
-  - **Aceitar entrega**
-  - **Saiu para entrega**
-  - **Entregue**
-- Compartilhamento de localização em tempo real
+**Importante:** a aplicação exige as variáveis Supabase para inicializar. Além delas, recursos como pedidos, autenticação e Realtime precisam de tabelas, políticas RLS e dados previamente configurados. A integração de pagamento utiliza a função `create-checkout-session`; a função de rotas `get-delivery-route` utiliza `ORS_API_KEY` no ambiente servidor. Essas integrações não funcionam apenas com a instalação de dependências do frontend.
 
----
+## 🧪 Verificações e build
 
-## 📍 Rastreamento em Tempo Real
+```bash
+npm run lint
+npm run build
+npm run preview
+```
 
-O sistema permite acompanhar o motoboy durante a entrega.
+Há também um workflow em `.github/workflows/playwright.yml` para testes de navegador. **A presença do workflow não significa que a execução atual esteja aprovada**; confira os resultados em [Actions](https://github.com/HelioConde/site-pizzaria/actions).
 
-Tecnologias utilizadas:
+O `vite.config.js` configura o prefixo `/site-pizzaria/` para o build de produção publicado no GitHub Pages. O comando `npm run deploy` envia o diretório `dist/` via `gh-pages`, exigindo autenticação apropriada.
 
-- **Geolocation API**
-- **Leaflet**
-- **OpenStreetMap**
-- **Supabase Realtime**
+## 📁 Organização
 
-Regras de funcionamento:
+```text
+src/
+  pages/
+    Menu/                 Cardápio e carrinho
+    Checkout/             Finalização dos pedidos
+    Auth/                 Login e autenticação
+    Account/              Dados, endereços e histórico
+    Admin/                Gestão da operação
+    Motoboy/              Entregas e localização
+    PaymentOnlineCheck/   Retorno do pagamento online
+    PaymentSuccess/       Confirmação visual
+  components/             Componentes e mapas reutilizáveis
+  hooks/                  Estado da sessão e perfil
+  lib/supabase.js         Cliente e configuração Supabase
+public/images/            Recursos gráficos
+supabase/functions/       Função de cálculo de rotas incluída
+.github/workflows/        Testes automatizados
+```
 
-- 📍 GPS ativado quando o motoboy marca **"Saiu para entrega"**
-- 🛑 GPS desativado automaticamente quando o pedido é marcado **"Entregue"**
+## 🔐 Privacidade e segurança
 
----
+- Permissões de cliente, administração e entregador devem ser reforçadas **no banco e nas funções do servidor**, não apenas pelas rotas de interface.
+- A chave `VITE_SUPABASE_ANON_KEY` é pública por natureza; **nunca** publique `service_role`, segredos Stripe ou `ORS_API_KEY` no frontend.
+- A geolocalização requer permissão do usuário e deve ser tratada como dado sensível no contexto da operação.
+- Perfis e pedidos da demonstração podem compartilhar um ambiente de testes. Evite usar informações pessoais reais.
+- Integrações com pagamentos reais exigem configuração segura, confirmações no backend e validação antes de produção.
 
-## 🔐 Controle de Permissões (RBAC)
+## ✅ Estado do projeto
 
-| Ação | Cliente | Admin | Motoboy |
-|-----|------|------|------|
-Criar pedido | ✅ | ❌ | ❌ |
-Alterar status | ❌ | ✅ | Parcial |
-Atribuir motoboy | ❌ | ✅ | ❌ |
-Aceitar entrega | ❌ | ❌ | ✅ |
-Marcar entregue | ❌ | ✅ | ✅ |
-Confirmar recebimento | ✅ | ❌ | ❌ |
+**Versão 1.0 — projeto finalizado como entrega de portfólio.**
 
----
+O escopo principal foi organizado em jornadas de cliente, administração e entregador. Extensões como notificações push, novos relatórios ou recursos comerciais adicionais são **evoluções opcionais**, não pendências para declarar a entrega original concluída.
 
-## 🗂️ Arquitetura do Projeto
-
-### 🎨 Frontend
-
-- React
-- Vite
-- React Router
-- CSS Modules
-- Leaflet (Mapas)
-
-Arquitetura baseada em **componentes reutilizáveis e separação de responsabilidades**.
-
----
-
-### ⚙️ Backend (BaaS)
-
-O projeto utiliza **Supabase** como backend.
-
-Tecnologias:
-
-- Supabase
-- PostgreSQL
-- Supabase Auth
-- Supabase Realtime
-
-Essa arquitetura permite:
-
-- autenticação integrada
-- banco de dados escalável
-- atualizações em tempo real
-- simplificação da infraestrutura backend
+A publicação e o funcionamento de serviços externos podem exigir manutenção ou configuração independente do fechamento do projeto.
 
 ---
 
-## 🗄️ Modelagem de Dados (Resumo)
+<div align="center">
 
-### Users
+**Desenvolvido por [Hélio Conde](https://github.com/HelioConde)**
 
-- id
-- email
-- role (client | admin | delivery)
+[Portfólio](https://helioconde.github.io/portfolio2.0/) · [LinkedIn](https://www.linkedin.com/in/helioconde/) · [Demonstração](https://helioconde.github.io/site-pizzaria/)
 
-### Products
-
-- id
-- name
-- price
-- description
-- active
-
-### Orders
-
-- id
-- user_id
-- items
-- delivery_address
-- payment_method
-- payment_status
-- order_status
-- delivery_user_id
-- created_at
-
----
-
-## 🏗️ Fluxo de Status do Pedido
-
-1️⃣ Criado  
-2️⃣ Aguardando pagamento  
-3️⃣ Pago  
-4️⃣ Em preparo  
-5️⃣ Aguardando entregador  
-6️⃣ Saiu para entrega  
-7️⃣ Entregue  
-8️⃣ Confirmado pelo cliente  
-
----
-
-## 🎯 Diferenciais Técnicos
-
-- Sistema com **múltiplos níveis de acesso (RBAC)**
-- **Rastreamento GPS em tempo real**
-- Integração com **Supabase**
-- Arquitetura modular
-- Simulação de produto SaaS
-- Fluxo completo de delivery
-
----
-
-## 📦 Roadmap (Melhorias Futuras)
-
-- Integração com pagamento real (**Stripe**)
-- WebSockets para atualização instantânea
-- Notificações push
-- Histórico de localização
-- Sistema de avaliações
-- Dashboard administrativo com métricas
-
----
-
-## 🧪 Objetivo Profissional
-
-Este projeto demonstra:
-
-- Arquitetura de aplicações modernas
-- Integração frontend + backend
-- Modelagem de dados
-- Controle de permissões
-- Rastreamento em tempo real
-- Desenvolvimento de produto real
-
----
-
-## 🌐 Demo Online
-
-A aplicação está disponível online:
-
-🔗 https://helioconde.github.io/site-pizzaria/
-
----
-
-## 🔑 Usuários para Teste
-
-Você pode testar os diferentes perfis do sistema utilizando os seguintes usuários.
-
-### 👤 Cliente
-
-Email: teste@teste.com  
-Senha: 12345678  
-
----
-
-### 🛠️ Administrador
-
-Email: admin@admin.com  
-Senha: 12345678  
-
----
-
-### 🛵 Motoboy
-
-Email: motoboy@motoboy.com  
-Senha: 12345678  
-
----
-
-⚠️ Observação
-
-Este projeto é uma simulação de sistema real de delivery.  
-Durante os testes, outros usuários podem alterar o status dos pedidos.
-
-## 👨‍💻 Autor
-
-**Hélio Conde**
-
-Desenvolvedor Front-End focado em **aplicações modernas, interativas e sistemas reais**.
-
-🔗 Linkedin  
-https://www.linkedin.com/in/helioconde/
+</div>
