@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../../lib/supabase";
+import { sanitizeCartItems } from "../../../lib/cart.js";
 
 import {
   CART_STORAGE_KEY,
@@ -255,7 +256,7 @@ export default function useCheckout() {
         if (savedCart) {
           const parsedCart = JSON.parse(savedCart);
           if (Array.isArray(parsedCart)) {
-            setCartItems(parsedCart.map(sanitizeCartItem).filter(Boolean));
+            setCartItems(sanitizeCartItems(parsedCart));
           }
         }
 
