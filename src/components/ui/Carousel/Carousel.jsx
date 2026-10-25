@@ -236,6 +236,7 @@ export default function Carousel({
                 aria-roledescription="slide"
                 aria-label={`Slide ${slideIndex + 1} de ${max}`}
                 aria-hidden={!isActive}
+                inert={!isActive}
               >
                 <div className={styles.grid}>
                   <div className={styles.left}>
