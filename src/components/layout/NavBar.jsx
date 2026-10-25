@@ -22,6 +22,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const accountRef = useRef(null);
+  const mobilePanelRef = useRef(null);
+  const burgerRef = useRef(null);
   const mobileMenuId = useId();
   const accountMenuId = useId();
 
@@ -63,6 +65,43 @@ export default function Navbar() {
 
     return () => {
       document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const panel = mobilePanelRef.current;
+    const getFocusables = () =>
+      [...(panel?.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ) ?? [])].filter((element) => element.getClientRects().length > 0);
+
+    getFocusables()[0]?.focus();
+
+    function trapFocus(event) {
+      if (event.key !== "Tab") return;
+      const elements = getFocusables();
+      if (!elements.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.removeEventListener("keydown", trapFocus);
+      // Restore the keyboard to its original trigger on dismiss.
+      burgerRef.current?.focus();
     };
   }, [open]);
 
@@ -284,6 +323,7 @@ export default function Navbar() {
 
           <button
             className={styles.burger}
+            ref={burgerRef}
             type="button"
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
@@ -301,6 +341,9 @@ export default function Navbar() {
         id={mobileMenuId}
         className={`${styles.mobile} ${open ? styles.open : ""}`}
         aria-hidden={!open}
+        role="dialog"
+        aria-modal={open ? "true" : undefined}
+        aria-label="Menu de navegação"
       >
         <button
           className={styles.backdrop}
@@ -309,7 +352,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)}
         />
 
-        <div className={styles.mobilePanel}>
+        <div className={styles.mobilePanel} ref={mobilePanelRef}>
           {links.map((item) => (
             <Link
               key={item.section}
