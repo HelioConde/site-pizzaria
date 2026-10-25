@@ -30,7 +30,7 @@ test("carousel next control changes visible slide", async ({ page }) => {
   const selected = page.getByRole("button", { name: "Ir para o slide 1" });
   await expect(selected).toHaveAttribute("aria-current", "true");
   await page.getByRole("button", { name: "Próximo slide" }).click();
-  await expect(page.getByRole("button", { name: "Ir para o slide 2" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Ir para o slide 2" })).toHaveAttribute("aria-current", "true");
 });
 
 test("catalog search area renders without horizontal overflow", async ({ page }) => {
@@ -49,7 +49,7 @@ test("Como funciona renders actual steps and navigation reaches it", async ({ pa
   await expect(page.getByRole("heading", { name: "Acompanhe as etapas" })).toBeVisible();
   const mobileMenu = page.getByRole("button", { name: "Abrir menu" });
   if (await mobileMenu.isVisible()) await mobileMenu.click();
-  await page.getByRole("link", { name: "Como funciona" }).click();
+  await page.getByRole("link", { name: "Como funciona", exact: true }).click();
   await expect(page).toHaveURL(/#como-funciona$/);
 });
 
