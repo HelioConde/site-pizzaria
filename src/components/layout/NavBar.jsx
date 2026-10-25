@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import useAuthRole from "../../hooks/useAuthRole";
 
-import styles from "./Navbar.module.css";
+import styles from "./NavBar.module.css";
 import Button from "../ui/Button/Button";
 
 const links = [
