@@ -115,3 +115,8 @@
     border-radius: 16px;
   }
 }
+.wrap { padding: clamp(32px, 5vw, 64px) 0; }
+.container { max-width: var(--content-max); }
+.title { font-size: clamp(1.75rem, 3vw, 2.25rem); }
+.grid { gap: var(--space-6); }
+.card { padding: var(--space-6); border-radius: 22px; }
