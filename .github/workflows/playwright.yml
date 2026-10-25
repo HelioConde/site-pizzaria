@@ -17,6 +17,8 @@ jobs:
       run: npm ci
     - name: Run cart unit tests
       run: npm run test:unit
+    - name: Verify server checkout price calculations
+      run: node --test supabase/functions/_shared/checkoutPricing.test.mjs
     - name: Install Playwright test runner
       run: npm install --no-save @playwright/test
     - name: Install Playwright Chromium
