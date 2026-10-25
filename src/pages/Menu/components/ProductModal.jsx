@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import styles from "../Menu.module.css";
 import Button from "../../../components/ui/Button/Button";
 
@@ -17,6 +18,26 @@ export default function ProductModal({
   formatPrice,
   maxNotesLength = 220,
 }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!open || !product) return undefined;
+    const previousFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.querySelector("button")?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCloseRef.current();
+      if (event.key !== "Tab" || !dialog) return;
+      const elements = [...dialog.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];
+      if (!elements.length) return;
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus?.(); };
+  }, [open, product?.id]);
   if (!open || !product) return null;
 
   const showIngredientOptions = !!product.isCustomizable;
@@ -29,6 +50,7 @@ export default function ProductModal({
     >
       <div
         className={styles.productModal}
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         aria-label="Personalizar produto"
         role="dialog"

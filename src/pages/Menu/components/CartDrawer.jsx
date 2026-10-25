@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import styles from "../Menu.module.css";
 import Button from "../../../components/ui/Button/Button";
@@ -15,6 +16,27 @@ export default function CartDrawer({
   onRemove,
   formatPrice,
 }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.querySelector("button")?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCloseRef.current();
+      if (event.key !== "Tab" || !dialog) return;
+      const elements = [...dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')];
+      if (!elements.length) return;
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus?.(); };
+  }, [open]);
+  if (!open) return null;
   return (
     <div
       className={`${styles.drawerOverlay} ${open ? styles.drawerOpen : ""}`}
@@ -23,6 +45,7 @@ export default function CartDrawer({
     >
       <aside
         className={styles.drawer}
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         aria-label="Carrinho de compras"
         role="dialog"
