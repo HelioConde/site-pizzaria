@@ -27,10 +27,10 @@ test("capture home reference screenshot", async ({ page }) => {
 
 test("carousel next control changes visible slide", async ({ page }) => {
   await page.goto("./");
-  const selected = page.getByRole("tab", { name: "Ir para o slide 1" });
-  await expect(selected).toHaveAttribute("aria-selected", "true");
+  const selected = page.getByRole("button", { name: "Ir para o slide 1" });
+  await expect(selected).toHaveAttribute("aria-current", "true");
   await page.getByRole("button", { name: "Próximo slide" }).click();
-  await expect(page.getByRole("tab", { name: "Ir para o slide 2" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Ir para o slide 2" })).toHaveAttribute("aria-selected", "true");
 });
 
 test("catalog search area renders without horizontal overflow", async ({ page }) => {
@@ -38,4 +38,36 @@ test("catalog search area renders without horizontal overflow", async ({ page })
   await expect(page.locator("body")).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
   expect(overflow).toBe(false);
+});
+
+test("Como funciona renders actual steps and navigation reaches it", async ({ page }) => {
+  await page.goto("./");
+  const heading = page.getByRole("heading", { name: "Do cardápio até a entrega" });
+  await expect(heading).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Escolha seu sabor" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Personalize o pedido" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Acompanhe as etapas" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("link", { name: "Como funciona" }).click();
+  await expect(page).toHaveURL(/#como-funciona$/);
+});
+
+test("carousel has an explicit pause and resume control", async ({ page }) => {
+  await page.goto("./");
+  const pause = page.getByRole("button", { name: "Pausar reprodução automática" });
+  await expect(pause).toBeVisible();
+  await pause.click();
+  await expect(page.getByRole("button", { name: "Retomar reprodução automática" }))
+    .toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Retomar reprodução automática" }).click();
+  await expect(pause).toHaveAttribute("aria-pressed", "false");
+});
+
+test("reduced motion disables automatic carousel until explicit opt in", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./");
+  const resume = page.getByRole("button", { name: "Retomar reprodução automática" });
+  await expect(resume).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Ir para o slide 1" }))
+    .toHaveAttribute("aria-current", "true");
 });
