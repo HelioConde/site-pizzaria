@@ -17,13 +17,15 @@ export default function CartDrawer({
   formatPrice,
 }) {
   const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!open) return undefined;
     const previousFocus = document.activeElement;
     const dialog = dialogRef.current;
     dialog?.querySelector("button")?.focus();
     function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !dialog) return;
       const elements = [...dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')];
       if (!elements.length) return;
@@ -33,7 +35,7 @@ export default function CartDrawer({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus?.(); };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return (
     <div
