@@ -1,18 +1,14 @@
 <!-- README do projeto Base Studio Pizzas -->
 <div align="center">
-
-# 🍕 Base Studio Pizzas
-
-### Plataforma full-stack de delivery para pizzarias
-
-**Do cardápio à entrega:** uma experiência web com jornadas próprias para clientes, administradores e entregadores.
-
-[![Projeto concluído](https://img.shields.io/badge/STATUS-PROJETO%20CONCLU%C3%8DDO-16803c?style=for-the-badge)](https://github.com/HelioConde/site-pizzaria)
-[![React](https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
-[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-
-**[🌐 Acessar demonstração](https://helioconde.github.io/site-pizzaria/)** · **[💻 Explorar código](https://github.com/HelioConde/site-pizzaria)** · **[👤 Meu portfólio](https://helioconde.github.io/portfolio2.0/)**
-
+  <h1>🍕 Base Studio Pizzas</h1>
+  <h3>Plataforma full-stack de delivery para pizzarias</h3>
+  <p><strong>Do cardápio à entrega:</strong> uma experiência web com jornadas próprias para clientes, administradores e entregadores.</p>
+  <p>
+    <a href="https://github.com/HelioConde/site-pizzaria"><img src="https://img.shields.io/badge/STATUS-PROJETO%20CONCLU%C3%8DDO-16803c?style=for-the-badge" alt="Projeto concluído"></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&amp;logo=react&amp;logoColor=white" alt="React 19"></a>
+    <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&amp;logo=supabase&amp;logoColor=white" alt="Supabase"></a>
+  </p>
+  <p><strong><a href="https://helioconde.github.io/site-pizzaria/">🌐 Acessar demonstração</a></strong> · <strong><a href="https://github.com/HelioConde/site-pizzaria">💻 Explorar código</a></strong> · <strong><a href="https://helioconde.github.io/portfolio2.0/">👤 Meu portfólio</a></strong></p>
 </div>
 
 ---
@@ -155,8 +151,8 @@ A publicação e o funcionamento de serviços externos podem exigir manutenção
 
 <div align="center">
 
-**Desenvolvido por [Hélio Conde](https://github.com/HelioConde)**
+<p><strong>Desenvolvido por <a href="https://github.com/HelioConde">Hélio Conde</a></strong></p>
 
-[Portfólio](https://helioconde.github.io/portfolio2.0/) · [LinkedIn](https://www.linkedin.com/in/helioconde/) · [Demonstração](https://helioconde.github.io/site-pizzaria/)
+<p><a href="https://helioconde.github.io/portfolio2.0/">Portfólio</a> · <a href="https://www.linkedin.com/in/helioconde/">LinkedIn</a> · <a href="https://helioconde.github.io/site-pizzaria/">Demonstração</a></p>
 
 </div>
