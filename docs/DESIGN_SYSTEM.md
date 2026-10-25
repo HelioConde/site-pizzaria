@@ -39,3 +39,24 @@ Estas diretrizes não substituem avaliação formal WCAG, nem homologação dos 
 
 ## Testes de regressão
 O arquivo `tests/e2e/responsive.spec.js` verifica dimensões compactas, ausência de rolagem horizontal, focabilidade dos controles e capturas visuais.
+
+
+## Página inicial — direção visual e implementação
+
+Na rodada `improve/home-visual-accessibility-20261025`, a homepage recebeu um desenho editorial mais consistente, construído sobre os componentes existentes:
+
+- **Hero:** imagem de referência do próprio projeto, quadro com gradiente quente, borda sutil, tipografia responsiva e hierarquia clara entre título, descrição e ações.
+- **Como funciona:** sequência de três cartões com numeração visível, ícones, títulos objetivos e uma grade de três colunas no desktop que vira uma coluna a partir de 760 px.
+- **Chamada final:** fundo bordô/vermelho profundo com texto de alto contraste e uma ação principal destacada.
+- **Destaques:** uma promoção só recebe o rótulo quando o preço anterior é estritamente maior que o preço atual; não apresentar pseudo-desconto.
+- **Carrossel:** controles anteriores/próximos, seleção direta de slides e botão permanente de pausa/retomada, todos acionáveis por teclado. Com `prefers-reduced-motion: reduce`, a rotação inicia pausada; o visitante pode retomá-la explicitamente.
+- **Âncoras:** `#como-funciona` referencia conteúdo real e `#inicio` deve ser único no DOM.
+
+### Critérios para Image to Code
+Usar as imagens e capturas do próprio repositório como referência e implementá-las com elementos React e CSS Modules reais, sem imagens de interfaces falsas substituindo botões ou informações interativas. Evitar exagero de escala/corte que esconda os elementos importantes das capturas.
+
+### Testes
+Manter os testes de comportamento em `tests/e2e/smoke.spec.js` e capturas visuais responsivas da homepage em `tests/e2e/home-design.spec.js`. Conferir também área clicável e texto em 320, 375, 768 e 1440 px.
+
+### Atenção comercial
+A aparência e os testes visuais não homologam o fluxo financeiro. As alterações críticas de pagamento e RLS seguem isoladas no PR de segurança.

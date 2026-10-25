@@ -81,6 +81,11 @@ export default function Carousel({
 
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [userPaused, setUserPaused] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
+  );
+  const isRotationPaused = isPaused || userPaused;
 
   const timerRef = useRef(null);
   const startX = useRef(null);
@@ -126,7 +131,14 @@ export default function Carousel({
   }, [max, index]);
 
   useEffect(() => {
-    if (!autoPlay || isPaused || max <= 1) {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setUserPaused(media.matches);
+    media.addEventListener("change", updateMotionPreference);
+    return () => media.removeEventListener("change", updateMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    if (!autoPlay || isRotationPaused || max <= 1) {
       clearTimer();
       return;
     }
@@ -138,7 +150,7 @@ export default function Carousel({
     return () => {
       clearTimer();
     };
-  }, [autoPlay, isPaused, max, safeInterval]);
+  }, [autoPlay, isRotationPaused, max, safeInterval]);
 
   useEffect(() => {
     function handleVisibilityChange() {
@@ -201,11 +213,12 @@ export default function Carousel({
       className={styles.wrap}
       aria-label={ariaLabel}
       aria-roledescription="carousel"
-      id="inicio"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocusCapture={() => setIsPaused(true)}
-      onBlurCapture={() => setIsPaused(false)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+      }}
     >
       <div
         className={styles.viewport}
@@ -323,11 +336,7 @@ export default function Carousel({
           ‹
         </button>
 
-        <div
-          className={styles.dots}
-          role="tablist"
-          aria-label="Selecionar slide"
-        >
+        <div className={styles.dots} role="group" aria-label="Selecionar slide">
           {safeSlides.map((_, slideIndex) => {
             const isActive = slideIndex === index;
 
@@ -336,15 +345,13 @@ export default function Carousel({
                 key={`${carouselId}-dot-${slideIndex}`}
                 id={`${carouselId}-tab-${slideIndex}`}
                 type="button"
-                role="tab"
                 className={`${styles.dot} ${
                   isActive ? styles.dotActive : ""
                 }`}
                 onClick={() => goTo(slideIndex)}
                 aria-label={`Ir para o slide ${slideIndex + 1}`}
-                aria-selected={isActive}
+                aria-current={isActive ? "true" : undefined}
                 aria-controls={`${carouselId}-slide-${slideIndex}`}
-                tabIndex={isActive ? 0 : -1}
               />
             );
           })}
@@ -359,6 +366,18 @@ export default function Carousel({
         >
           ›
         </button>
+        {autoPlay && max > 1 ? (
+          <button
+            type="button"
+            className={styles.pauseBtn}
+            aria-label={userPaused ? "Retomar reprodução automática" : "Pausar reprodução automática"}
+            aria-pressed={userPaused}
+            onClick={() => setUserPaused((paused) => !paused)}
+          >
+            <span aria-hidden="true">{userPaused ? "▶" : "Ⅱ"}</span>
+            <span>{userPaused ? "Reproduzir" : "Pausar"}</span>
+          </button>
+        ) : null}
       </div>
     </section>
   );

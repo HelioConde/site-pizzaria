@@ -66,6 +66,30 @@ const homeSections = {
       imageAlt: "Painel administrativo e acompanhamento de pedidos da Base Studio Pizzas",
     },
   ],
+  howItWorks: {
+    title: "Do cardápio até a entrega",
+    subtitle: "Uma jornada simples para escolher, personalizar e acompanhar seu pedido.",
+    steps: [
+      {
+        id: "step-menu",
+        icon: "cart",
+        title: "Escolha seu sabor",
+        description: "Explore o cardápio, filtre as opções e encontre sua pizza favorita.",
+      },
+      {
+        id: "step-customize",
+        icon: "slice",
+        title: "Personalize o pedido",
+        description: "Ajuste ingredientes, informe observações e confira os valores no carrinho.",
+      },
+      {
+        id: "step-delivery",
+        icon: "bike",
+        title: "Acompanhe as etapas",
+        description: "Finalize com seus dados de entrega e consulte o andamento do pedido.",
+      },
+    ],
+  },
   testimonials: {
     title: "Experiência ilustrativa",
     subtitle: "Depoimentos fictícios usados apenas para demonstrar a interface — não representam avaliações reais.",

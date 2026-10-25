@@ -17,12 +17,13 @@ function formatPrice(value) {
   }).format(numericValue);
 }
 
-function hasValidOldPrice(value) {
+function hasValidOldPrice(value, currentPrice) {
   if (value == null || value === "") return false;
 
   const numericValue = Number(value);
 
-  return Number.isFinite(numericValue) && numericValue > 0;
+  const current = Number(currentPrice);
+  return Number.isFinite(numericValue) && Number.isFinite(current) && current >= 0 && numericValue > current;
 }
 
 function normalizeRating(value) {
@@ -103,7 +104,7 @@ function ItemCard({ item, badgeText }) {
 
   const productTarget = item?.slug || item?.id || null;
   const safePrice = formatPrice(item?.price);
-  const safeOldPrice = hasValidOldPrice(item?.oldPrice)
+  const safeOldPrice = hasValidOldPrice(item?.oldPrice, item?.price)
     ? formatPrice(item?.oldPrice)
     : null;
   const pizzaImageSrc = normalizeImagePath(item?.image);
@@ -177,7 +178,7 @@ export default function Highlights({ products = [] }) {
     .slice(0, 2);
 
   const promotions = activeProducts
-    .filter((product) => hasValidOldPrice(product?.oldPrice))
+    .filter((product) => hasValidOldPrice(product?.oldPrice, product?.price))
     .slice(0, 2);
 
   if (!bestSellers.length && !promotions.length) {
