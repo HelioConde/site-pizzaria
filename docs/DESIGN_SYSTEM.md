@@ -60,3 +60,27 @@ Manter os testes de comportamento em `tests/e2e/smoke.spec.js` e capturas visuai
 
 ### Atenção comercial
 A aparência e os testes visuais não homologam o fluxo financeiro. As alterações críticas de pagamento e RLS seguem isoladas no PR de segurança.
+
+
+## Rodada de UI: navegação e destaque de produtos (25/10/2026)
+
+### Tokens e consistência
+- `--brand-deep`, `--surface-warm`, `--line-warm` e `--shadow-card`: referência para os cartões e o cabeçalho com tons quentes.
+- Nenhuma transformação de `button:hover` deve ser aplicada globalmente: cada componente define seu próprio estado interativo.
+- Evitar `will-change` permanente em planos de fundo fixos, que pode aumentar o uso de memória gráfica.
+
+### Cabeçalho mobile
+- Menu abre como painel acessível e move o foco para a primeira opção.
+- `Tab` e `Shift+Tab` permanecem dentro do menu enquanto aberto; `Escape` fecha e devolve foco ao botão.
+- O painel possui altura máxima baseada em `dvh` e rolagem interna; alvos interativos têm, no mínimo, 44 px.
+- Cabeçalho e botão hambúrguer continuam disponíveis no desktop/mobile sem quebrar a largura da tela.
+
+### Cards de destaque
+- Estrutura React existente mantida, mas CSS Modules reescrito com proporções consistentes, imagens sem recorte, preço visível e rótulos claros.
+- Um link visível para o cardápio completo aparece no cabeçalho.
+- Produtos vendidos são ordenados primeiro por `totalSold`, com `sortOrder` como desempate; descontos aparecem apenas quando o preço anterior é maior que o atual.
+- Estados de foco e `prefers-reduced-motion` previstos na estilização.
+
+### QA
+- `tests/e2e/nav-highlights.spec.js` contém casos para o menu mobile em 320/375/768 px e para a exibição de produtos simulados no destaque.
+- Esses testes não substituem revisão visual humana das screenshots nem homologação das regras de negócio no Supabase.
