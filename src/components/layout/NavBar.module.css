@@ -606,3 +606,13 @@
     width: auto;
   }
 }
+/* Stronger selectors than the generic Button module (loaded after navbar). */
+@media (max-width: 900px) {
+  .actions .cta,
+  .actions .accountButton,
+  .actions .accountMenu { display: none; }
+  .actions .burger { display: inline-block; flex: 0 0 44px; }
+  .inner { width: 100%; min-width: 0; }
+  .brand { min-width: 0; }
+  .brandText { overflow-wrap: anywhere; }
+}
