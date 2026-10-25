@@ -67,19 +67,19 @@ const homeSections = {
     },
   ],
   testimonials: {
-    title: "Avaliações",
-    subtitle: "O que nossos clientes acham da experiência.",
+    title: "Experiência ilustrativa",
+    subtitle: "Depoimentos fictícios usados apenas para demonstrar a interface — não representam avaliações reais.",
     items: [
       {
         id: "testimonial-1",
-        name: "Cliente Base",
+        name: "Exemplo de cliente",
         city: "Brasília - DF",
         rating: 5,
         text: "Pedido rápido, visual bonito e experiência muito boa no celular.",
       },
       {
         id: "testimonial-2",
-        name: "Cliente Premium",
+        name: "Exemplo de cliente 2",
         city: "Brasília - DF",
         rating: 5,
         text: "Fluxo de compra simples e acompanhamento bem organizado.",
