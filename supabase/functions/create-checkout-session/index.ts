@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       return {
         price_data: {
           currency: "brl",
-          product_data: { name: item.name, description: description || undefined },
+          product_data: { name: item.name, description: description || undefined, metadata: { product_id: item.productId, notes: item.notes, removed_ingredients: item.removedIngredients.join(", ").slice(0, 450) } },
           unit_amount: item.unitPriceCents,
         },
         quantity: item.quantity,
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: "brl",
-          product_data: { name: "Taxa de entrega" },
+          product_data: { name: "Taxa de entrega", metadata: { line_type: "delivery_fee" } },
           unit_amount: canonical.deliveryFeeCents,
         },
         quantity: 1,
@@ -139,6 +139,13 @@ Deno.serve(async (req) => {
         delivery_address: `${str(body?.delivery?.address)}, ${str(body?.delivery?.number)}`.slice(0, 200),
         delivery_city: str(body?.delivery?.city, 80),
         delivery_state: str(body?.delivery?.state, 10),
+        delivery_cep: digits(body?.delivery?.cep).slice(0, 8),
+        delivery_district: str(body?.delivery?.district, 120),
+        delivery_number: str(body?.delivery?.number, 30),
+        delivery_complement: str(body?.delivery?.complement, 180),
+        delivery_reference: str(body?.delivery?.reference, 180),
+        delivery_lat: str(body?.delivery?.lat, 30),
+        delivery_lng: str(body?.delivery?.lng, 30),
       },
     });
 
