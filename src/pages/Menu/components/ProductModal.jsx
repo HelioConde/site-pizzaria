@@ -19,13 +19,15 @@ export default function ProductModal({
   maxNotesLength = 220,
 }) {
   const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!open || !product) return undefined;
     const previousFocus = document.activeElement;
     const dialog = dialogRef.current;
     dialog?.querySelector("button")?.focus();
     function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !dialog) return;
       const elements = [...dialog.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];
       if (!elements.length) return;
@@ -35,7 +37,7 @@ export default function ProductModal({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus?.(); };
-  }, [open, product, onClose]);
+  }, [open, product?.id]);
   if (!open || !product) return null;
 
   const showIngredientOptions = !!product.isCustomizable;
