@@ -174,7 +174,10 @@ export default function Highlights({ products = [] }) {
   const activeProducts = safeProducts.filter((product) => product?.active);
 
   const bestSellers = [...activeProducts]
-    .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+    .sort((a, b) =>
+      (Number(b?.totalSold || 0) - Number(a?.totalSold || 0)) ||
+      (Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+    )
     .slice(0, 2);
 
   const promotions = activeProducts
@@ -189,10 +192,15 @@ export default function Highlights({ products = [] }) {
     <section className={styles.wrap} aria-label="Destaques">
       <div className={styles.container}>
         <header className={styles.head}>
-          <h2 className={styles.title}>Destaques</h2>
-          <p className={styles.subtitle}>
-            Os sabores mais pedidos e as melhores promoções do momento.
-          </p>
+          <div>
+            <h2 className={styles.title}>Destaques</h2>
+            <p className={styles.subtitle}>
+              Descubra os sabores mais pedidos e as ofertas disponíveis no cardápio.
+            </p>
+          </div>
+          <Link className={styles.allLink} to="/menu">
+            Ver cardápio completo <span aria-hidden="true">→</span>
+          </Link>
         </header>
 
         <div className={styles.grid}>
