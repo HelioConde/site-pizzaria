@@ -28,3 +28,14 @@ Validar 320, 375, 768, 1024 e 1440 px; testar zoom 200%, tabulação, contraste 
 
 ## Limites
 Estas diretrizes não substituem avaliação formal WCAG, nem homologação dos fluxos de pagamento, banco ou entrega.
+
+## Catálogo — aplicação prática
+- Grade fluida: desktop com colunas automáticas, mobile em 1–2 colunas conforme largura disponível.
+- Imagens: container com proporção estável e `object-fit: contain`, sem cortes de ingredientes.
+- Preços: hierarquia alta e vermelho de marca com contraste mais forte (`#b91c1c`).
+- Carrinho flutuante: no mobile fica na área inferior e respeita `safe-area-inset-bottom`.
+- Modais e drawers: altura máxima baseada em `dvh`, permitindo rolagem interna.
+- A revisão visual é feita no CSS Modules existente, sem recriar componentes ou alterar integrações.
+
+## Testes de regressão
+O arquivo `tests/e2e/responsive.spec.js` verifica dimensões compactas, ausência de rolagem horizontal, focabilidade dos controles e capturas visuais.
