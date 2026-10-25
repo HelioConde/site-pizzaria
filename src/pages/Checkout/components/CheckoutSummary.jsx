@@ -43,7 +43,7 @@ export default function CheckoutSummary({
             <strong>{estimatedDelivery}</strong>
           </div>
 
-          <div className={styles.summaryPillSafe}>🔒 Checkout seguro</div>
+          <div className={styles.summaryPillSafe}>Valores sujeitos à confirmação do pedido</div>
         </div>
       </div>
 
