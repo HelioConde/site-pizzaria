@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Navbar from "./components/layout/NavBar";
@@ -9,15 +9,15 @@ import Testimonials from "./components/sections/Testimonials/Testimonials";
 import FinalCta from "./components/sections/FinalCta/FinalCta";
 import Footer from "./components/sections/Footer/Footer";
 
-import Motoboy from "./pages/Motoboy/Motoboy";
-import Checkout from "./pages/Checkout/Checkout";
-import Auth from "./pages/Auth/Auth";
-import PaymentSuccess from "./pages/PaymentSuccess/PaymentSuccess";
-import PaymentOnlineCheck from "./pages/PaymentOnlineCheck/PaymentOnlineCheck";
-import Menu from "./pages/Menu/Menu";
-import Account from "./pages/Account/Account";
+const Motoboy = lazy(() => import("./pages/Motoboy/Motoboy"));
+const Checkout = lazy(() => import("./pages/Checkout/Checkout"));
+const Auth = lazy(() => import("./pages/Auth/Auth"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess/PaymentSuccess"));
+const PaymentOnlineCheck = lazy(() => import("./pages/PaymentOnlineCheck/PaymentOnlineCheck"));
+const Menu = lazy(() => import("./pages/Menu/Menu"));
+const Account = lazy(() => import("./pages/Account/Account"));
 import ScrollToHash from "./components/utils/ScrollToHash";
-import Admin from "./pages/Admin/Admin";
+const Admin = lazy(() => import("./pages/Admin/Admin"));
 import ProtectedRoute from "./components/routes/ProtectedRoute";
 import useAuthRole from "./hooks/useAuthRole";
 import { supabase } from "./lib/supabase";
@@ -301,7 +301,8 @@ function AppContent() {
       {!shouldHideNavbar ? <Navbar /> : null}
       <ScrollToHash />
 
-      <Routes>
+      <Suspense fallback={<FullPageFeedback title="Carregando página..." message="Preparando esta etapa do sistema." />}>
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/checkout" element={<Checkout />} />
@@ -360,7 +361,8 @@ function AppContent() {
         />
 
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </>
   );
 }
