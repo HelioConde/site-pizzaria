@@ -448,3 +448,25 @@
     font-size: 20px;
   }
 }
+/* Responsive editorial hero: keep screenshots visible without clipping. */
+.wrap { padding-top: clamp(28px, 5vw, 64px); }
+.viewport { max-width: var(--content-max); }
+.grid { gap: clamp(20px, 3vw, 42px); }
+.title { font-size: clamp(2.25rem, 4.7vw, 3.75rem); line-height: 1.08; }
+.heroImageWrap { overflow: hidden; border-radius: 22px; }
+.heroImage { max-height: 460px; object-fit: contain; }
+.heroMap .heroImage, .heroAdmin .heroImage { transform: none; }
+.heroAdmin .heroImageWrap { transform: none; }
+.navBtn { min-width: 44px; min-height: 44px; }
+.dot { min-width: 24px; min-height: 24px; background-clip: content-box; padding: 7px; }
+.dotActive { width: 30px; background: var(--primary); background-clip: content-box; }
+@media (max-width: 980px) {
+  .right { justify-content: center; }
+  .heroImage { max-height: 340px; }
+}
+@media (max-width: 520px) {
+  .wrap { padding: 28px 16px 0; }
+  .title { font-size: clamp(2rem, 8vw, 2.5rem); }
+  .heroImage { max-height: 230px; }
+  .navBtn { width: 44px; height: 44px; }
+}

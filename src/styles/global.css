@@ -11,6 +11,15 @@
     --shadow: 0 18px 45px rgba(2, 6, 23, 0.08);
 
     --nav-h: 76px;
+    --content-max: 1120px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --focus-ring: #9a3412;
 }
 
 html {
@@ -98,4 +107,23 @@ a {
             52% 2%,
             0% 0%;
     }
+}
+/* Shared accessible interactions */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+:where(button, input, textarea, select) { font: inherit; }
+:where(img, svg, video) { max-width: 100%; }
+:where(h1, h2, h3) { text-wrap: balance; }
+:where(p, li) { overflow-wrap: break-word; }
+::selection { background: #fed7aa; color: #431407; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
