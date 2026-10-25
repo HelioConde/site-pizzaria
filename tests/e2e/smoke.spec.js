@@ -47,8 +47,9 @@ test("Como funciona renders actual steps and navigation reaches it", async ({ pa
   await expect(page.getByRole("heading", { name: "Escolha seu sabor" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Personalize o pedido" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Acompanhe as etapas" })).toBeVisible();
-  await page.getByRole("navigation", { name: "Navegação principal" })
-    .getByRole("link", { name: "Como funciona" }).click();
+  const mobileMenu = page.getByRole("button", { name: "Abrir menu" });
+  if (await mobileMenu.isVisible()) await mobileMenu.click();
+  await page.getByRole("link", { name: "Como funciona" }).click();
   await expect(page).toHaveURL(/#como-funciona$/);
 });
 
