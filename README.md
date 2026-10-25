@@ -1,4 +1,17 @@
-## 🍕 Base Studio Pizzas  
+# Base Studio Pizzas — Plataforma de delivery (estudo)
+
+**Projeto full-stack em evolução para simular pedidos, gestão de pizzaria e entregas em diferentes perfis de usuário.**
+
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento-64748b)
+
+## Apresentação
+
+A aplicação é voltada ao aprendizado de fluxos reais de delivery: cliente, administração, entregador, andamento dos pedidos e localização. O escopo inclui rastreamento por GPS, mas **não se deve assumir que todos os recursos estão integrados e homologados para produção**.
+
+**Antes de usar com clientes reais:** revisar autenticação, permissões, dados de localização, pagamentos, privacidade e qualidade dos testes.
+
+---
+
 ### Plataforma Fullstack de Delivery
 
 ## 🚧 Projeto em Desenvolvimento
