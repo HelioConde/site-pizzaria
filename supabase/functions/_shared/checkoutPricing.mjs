@@ -1,5 +1,5 @@
 // Shared pure pricing logic for Edge Functions. Never trust client totals.
-export const MAX_CHECKOUT_ITEMS = 100;
+export const MAX_CHECKOUT_ITEMS = 99;
 export const MAX_CHECKOUT_QUANTITY = 99;
 
 export function toCents(value) {
