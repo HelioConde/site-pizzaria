@@ -824,3 +824,11 @@
 }
 @media (max-width: 370px) { .grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .card:hover, .card:hover .image { transform: none; } }
+
+/* Prevent the translated off-canvas cart from inflating document scroll width. */
+.drawerOverlay { overflow: hidden; max-width: 100vw; }
+.drawer { box-sizing: border-box; max-width: 100%; }
+@media (max-width: 640px) {
+  .hero, .filtersSection, .catalogSection { min-width: 0; }
+  .exploreCard, .grid, .card, .cardBody { min-width: 0; }
+}
