@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Menu.module.css";
+import { sanitizeCartItems, MAX_ITEM_QUANTITY } from "../../lib/cart.js";
 import Button from "../../components/ui/Button/Button";
 
 import ProductCard from "./components/ProductCard";
@@ -66,31 +67,6 @@ function isCustomizableProduct(product) {
   );
 }
 
-function sanitizeCartItem(item) {
-  if (!item || typeof item !== "object") return null;
-
-  const rawId = item.id ?? null;
-  const rawProductId =
-    item.productId ?? item.baseProductId ?? item.originalProductId ?? null;
-  const rawName = item.name ?? "";
-
-  if (!rawId || !rawName) return null;
-
-  return {
-    id: String(rawId),
-    productId: rawProductId != null ? String(rawProductId) : null,
-    name: String(rawName || "Produto").trim(),
-    price: Number(item.price || 0),
-    image: item.image || null,
-    quantity: Math.max(1, Number(item.quantity || 1)),
-    notes: String(item.notes || "").trim().slice(0, MAX_NOTES_LENGTH),
-    removedIngredients: Array.isArray(item.removedIngredients)
-      ? item.removedIngredients
-          .map((value) => String(value || "").trim())
-          .filter(Boolean)
-      : [],
-  };
-}
 
 function getInitialCartItems() {
   try {
@@ -102,7 +78,7 @@ function getInitialCartItems() {
     const parsedCart = JSON.parse(savedCart);
     if (!Array.isArray(parsedCart)) return [];
 
-    return parsedCart.map(sanitizeCartItem).filter(Boolean);
+    return sanitizeCartItems(parsedCart);
   } catch (error) {
     console.error("Erro ao carregar carrinho do localStorage:", error);
     return [];
@@ -381,7 +357,7 @@ export default function Menu() {
     setCartItems((prev) =>
       prev.map((item) =>
         item.id === cartItemId
-          ? { ...item, quantity: Number(item.quantity || 0) + 1 }
+          ? { ...item, quantity: Math.min(MAX_ITEM_QUANTITY, Number(item.quantity || 0) + 1) }
           : item
       )
     );
@@ -478,7 +454,7 @@ export default function Menu() {
 
   useEffect(() => {
     try {
-      const normalizedItems = cartItems.map(sanitizeCartItem).filter(Boolean);
+      const normalizedItems = sanitizeCartItems(cartItems);
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedItems));
     } catch (error) {
       console.error("Erro ao salvar carrinho no localStorage:", error);

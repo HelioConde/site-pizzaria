@@ -1,4 +1,5 @@
 import { DEFAULT_DELIVERY_FEE } from "./checkout.constants";
+import { sanitizeCartItem as normalizeCartItem } from "../../lib/cart.js";
 
 export function formatPrice(value) {
     if (value == null) return null;
@@ -77,21 +78,7 @@ export function parseMoneyValue(value) {
 }
 
 export function sanitizeCartItem(item) {
-    if (!item || typeof item !== "object") return null;
-    if (!item.name) return null;
-
-    return {
-        id: item.id ?? null,
-        productId: item.productId ?? item.id ?? null,
-        name: String(item.name || "Produto"),
-        price: Number(item.price || 0),
-        image: item.image || null,
-        quantity: Math.max(1, Number(item.quantity || 1)),
-        notes: String(item.notes || "").trim(),
-        removedIngredients: Array.isArray(item.removedIngredients)
-            ? item.removedIngredients.filter(Boolean)
-            : [],
-    };
+    return normalizeCartItem(item);
 }
 
 export function mapUserMetadataToForm(metadata = {}) {
@@ -241,7 +228,7 @@ export function validateDeliveryData({
 
             const changeValue = parseMoneyValue(activeDelivery.changeFor);
 
-            if (changeValue <= 0) {
+            if (!Number.isFinite(changeValue) || changeValue <= 0) {
                 return "Informe um valor de troco válido.";
             }
 
