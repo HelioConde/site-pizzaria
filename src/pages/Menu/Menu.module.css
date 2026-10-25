@@ -785,3 +785,42 @@
     width: 100%;
   }
 }
+/* Catalog redesign — scalable cards, clearer typography and safe mobile layout */
+.hero { padding: clamp(28px, 4vw, 56px) 20px 28px; background: linear-gradient(135deg, #fff7ed 0%, #fff 64%); }
+.heroContent, .exploreCard, .grid { max-width: 1200px; }
+.title { font-size: clamp(2rem, 5vw, 3.6rem); letter-spacing: -.045em; line-height: 1.1; }
+.searchInput { border-radius: 14px; box-shadow: 0 6px 20px rgba(15,23,42,.04); }
+.filtersSection { padding-bottom: 24px; }
+.exploreCard { border-radius: 20px; box-shadow: 0 12px 40px rgba(15,23,42,.04); }
+.filterBtn { min-height: 44px; font-weight: 700; }
+.filterActive { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+.grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 252px), 1fr)); align-items: stretch; justify-content: stretch; gap: clamp(14px, 2vw, 24px); }
+.card { max-width: none; display: flex; flex-direction: column; border-radius: 20px; }
+.imageWrap { aspect-ratio: 4 / 3; padding: 12px; overflow: hidden; }
+.image { object-fit: contain; transition: transform .25s ease; }
+.card:hover .image { transform: scale(1.04); }
+.cardBody { flex: 1; display: flex; flex-direction: column; padding: 18px; }
+.cardDesc { min-height: 0; flex: 1; }
+.cardFooter { margin-top: auto; }
+.price { color: #b91c1c; }
+.floatingCart { background: #b91c1c; }
+.drawer { max-height: 100dvh; }
+.productModal { max-height: min(90dvh, 860px); overflow-y: auto; }
+.qtyBox button, .closeBtn { min-width: 44px; min-height: 44px; }
+:where(.filterBtn, .floatingCart, .closeBtn, .qtyBox button, .removeBtn, .searchClear):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .hero { padding: 28px 16px 24px; }
+  .filtersSection, .catalogSection { padding-left: 16px; padding-right: 16px; }
+  .grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; }
+  .cardBody { padding: 12px; }
+  .cardTitle { font-size: 1rem; }
+  .cardDesc { font-size: .88rem; line-height: 1.45; }
+  .imageWrap { aspect-ratio: 1 / 1; padding: 8px; }
+  .cardFooter { align-items: flex-start; }
+  .floatingCart { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); right: 16px; }
+  .catalogSection { padding-bottom: 100px; }
+  .productModalOverlay { padding: 12px; }
+  .productModal { max-height: calc(100dvh - 24px); }
+}
+@media (max-width: 370px) { .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .card:hover, .card:hover .image { transform: none; } }
