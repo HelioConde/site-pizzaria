@@ -41,6 +41,9 @@ export default function HowItWorks({ data }) {
                 key={step.id ?? `how-it-works-step-${index}`}
                 className={styles.card}
               >
+                <span className={styles.stepNumber} aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <div className={styles.icon} aria-hidden="true">
                   {safeIcon}
                 </div>
