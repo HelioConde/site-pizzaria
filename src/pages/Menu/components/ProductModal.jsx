@@ -20,9 +20,12 @@ export default function ProductModal({
 }) {
   const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   useEffect(() => {
-    if (!open || !product) return undefined;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  const productId = product?.id;
+  useEffect(() => {
+    if (!open || !productId) return undefined;
     const previousFocus = document.activeElement;
     const dialog = dialogRef.current;
     dialog?.querySelector("button")?.focus();
@@ -37,7 +40,7 @@ export default function ProductModal({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus?.(); };
-  }, [open, product?.id]);
+  }, [open, productId]);
   if (!open || !product) return null;
 
   const showIngredientOptions = !!product.isCustomizable;
