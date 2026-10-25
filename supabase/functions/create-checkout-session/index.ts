@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const requestedItems = body?.cartItems;
-    if (!Array.isArray(requestedItems) || !requestedItems.length || requestedItems.length > 100) {
+    if (!Array.isArray(requestedItems) || !requestedItems.length || requestedItems.length > 99) {
       throw new Error("Carrinho inválido.");
     }
 
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       const description = [
         item.notes && `Obs: ${item.notes}`,
         item.removedIngredients.length && `Remover: ${item.removedIngredients.join(", ")}`,
-      ].filter(Boolean).join(" | ");
+      ].filter(Boolean).join(" | ").slice(0, 450);
       return {
         price_data: {
           currency: "brl",
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
         // Confirming a paid order must compare against the Stripe amount and a
         // SERVER-PERSISTED item snapshot, not caller-controlled checkoutPayload.
         canonical_total_cents: String(canonical.totalCents),
-        delivery_address: `${str(body?.delivery?.address)}, ${str(body?.delivery?.number)}`.slice(0, 200),
+        delivery_address: str(body?.delivery?.address, 200),
         delivery_city: str(body?.delivery?.city, 80),
         delivery_state: str(body?.delivery?.state, 10),
         delivery_cep: digits(body?.delivery?.cep).slice(0, 8),
@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
         delivery_number: str(body?.delivery?.number, 30),
         delivery_complement: str(body?.delivery?.complement, 180),
         delivery_reference: str(body?.delivery?.reference, 180),
-        delivery_lat: str(body?.delivery?.lat, 30),
-        delivery_lng: str(body?.delivery?.lng, 30),
+        delivery_lat: Number.isFinite(Number(body?.delivery?.lat)) && body?.delivery?.lat != null ? String(body.delivery.lat).slice(0, 30) : "",
+        delivery_lng: Number.isFinite(Number(body?.delivery?.lng)) && body?.delivery?.lng != null ? String(body.delivery.lng).slice(0, 30) : "",
       },
     });
 
