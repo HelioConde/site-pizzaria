@@ -5,6 +5,7 @@
  */
 export const MAX_CART_ITEMS = 100;
 export const MAX_ITEM_QUANTITY = 99;
+export const MAX_ITEM_PRICE = 1_000_000;
 export const MAX_NOTES_LENGTH = 220;
 
 export function sanitizeCartItem(item) {
@@ -18,7 +19,7 @@ export function sanitizeCartItem(item) {
   if (
     rawId == null || String(rawId).trim() === "" ||
     !name ||
-    !Number.isFinite(price) || price < 0 ||
+    !Number.isFinite(price) || price < 0 || price > MAX_ITEM_PRICE ||
     !Number.isSafeInteger(quantity) || quantity < 1
   ) return null;
 
