@@ -84,3 +84,16 @@ A aparência e os testes visuais não homologam o fluxo financeiro. As alteraç�
 ### QA
 - `tests/e2e/nav-highlights.spec.js` contém casos para o menu mobile em 320/375/768 px e para a exibição de produtos simulados no destaque.
 - Esses testes não substituem revisão visual humana das screenshots nem homologação das regras de negócio no Supabase.
+
+
+## Rodada 27/10/2026 — honestidade comercial e estados de compra
+
+A mesma regra pura `hasRealDiscount(oldPrice, currentPrice)` agora é usada no cardápio e na homepage. Preço antigo só aparece riscado quando for **maior** que o atual, evitando comunicar um desconto inexistente.
+
+- **Capacidade do carrinho:** até 100 entradas distintas. Ao atingir o limite, a personalização informa o motivo e desabilita a adição, sem aparentar sucesso e descartar o item em segundo plano.
+- **Quantidade por entrada:** até 99 unidades. O botão de incremento deixa de ficar acionável no limite e aparece uma explicação textual.
+- **Carregamento e busca:** a barra de resultados tem `role="status"` e `aria-live="polite"`, com mensagem de carregamento ou indisponibilidade antes da contagem; não anuncia falsamente “0 produtos” enquanto a consulta ainda está em andamento.
+- **Leitor de tela:** cada botão de adição do cardápio identifica o produto pelo nome.
+- **QA:** `tests/unit/merchandising.test.mjs` verifica promoções válidas e inválidas. `tests/e2e/menu-experience.spec.js` simula produtos, verifica personalização e testa limites do carrinho e quantidades máximas. As respostas de catálogo são fixtures locais; não homologam pedidos reais.
+
+O site é um portfólio: os valores persistidos no navegador não substituem a verificação autoritativa de preço e de permissões no servidor, tratada separadamente no PR de segurança.

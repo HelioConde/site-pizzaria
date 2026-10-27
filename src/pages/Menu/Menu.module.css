@@ -832,3 +832,35 @@
   .hero, .filtersSection, .catalogSection { min-width: 0; }
   .exploreCard, .grid, .card, .cardBody { min-width: 0; }
 }
+
+
+/* Clear quantity and capacity states without introducing viewport overflow. */
+.cartActions {
+  flex-wrap: wrap;
+}
+.cartQuantityLimit {
+  flex: 1 1 100%;
+  color: #9f241d;
+  font-size: .83rem;
+  line-height: 1.4;
+}
+.qtyBox button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.cartCapacityMessage {
+  margin: 0 0 var(--space-4, 16px);
+  padding: 12px 14px;
+  color: #75261f;
+  background: #fff4eb;
+  border: 1px solid #edc9b6;
+  border-radius: 12px;
+  font-size: .92rem;
+  line-height: 1.5;
+}
+.resultsBar[role="status"] {
+  min-height: 42px;
+}
+@media (max-width: 640px) {
+  .cartCapacityMessage { margin-bottom: 12px; }
+}

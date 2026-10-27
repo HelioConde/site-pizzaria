@@ -1,7 +1,9 @@
 import styles from "../Menu.module.css";
 import Button from "../../../components/ui/Button/Button";
+import { hasRealDiscount } from "../../../lib/merchandising.js";
 
 export default function ProductCard({ item, onOpenModal, formatPrice }) {
+  const discounted = hasRealDiscount(item.oldPrice, item.price);
   return (
     <article className={styles.card}>
       <div className={styles.imageWrap}>
@@ -25,7 +27,7 @@ export default function ProductCard({ item, onOpenModal, formatPrice }) {
 
         <div className={styles.cardFooter}>
           <div className={styles.priceBox}>
-            {item.oldPrice ? (
+            {discounted ? (
               <span className={styles.oldPrice}>
                 {formatPrice(item.oldPrice)}
               </span>
@@ -39,6 +41,7 @@ export default function ProductCard({ item, onOpenModal, formatPrice }) {
             variant="primary"
             size="sm"
             onClick={() => onOpenModal(item)}
+            aria-label={`Personalizar e adicionar ${item.name} ao carrinho`}
           >
             Adicionar
           </Button>

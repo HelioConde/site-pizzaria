@@ -17,6 +17,8 @@ export default function ProductModal({
   onConfirm,
   formatPrice,
   maxNotesLength = 220,
+  cartAtCapacity = false,
+  maxCartItems = 100,
 }) {
   const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
@@ -135,6 +137,13 @@ export default function ProductModal({
           </span>
         </div>
 
+        {cartAtCapacity ? (
+          <p className={styles.cartCapacityMessage} role="status">
+            O carrinho atingiu o limite de {maxCartItems} produtos diferentes.
+            Remova um item para adicionar outro.
+          </p>
+        ) : null}
+
         <div className={styles.productModalActions}>
           <Button
             type="button"
@@ -150,6 +159,7 @@ export default function ProductModal({
             variant="primary"
             size="md"
             onClick={onConfirm}
+            disabled={cartAtCapacity}
           >
             Adicionar ao carrinho
           </Button>
