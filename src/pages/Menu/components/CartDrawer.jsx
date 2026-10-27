@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import styles from "../Menu.module.css";
 import Button from "../../../components/ui/Button/Button";
+import { MAX_ITEM_QUANTITY } from "../../../lib/cart.js";
 
 export default function CartDrawer({
   open,
@@ -121,11 +122,17 @@ export default function CartDrawer({
                       <button
                         type="button"
                         onClick={() => onIncrease(item.id)}
+                        disabled={item.quantity >= MAX_ITEM_QUANTITY}
                         aria-label={`Aumentar quantidade de ${item.name}`}
                       >
                         +
                       </button>
                     </div>
+                    {item.quantity >= MAX_ITEM_QUANTITY ? (
+                      <span className={styles.cartQuantityLimit}>
+                        Máximo de {MAX_ITEM_QUANTITY} unidades
+                      </span>
+                    ) : null}
 
                     <button
                       type="button"
