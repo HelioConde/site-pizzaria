@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import styles from "./Highlights.module.css";
+import { hasRealDiscount } from "../../../lib/merchandising.js";
 
 const backgroundImageSrc = `${import.meta.env.BASE_URL}images/pizzaria-bg.png`;
 
@@ -15,15 +16,6 @@ function formatPrice(value) {
     style: "currency",
     currency: "BRL",
   }).format(numericValue);
-}
-
-function hasValidOldPrice(value, currentPrice) {
-  if (value == null || value === "") return false;
-
-  const numericValue = Number(value);
-
-  const current = Number(currentPrice);
-  return Number.isFinite(numericValue) && Number.isFinite(current) && current >= 0 && numericValue > current;
 }
 
 function normalizeRating(value) {
@@ -104,7 +96,7 @@ function ItemCard({ item, badgeText }) {
 
   const productTarget = item?.slug || item?.id || null;
   const safePrice = formatPrice(item?.price);
-  const safeOldPrice = hasValidOldPrice(item?.oldPrice, item?.price)
+  const safeOldPrice = hasRealDiscount(item?.oldPrice, item?.price)
     ? formatPrice(item?.oldPrice)
     : null;
   const pizzaImageSrc = normalizeImagePath(item?.image);
@@ -181,7 +173,7 @@ export default function Highlights({ products = [] }) {
     .slice(0, 2);
 
   const promotions = activeProducts
-    .filter((product) => hasValidOldPrice(product?.oldPrice, product?.price))
+    .filter((product) => hasRealDiscount(product?.oldPrice, product?.price))
     .slice(0, 2);
 
   if (!bestSellers.length && !promotions.length) {
