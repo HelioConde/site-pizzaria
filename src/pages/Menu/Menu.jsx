@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import styles from "./Menu.module.css";
-import { sanitizeCartItems, MAX_ITEM_QUANTITY } from "../../lib/cart.js";
+import { sanitizeCartItems, MAX_CART_ITEMS, MAX_ITEM_QUANTITY } from "../../lib/cart.js";
 import Button from "../../components/ui/Button/Button";
 
 import ProductCard from "./components/ProductCard";
@@ -311,7 +311,7 @@ export default function Menu() {
   }
 
   function handleConfirmProduct() {
-    if (!selectedProduct?.id) return;
+    if (!selectedProduct?.id || cartItems.length >= MAX_CART_ITEMS) return;
 
     const removedIngredients = isCustomizableProduct(selectedProduct)
       ? [
@@ -323,19 +323,22 @@ export default function Menu() {
 
     const trimmedNotes = notes.trim().slice(0, MAX_NOTES_LENGTH);
 
-    setCartItems((prev) => [
-      ...prev,
-      {
-        id: generateCartItemId(selectedProduct.id),
-        productId: String(selectedProduct.id),
-        name: String(selectedProduct.name || "Produto").trim(),
-        price: Number(selectedProduct.price || 0),
-        image: selectedProduct.image || null,
-        quantity: 1,
-        notes: trimmedNotes,
-        removedIngredients,
-      },
-    ]);
+    setCartItems((prev) => {
+      if (prev.length >= MAX_CART_ITEMS) return prev;
+      return [
+        ...prev,
+        {
+          id: generateCartItemId(selectedProduct.id),
+          productId: String(selectedProduct.id),
+          name: String(selectedProduct.name || "Produto").trim(),
+          price: Number(selectedProduct.price || 0),
+          image: selectedProduct.image || null,
+          quantity: 1,
+          notes: trimmedNotes,
+          removedIngredients,
+        },
+      ];
+    });
 
     handleCloseProductModal();
     setCartOpen(true);
@@ -521,18 +524,24 @@ export default function Menu() {
               onChangeCategory={setActiveCategory}
             />
 
-            <div className={styles.resultsBar}>
-              <p className={styles.resultsText}>
-                Mostrando <strong>{products.length}</strong>{" "}
-                {products.length === 1 ? "produto" : "produtos"} • Categoria:{" "}
-                <strong>{activeCategoryName}</strong>
-                {search ? (
-                  <>
-                    {" "}
-                    • Busca: <strong>“{search}”</strong>
-                  </>
-                ) : null}
-              </p>
+            <div className={styles.resultsBar} role="status" aria-live="polite" aria-atomic="true">
+              {loading ? (
+                <p className={styles.resultsText}>Carregando produtos do cardápio…</p>
+              ) : menuMessage ? (
+                <p className={styles.resultsText}>Cardápio temporariamente indisponível.</p>
+              ) : (
+                <p className={styles.resultsText}>
+                  Mostrando <strong>{products.length}</strong>{" "}
+                  {products.length === 1 ? "produto" : "produtos"} • Categoria:{" "}
+                  <strong>{activeCategoryName}</strong>
+                  {search ? (
+                    <>
+                      {" "}
+                      • Busca: <strong>“{search}”</strong>
+                    </>
+                  ) : null}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -636,6 +645,8 @@ export default function Menu() {
         onConfirm={handleConfirmProduct}
         formatPrice={formatPrice}
         maxNotesLength={MAX_NOTES_LENGTH}
+        cartAtCapacity={cartItems.length >= MAX_CART_ITEMS}
+        maxCartItems={MAX_CART_ITEMS}
       />
 
       <CartDrawer
